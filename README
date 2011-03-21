@@ -75,7 +75,6 @@ Anton Barty, CFEL
 
 
 
-
 Matt Weaver, SLAC
 - myana code, which forms the basis of the XTC processing part of this code
 
@@ -85,3 +84,4 @@ Thomas White, CFEL
 Garth Williams, SLAC
 - Routines for extracting raw cspad image data from the myana data structure
 
+this is Andrew testing that he can commit a change!
