@@ -1,6 +1,7 @@
 ###############################################
 # 	Makefile for LCLS csPad detector version of myana
-#	Anton Barty, December 2010
+#	Now morphed into Cheetah
+#	Anton Barty, CFEL, December 2010
 #
 #	Note: before this makefile will work it is necessary to compile 
 #	the LCLS libraries.  This is done as follows:
@@ -11,7 +12,7 @@
 #	Change the target CPU/OS combination if working on a different system, eg: OS-X)
 #
 ###############################################
-TARGET 			= cspad_cryst
+TARGET 			= cheetah
 ARCH 			= x86_64-linux
 
 MYANADIR		= myana
@@ -68,7 +69,7 @@ $(CSPADDIR)/myana_cspad-gjw: $(MYANADIR)/main.o $(MYANADIR)/XtcRun.o $(CSPADDIR)
 
 
 # csPAD cleaner
-cspad_cryst.o: cspad_cryst.cpp 
+cheetah.o: cheetah.cpp 
 	$(CPP) $(CFLAGS) $<
 
 worker.o: worker.cpp worker.h 
@@ -80,7 +81,7 @@ setup.o: setup.cpp setup.h
 data2d.o: data2d.cpp data2d.h 
 	$(CPP) $(CFLAGS) $<
 
-cspad_cryst: cspad_cryst.o setup.o worker.o data2d.o $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
+cheetah: cheetah.o setup.o worker.o data2d.o $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
 	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^
 
 
