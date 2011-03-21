@@ -61,7 +61,7 @@ If you modify anything:
 
 **** Major contributions (in alphabetical order) ***
 
-Anton Barty
+Anton Barty, CFEL
 - Original version of this image processing code
 - Multithreaded image processing
 - ini file parsing
@@ -79,6 +79,8 @@ Anton Barty
 Matt Weaver, SLAC
 - myana code, which forms the basis of the XTC processing part of this code
 
+Thomas White, CFEL
+- many fixes relating to compiling the SLAC libraries on other machines
 
 Garth Williams, SLAC
 - Routines for extracting raw cspad image data from the myana data structure
