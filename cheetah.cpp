@@ -1,12 +1,31 @@
 /*
- *  cspad_cryst.cpp
- *  cspad_cryst
+ *  cheetah.cpp
+ *  cheetah
  *
  *  Created by Anton Barty on 7/2/11.
  *  Copyright 2011 CFEL. All rights reserved.
  *	
  *	This file based on myana_cspad.cc,v 1.6 2010/10/21 22:09:43 by Matt Weaver, SLAC 
  *
+ *  The contents of the directories 
+ *		myana,
+ *		cspad-gjw, and 
+ *		build 
+ *	can be obtained from SLAC, are copyright by the SLAC instrument development team, 
+ *	and are covered by whatever license that software is distributed under. 
+ *
+ *	The rest of this code is free software: you can modify
+ *	it under the terms of the GNU General Public License as published by
+ *	the Free Software Foundation, either version 3 of the License, or
+ *	(at your option) any later version.
+ *
+ *	This program is distributed in the hope that it will be useful,
+ *	but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *	GNU General Public License for more details.
+ *
+ *	You should have received a copy of the GNU General Public License
+ *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 

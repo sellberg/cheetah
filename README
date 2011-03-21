@@ -1,0 +1,85 @@
+/*
+ *  cheetah
+ *	A multi-threaded image program for analysing cspad image data from the CXI instrument at LCLS
+ *
+ *  Created by Anton Barty on 7/2/11.
+ *  Copyright 2011 CFEL. All rights reserved.
+ *	
+ *	The contents of the directories 
+ *		myana,
+ *		cspad-gjw, and 
+ *		build 
+ *	can be obtained from SLAC, are copyright by the SLAC instrument development team, 
+ *	and are covered by whatever license that software is distributed under. 
+ * 
+ *	You can modify this software under the terms of the GNU General Public License 
+ *	as published by the Free Software Foundation, either version 3 of the License, or
+ *	(at your option) any later version.
+ *
+ *	This program is distributed in the hope that it will be useful,
+ *	but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *	GNU General Public License for more details.
+ *
+ *	You should have received a copy of the GNU General Public License
+ *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+
+
+
+**** Guidelines for modifying the code ***
+
+The 'main' in this program is found in cheetah.cpp
+This calls functions in setup.cpp at the start and end of execution for parsing ini files, 
+loading static pixel maps, allocating global variables and memory, keeping log files, and writing 
+out common summed data at the end of execution.
+cheetah.cpp also contains one function that is called once per cspad data frame. This function 
+calculates data relating to the current frame, copies useful information including raw image data
+into a worker thread structure, and passes this to worker.cpp for processing.
+
+Global variables are all defined in the class cGlobal, which always appears in the code 
+as the variable 'global'.  This holds information that is persistent between multiple images.
+The class definition is found in setup.cpp
+Variables containing data for one particular image are contained in threadInfo, which is passed to 
+worker.cpp.  This contains all data required for processing just one data frame. 
+
+
+
+
+If you modify anything:
+- Be modular: Always configure new modules through the cheetah.ini file, and make modules easy to turn on and off.
+- Do not statically code variables that may need to be changed or tweaked: put configurations in cheetah.ini instead
+- Maintain a clean distinction between 'global' for program-level variables and 'threadInfo' for data pertaining to one frame only.
+- Do not create new global variables: put it in cGlobal instead.
+- Keep new modules modular: pass information using the global and threadInfo variables
+- Keep it thread safe:  Use appropriate mutexes whenever writing to global variables
+- Clean up your memory: worker.cpp is called once for each image, leaky memory quickly bloats out the system.
+
+
+
+
+**** Major contributions (in alphabetical order) ***
+
+Anton Barty
+- Original version of this image processing code
+- Multithreaded image processing
+- ini file parsing
+- Peakfinding and hitfinding
+- Persistent background subtraction
+- Dynamic suppression of hot mpixels
+- Powder pattern generation
+- HDF5 image data output
+- Assembly and interpolation into a geometrically correct image layout
+- Formats of the geometry file, and other input and output files
+
+
+
+
+Matt Weaver, SLAC
+- myana code, which forms the basis of the XTC processing part of this code
+
+
+Garth Williams, SLAC
+- Routines for extracting raw cspad image data from the myana data structure
+
