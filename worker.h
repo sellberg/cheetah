@@ -116,14 +116,10 @@ static uint32_t nevents = 0;
  *	Function prototypes
  */
 void *worker(void *);
-void cmModuleSubtract(tThreadInfo*, cGlobal*);
-void cmSubModuleSubtract(tThreadInfo*, cGlobal*);
 void subtractDarkcal(tThreadInfo*, cGlobal*);
 void applyGainCorrection(tThreadInfo*, cGlobal*);
 void applyBadPixelMask(tThreadInfo*, cGlobal*);
-void subtractPersistentBackground(tThreadInfo*, cGlobal*);
 void killHotpixels(tThreadInfo*, cGlobal*);
-int  hitfinder(tThreadInfo*, cGlobal*);
 void addToPowder(tThreadInfo*, cGlobal*);
 void assemble2Dimage(tThreadInfo*, cGlobal*);
 void nameEvent(tThreadInfo*, cGlobal*);

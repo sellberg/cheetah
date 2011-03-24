@@ -81,7 +81,16 @@ setup.o: setup.cpp setup.h
 data2d.o: data2d.cpp data2d.h 
 	$(CPP) $(CFLAGS) $<
 
-cheetah: cheetah.o setup.o worker.o data2d.o $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
+hitfinder.o: hitfinder.cpp hitfinder.h 
+	$(CPP) $(CFLAGS) $<
+
+commonmode.o: commonmode.cpp commonmode.h 
+	$(CPP) $(CFLAGS) $<
+
+background.o: background.cpp background.h 
+	$(CPP) $(CFLAGS) $<
+
+cheetah: cheetah.o setup.o worker.o data2d.o hitfinder.o commonmode.o background.o $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
 	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^
 
 
