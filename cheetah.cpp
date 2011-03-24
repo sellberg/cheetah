@@ -561,7 +561,8 @@ void endjob()
 	pthread_mutex_destroy(&global.powdersum2_mutex);
 	pthread_mutex_destroy(&global.selfdark_mutex);
 	pthread_mutex_destroy(&global.hotpixel_mutex);
-
+	pthread_mutex_destroy(&global.nhits_mutex);
+	pthread_mutex_destroy(&global.framefp_mutex);
 	
 	
 	printf("Done!\n");

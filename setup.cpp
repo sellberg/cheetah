@@ -366,7 +366,7 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "useselfdarkcal")) {
 		useSubtractPersistentBackground = atoi(value);
 	}
-	else if (!strcmp(tag, "subtractpersistentbackground")) {
+	else if (!strcmp(tag, "usesubtractpersistentbackground")) {
 		useSubtractPersistentBackground = atoi(value);
 	}
 	
@@ -429,10 +429,10 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "bgmemory")) {
 		bgMemory = atof(value);
 	}
-	else if (!strcmp(tag, "scaleBackground")) {
+	else if (!strcmp(tag, "scalebackground")) {
 		scaleBackground = atoi(value);
 	}
-	else if (!strcmp(tag, "scaleDarkcal")) {
+	else if (!strcmp(tag, "scaledarkcal")) {
 		scaleBackground = atoi(value);
 	}
 	else if (!strcmp(tag, "startframes")) {

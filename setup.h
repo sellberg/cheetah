@@ -31,19 +31,19 @@ public:
 	 *	Various switches and processing options
 	 */
 	// ini file to read
-	char		configFile[1024];
+	char		configFile[1024];		// name of the config file (e.g. cspad-cryst.ini)
 	
 	// Real-space geometry
 	char		geometryFile[1024];		// File containing pixelmap (X,Y coordinate of each pixel in raw data stream)
-	float		pixelSize;
+	float		pixelSize;			// in micrometers
 	
 	// Bad pixel masks
-	int			useBadPixelMask;
-	char		badpixelFile[1024];
+	int			useBadPixelMask;	// to specify pixels that you know are bad
+	char		badpixelFile[1024];		// file containing the map of bad pixel locations (raw format)
 	
 	// Static dark calibration (static offsets on each pixel to be subtracted)
 	char		darkcalFile[1024];		// File containing dark calibration
-	int			useDarkcalSubtraction;	// Subtract the darkcal (or not)?
+	int			useDarkcalSubtraction;	// Subtract the darkcal
 	int			generateDarkcal;		// Flip this on to generate a darkcal (auto-turns-on appropriate other options)
 	
 	// Common mode and pedastal subtraction
@@ -52,48 +52,49 @@ public:
 	float		cmFloor;				// Use lowest x% of values as the offset to subtract (typically lowest 2%)
 
 	// Gain correction
-	int			useGaincal;
-	int			invertGain;
-	char		gaincalFile[1024];
+	int			useGaincal;			// whether to read to gain map from a file
+	int			invertGain;			// whether to invert the gain map????
+	char		gaincalFile[1024];			// Name of file containing the gain map
 	
 	// Running background subtraction
-	int			useSubtractPersistentBackground;
-	int			subtractBg;
-	int			scaleBackground;
-	float		bgMemory;
+	int			useSubtractPersistentBackground;  // if set a running background will be calculated and subtracted. 
+	int			subtractBg;			  // what is this parameter?? It's also not in the ini file
+	int			scaleBackground;		  // scale the running background for each shot to account for intensity fluctuations
+	float		bgMemory;				  // number of frames to use for determining the running background
 	
 	// Kill persistently hot pixels
-	int			useAutoHotpixel;
-	int			hotpixADC;
-	int			hotpixMemory;
-	float		hotpixFreq;
-	int			startFrames;
+	int			useAutoHotpixel;		 // determine the hot pixels on the fly
+	int			hotpixADC;			 // threshold above which to count as hot pixels
+	int			hotpixMemory;			 // number of frames to look for hot pixels in
+	float		hotpixFreq;				 // hot often a pixel needs to be above the threshold to be regarded as hot.
+	
+	int			startFrames;			 // number of frames to use for forming initial background and hot pixel estimate (no frames outputed; digesting)
 	
 	// Hitfinding
-	int			hitfinder;
-	int			hitfinderAlgorithm;
-	int			hitfinderADC;
-	int			hitfinderNAT;
-	int			hitfinderNpeaks;
+	int			hitfinder;			 // specify whether to use the hitfinder
+	int			hitfinderAlgorithm;		 // 1,2,3 see the commented ini file or the code hitfinder.cpp
+	int			hitfinderADC;			 // ADC threshold used in the hitfinders
+	int			hitfinderNAT;			 // Threshold on number of pixels above hitfinderADC (Algorithm 1)
+	int			hitfinderNpeaks;		 // Number of peaks above hitfinderADC (algorithm 3)
 	int			hitfinderNpeaksMax;
-	int			hitfinderMinPixCount;
-	int			hitfinderMaxPixCount;
-	int			hitfinderCluster;
-	int			hitfinderUsePeakmask;
-	char		peaksearchFile[1024];
+	int			hitfinderMinPixCount;	 	 // Min number of pixels in peaks required for hit (Algorithm 2 and 3)
+	int			hitfinderMaxPixCount;		 // Max number of pixels in peaks required for hit (Algorithm 3 only)
+	int			hitfinderCluster;		 // minimum number of pixels to define a cluster (Algorithm 2)
+	int			hitfinderUsePeakmask;		 // set if you want to look for peaks in the region defined by the peak mask
+	char		peaksearchFile[1024];			 // the name of the file containing the peak mask (Raw format)
 	
 	// Powder pattern generation
-	int			powdersum;
-	int			powderthresh;
-	int			saveInterval;
+	int			powdersum;			 // Not implemented (I guess it should say whether to calculate the powder or not)
+	int			powderthresh;			 // pixels with an ADC value above this threshold will be added to the powder
+	int			saveInterval;			 // powder pattern is repeatedly saved according to this interval
 	
 	// Saving options
-	int			savehits;
-	int			saveRaw;
-	int			hdf5dump;
+	int			savehits;			 // set to save hits
+	int			saveRaw;			 // set to save each hit in raw format, in addition to assembled format. Powders are automatically saved as both
+	int			hdf5dump;			 // set to write every frame to h5 format 
 	
 	// Verbosity
-	int			debugLevel;
+	int			debugLevel;			 // doesn't seem to be implemented
 	
 	// Log files
 	char		logfile[1024];
@@ -116,7 +117,7 @@ public:
 	long			nActiveThreads;
 	long			threadCounter;
 	pthread_t		*threadID;
-	pthread_mutex_t	nActiveThreads_mutex;
+	pthread_mutex_t	nActiveThreads_mutex;		// there should be one mutex variable for each global variable which threads write to.
 	pthread_mutex_t	hotpixel_mutex;
 	pthread_mutex_t	selfdark_mutex;
 	pthread_mutex_t	powdersum1_mutex;
@@ -140,21 +141,21 @@ public:
 	
 	
 	// Common variables
-	int32_t			*darkcal;
-	int64_t			*powderRaw;
-	int64_t			*powderAssembled;
-	int16_t			*peakmask;
-	int16_t			*badpixelmask;
-	float			*hotpixelmask;
-	float			*selfdark;
-	float			*gaincal;
-	float			avgGMD;
-	long			npowder;
-	long			nprocessedframes;
-	long			nhits;
-	double			detectorZ;
+	int32_t			*darkcal;		//stores darkcal from the file darkcalFile
+	int64_t			*powderRaw;		//stores powder pattern in raw format
+	int64_t			*powderAssembled;	//stores the assembled powder pattern
+	int16_t			*peakmask;		//stores the peakmask from the file peakmaskFile
+	int16_t			*badpixelmask;		//stores the bad pixel mask from the file badpixelmaskFile
+	float			*hotpixelmask;		//stores the hot pixel mask calculated by the auto hot pixel finder
+	float			*selfdark;		//stores the background calculated by the running (persistant) background subtraction
+	float			*gaincal;		//stores the gain map read from the gaincalFile
+	float			avgGMD;			// what is this?
+	long			npowder;		// number of frames in the powder??
+	long			nprocessedframes;	// number of frames that have been processed by the worker program
+	long			nhits;			// number of hits that have been found
+	double			detectorZ;		// mm (?); position of the detector along the beam direction
 	
-	clock_t			lastclock;
+	clock_t			lastclock;		// variables for keeping track of time the program has been running
 	timeval			lasttime;	
 	float			datarate;
 	time_t			tstart, tend;
@@ -162,24 +163,23 @@ public:
 	
 	
 public:
-	void defaultConfiguration(void);
-	void parseConfigFile(char *);
-	void parseCommandLineArguments(int, char**);
-	void setup(void);
-	void readDetectorGeometry(char *);
+	void defaultConfiguration(void);		// sets default parameter values
+	void parseConfigFile(char *);			// reads the config file
+	void parseCommandLineArguments(int, char**);	// reads command line arguments
+	void setup(void);				// function that sets parameter values from default/config file/command line arguments
+	void readDetectorGeometry(char *);		// following functions read the h5 files in raw format
 	void readDarkcal(char *);
 	void readGaincal(char *);
 	void readPeakmask(char *);
 	void readBadpixelMask(char *);
 	
-	void writeInitialLog(void);
-	void updateLogfile(void);
+	void writeInitialLog(void);			// functions to write the log file
+	void updateLogfile(void);			
 	void writeFinalLog(void);
 
 	
 private:
-	void parseConfigTag(char*, char*);
-
+	void parseConfigTag(char*, char*);		// parses the ini file or command line options. New input commands must be added to this function.
 	
 };
 
