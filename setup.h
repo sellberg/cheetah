@@ -23,7 +23,9 @@
  *	Structure for hitfinder parameters
  */
 
-typedef struct{
+class cHitfinder {
+
+public:
 	int			use;			 // specify whether to use the hitfinder	
 	int			Algorithm;		 // 1,2,3 see the commented ini file or the code hitfinder.cpp
 	int			ADC;			 // ADC threshold used in the hitfinders
@@ -36,7 +38,7 @@ typedef struct{
 	int			UsePeakmask;		 // set if you want to look for peaks in the region defined by the peak mask
 	char		peaksearchFile[1024];			 // the name of the file containing the peak mask (Raw format)
 	int16_t			*peakmask;		//stores the peakmask from the file peakmaskFile
-} tHitfinder;
+};
 
 
 
@@ -91,10 +93,10 @@ public:
 	int			startFrames;			 // number of frames to use for forming initial background and hot pixel estimate (no frames outputed; digesting)
 	
 	// Hitfinding
-	tHitfinder 	*hitfinder;				// instance of the standard hitfinder
-	tHitfinder	*icefinder;				// hitfinder to finder patterns with ice peaks
-	tHitfinder	*waterfinder;				// hitfinder to identify shots with water
-	tHitfinder	*backgroundfinder;			// identify shots that are definitely part of the background (to make a more conservative background estimate)	
+	cHitfinder 	hitfinder;				// instance of the standard hitfinder
+	cHitfinder	icefinder;				// hitfinder to finder patterns with ice peaks
+	cHitfinder	waterfinder;				// hitfinder to identify shots with water
+	cHitfinder	backgroundfinder;			// identify shots that are definitely part of the background (to make a more conservative background estimate)	
 
 	
 	// Powder pattern generation

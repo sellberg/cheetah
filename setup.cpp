@@ -88,49 +88,50 @@ void cGlobal::defaultConfiguration(void) {
 	hotpixMemory = 50;
 	
 	// Hitfinding
-	hitfinder->use = 0;
-	hitfinder->ADC = 100;
-	hitfinder->NAT = 100;
-	hitfinder->Npeaks = 50;
-	hitfinder->NpeaksMax = 100000;
-	hitfinder->Algorithm = 3;
-	hitfinder->MinPixCount = 3;
-	hitfinder->MaxPixCount = 20;
-	hitfinder->UsePeakmask = 0;
-	strcpy(hitfinder->peaksearchFile, "peakmask.h5");
+	
+	hitfinder.use = 0;
+	hitfinder.ADC = 100;
+	hitfinder.NAT = 100;
+	hitfinder.Npeaks = 50;
+	hitfinder.NpeaksMax = 100000;
+	hitfinder.Algorithm = 3;
+	hitfinder.MinPixCount = 3;
+	hitfinder.MaxPixCount = 20;
+	hitfinder.UsePeakmask = 0;
+	strcpy(hitfinder.peaksearchFile, "peakmask.h5");
 
-	waterfinder->use = 0;
-	waterfinder->ADC = 100;
-	waterfinder->NAT = 100;
-	waterfinder->Npeaks = 50;
-	waterfinder->NpeaksMax = 100000;
-	waterfinder->Algorithm = 3;
-	waterfinder->MinPixCount = 3;
-	waterfinder->MaxPixCount = 20;
-	waterfinder->UsePeakmask = 0;
-	strcpy(waterfinder->peaksearchFile, "watermask.h5");
+	waterfinder.use = 0;
+	waterfinder.ADC = 100;
+	waterfinder.NAT = 100;
+	waterfinder.Npeaks = 50;
+	waterfinder.NpeaksMax = 100000;
+	waterfinder.Algorithm = 3;
+	waterfinder.MinPixCount = 3;
+	waterfinder.MaxPixCount = 20;
+	waterfinder.UsePeakmask = 0;
+	strcpy(waterfinder.peaksearchFile, "watermask.h5");
 
-	icefinder->use = 0;
-	icefinder->ADC = 100;
-	icefinder->NAT = 100;
-	icefinder->Npeaks = 50;
-	icefinder->NpeaksMax = 100000;
-	icefinder->Algorithm = 3;
-	icefinder->MinPixCount = 3;
-	icefinder->MaxPixCount = 20;
-	icefinder->UsePeakmask = 0;
-	strcpy(icefinder->peaksearchFile, "icemask.h5");
+	icefinder.use = 0;
+	icefinder.ADC = 100;
+	icefinder.NAT = 100;
+	icefinder.Npeaks = 50;
+	icefinder.NpeaksMax = 100000;
+	icefinder.Algorithm = 3;
+	icefinder.MinPixCount = 3;
+	icefinder.MaxPixCount = 20;
+	icefinder.UsePeakmask = 0;
+	strcpy(icefinder.peaksearchFile, "icemask.h5");
 
-	backgroundfinder->use = 0;
-	backgroundfinder->ADC = 100;
-	backgroundfinder->NAT = 100;
-	backgroundfinder->Npeaks = 50;
-	backgroundfinder->NpeaksMax = 100000;
-	backgroundfinder->Algorithm = 3;
-	backgroundfinder->MinPixCount = 3;
-	backgroundfinder->MaxPixCount = 20;
-	backgroundfinder->UsePeakmask = 0;
-	strcpy(backgroundfinder->peaksearchFile, "backgroundmask.h5");
+	backgroundfinder.use = 0;
+	backgroundfinder.ADC = 100;
+	backgroundfinder.NAT = 100;
+	backgroundfinder.Npeaks = 50;
+	backgroundfinder.NpeaksMax = 100000;
+	backgroundfinder.Algorithm = 3;
+	backgroundfinder.MinPixCount = 3;
+	backgroundfinder.MaxPixCount = 20;
+	backgroundfinder.UsePeakmask = 0;
+	strcpy(backgroundfinder.peaksearchFile, "backgroundmask.h5");
 
 	// Powder pattern generation
 	powdersum = 1;
@@ -213,10 +214,10 @@ void cGlobal::setup() {
 		subtractBg = 0;
 		useDarkcalSubtraction = 0;
 		useSubtractPersistentBackground = 0;
-		hitfinder->use = 0;
-		waterfinder->use = 0;
-		icefinder->use = 0;
-		backgroundfinder->use = 0;
+		hitfinder.use = 0;
+		waterfinder.use = 0;
+		icefinder.use = 0;
+		backgroundfinder.use = 0;
 		savehits = 0;
 		hdf5dump = 0;
 		saveRaw = 0;
@@ -355,7 +356,7 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 		strcpy(gaincalFile, value);
 	}
 	else if (!strcmp(tag, "peakmask")) {
-		strcpy(hitfinder->peaksearchFile, value);
+		strcpy(hitfinder.peaksearchFile, value);
 	}
 	else if (!strcmp(tag, "badpixelmask")) {
 		strcpy(badpixelFile, value);
@@ -389,7 +390,7 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 		useDarkcalSubtraction = atoi(value);
 	}
 	else if (!strcmp(tag, "hitfinder")) {
-		hitfinder->use = atoi(value);
+		hitfinder.use = atoi(value);
 	}
 	else if (!strcmp(tag, "savehits")) {
 		savehits = atoi(value);
@@ -440,34 +441,34 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 		powderthresh = atoi(value);
 	}
 	else if (!strcmp(tag, "hitfinderadc")) {
-		hitfinder->ADC = atoi(value);
+		hitfinder.ADC = atoi(value);
 	}
 	else if (!strcmp(tag, "hitfindernat")) {
-		hitfinder->NAT = atoi(value);
+		hitfinder.NAT = atoi(value);
 	}
 	else if (!strcmp(tag, "hitfindercluster")) {
-		hitfinder->Cluster = atoi(value);
+		hitfinder.Cluster = atoi(value);
 	}
 	else if (!strcmp(tag, "hitfindernpeaks")) {
-		hitfinder->Npeaks = atoi(value);
+		hitfinder.Npeaks = atoi(value);
 	}
 	else if (!strcmp(tag, "hitfindernpeaksmax")) {
-		hitfinder->NpeaksMax = atoi(value);
+		hitfinder.NpeaksMax = atoi(value);
 	}
 	else if (!strcmp(tag, "hitfinderalgorithm")) {
-		hitfinder->Algorithm = atoi(value);
+		hitfinder.Algorithm = atoi(value);
 	}
 	else if (!strcmp(tag, "hitfinderminpixcount")) {
-		hitfinder->MinPixCount = atoi(value);
+		hitfinder.MinPixCount = atoi(value);
 	}
 	else if (!strcmp(tag, "hitfindermaxpixcount")) {
-		hitfinder->MaxPixCount = atoi(value);
+		hitfinder.MaxPixCount = atoi(value);
 	}
 	
 	
 	
 	else if (!strcmp(tag, "hitfinderusepeakmask")) {
-		hitfinder->UsePeakmask = atoi(value);
+		hitfinder.UsePeakmask = atoi(value);
 	}
 	else if (!strcmp(tag, "selfdarkmemory")) {
 		bgMemory = atof(value);
@@ -490,106 +491,106 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	 *	Tags for water, ice, background finder
 	 */
 	else if (!strcmp(tag, "icepeakmask")) {
-		strcpy(icefinder->peaksearchFile, value);	
+		strcpy(icefinder.peaksearchFile, value);	
 	}	
 	else if (!strcmp(tag, "icefinder")) {
-		icefinder->use = atoi(value);
+		icefinder.use = atoi(value);
 	}
 	else if (!strcmp(tag, "icefinderadc")) {
-		icefinder->ADC = atoi(value);
+		icefinder.ADC = atoi(value);
 	}
 	else if (!strcmp(tag, "icefindernat")) {
-		icefinder->NAT = atoi(value);
+		icefinder.NAT = atoi(value);
 	}
 	else if (!strcmp(tag, "icefindercluster")) {
-		icefinder->Cluster = atoi(value);
+		icefinder.Cluster = atoi(value);
 	}
 	else if (!strcmp(tag, "icefindernpeaks")) {
-		icefinder->Npeaks = atoi(value);
+		icefinder.Npeaks = atoi(value);
 	}
 	else if (!strcmp(tag, "icefindernpeaksmax")) {
-		icefinder->NpeaksMax = atoi(value);
+		icefinder.NpeaksMax = atoi(value);
 	}
 	else if (!strcmp(tag, "icefinderalgorithm")) {
-		icefinder->Algorithm = atoi(value);
+		icefinder.Algorithm = atoi(value);
 	}
 	else if (!strcmp(tag, "icefinderminpixcount")) {
-		icefinder->MinPixCount = atoi(value);
+		icefinder.MinPixCount = atoi(value);
 	}
 	else if (!strcmp(tag, "icefindermaxpixcount")) {
-		icefinder->MaxPixCount = atoi(value);
+		icefinder.MaxPixCount = atoi(value);
 	}
 	else if (!strcmp(tag, "icefinderusepeakmask")) {
-		icefinder->UsePeakmask = atoi(value);
+		icefinder.UsePeakmask = atoi(value);
 	}
 
 	else if (!strcmp(tag, "waterpeakmask")) {
-		strcpy(waterfinder->peaksearchFile, value);	
+		strcpy(waterfinder.peaksearchFile, value);	
 	}
 	else if (!strcmp(tag, "waterfinder")) {
-		waterfinder->use = atoi(value);
+		waterfinder.use = atoi(value);
 	}
 	else if (!strcmp(tag, "waterfinderadc")) {
-		waterfinder->ADC = atoi(value);
+		waterfinder.ADC = atoi(value);
 	}
 	else if (!strcmp(tag, "waterfindernat")) {
-		waterfinder->NAT = atoi(value);
+		waterfinder.NAT = atoi(value);
 	}
 	else if (!strcmp(tag, "waterfindercluster")) {
-		waterfinder->Cluster = atoi(value);
+		waterfinder.Cluster = atoi(value);
 	}
 	else if (!strcmp(tag, "waterfindernpeaks")) {
-		waterfinder->Npeaks = atoi(value);
+		waterfinder.Npeaks = atoi(value);
 	}
 	else if (!strcmp(tag, "waterfindernpeaksmax")) {
-		waterfinder->NpeaksMax = atoi(value);
+		waterfinder.NpeaksMax = atoi(value);
 	}
 	else if (!strcmp(tag, "waterfinderalgorithm")) {
-		waterfinder->Algorithm = atoi(value);
+		waterfinder.Algorithm = atoi(value);
 	}
 	else if (!strcmp(tag, "waterfinderminpixcount")) {
-		waterfinder->MinPixCount = atoi(value);
+		waterfinder.MinPixCount = atoi(value);
 	}
 	else if (!strcmp(tag, "waterfindermaxpixcount")) {
-		waterfinder->MaxPixCount = atoi(value);
+		waterfinder.MaxPixCount = atoi(value);
 	}
 	else if (!strcmp(tag, "waterfinderusepeakmask")) {
-		waterfinder->UsePeakmask = atoi(value);
+		waterfinder.UsePeakmask = atoi(value);
 	}
 
 
 	else if (!strcmp(tag, "backgroundpeakmask")) {
-		strcpy(backgroundfinder->peaksearchFile, value);	
+		strcpy(backgroundfinder.peaksearchFile, value);	
 	}
 	else if (!strcmp(tag, "backgroundfinder")) {
-		backgroundfinder->use = atoi(value);
+		backgroundfinder.use = atoi(value);
 	}
 	else if (!strcmp(tag, "backgroundfinderadc")) {
-		backgroundfinder->ADC = atoi(value);
+		backgroundfinder.ADC = atoi(value);
 	}
 	else if (!strcmp(tag, "backgroundfindernat")) {
-		backgroundfinder->NAT = atoi(value);
+		backgroundfinder.NAT = atoi(value);
 	}
 	else if (!strcmp(tag, "backgroundfindercluster")) {
-		backgroundfinder->Cluster = atoi(value);
+		backgroundfinder.Cluster = atoi(value);
 	}
 	else if (!strcmp(tag, "backgroundfindernpeaks")) {
-		backgroundfinder->Npeaks = atoi(value);
+		backgroundfinder.Npeaks = atoi(value);
 	}
 	else if (!strcmp(tag, "backgroundfindernpeaksmax")) {
-		backgroundfinder->NpeaksMax = atoi(value);
+		backgroundfinder.NpeaksMax = atoi(value);
 	}
 	else if (!strcmp(tag, "backgroundfinderalgorithm")) {
-		backgroundfinder->Algorithm = atoi(value);
+		backgroundfinder.Algorithm = atoi(value);
 	}
 	else if (!strcmp(tag, "backgroundfinderminpixcount")) {
-		backgroundfinder->MinPixCount = atoi(value);
+		backgroundfinder.MinPixCount = atoi(value);
 	}
 	else if (!strcmp(tag, "backgroundfindermaxpixcount")) {
-		backgroundfinder->MaxPixCount = atoi(value);
+		backgroundfinder.MaxPixCount = atoi(value);
 	}
 	else if (!strcmp(tag, "backgroundfinderusepeakmask")) {
-		backgroundfinder->UsePeakmask = atoi(value);
+		backgroundfinder.UsePeakmask = atoi(value);
 	}
 
 
@@ -830,9 +831,9 @@ void cGlobal::readPeakmask(char *filename){
 	
 	
 	// Create memory space and default to searching for peaks everywhere
-	hitfinder->peakmask = (int16_t*) calloc(pix_nn, sizeof(int16_t));
+	hitfinder.peakmask = (int16_t*) calloc(pix_nn, sizeof(int16_t));
 	for(long i=0;i<pix_nn;i++)
-		hitfinder->peakmask[i] = 1;
+		hitfinder.peakmask[i] = 1;
 	
 	
 	// Check whether file exists!
@@ -861,7 +862,7 @@ void cGlobal::readPeakmask(char *filename){
 	
 	// Copy into peakmask array
 	for(long i=0;i<pix_nn;i++)
-		hitfinder->peakmask[i] = (int16_t) temp2d.data[i];
+		hitfinder.peakmask[i] = (int16_t) temp2d.data[i];
 }
 
 
@@ -1067,9 +1068,9 @@ void cGlobal::readIcemask(char *filename){
 	
 	
 	// Create memory space and default to searching for peaks everywhere
-	icefinder->peakmask = (int16_t*) calloc(pix_nn, sizeof(int16_t));
+	icefinder.peakmask = (int16_t*) calloc(pix_nn, sizeof(int16_t));
 	for(long i=0;i<pix_nn;i++)
-		icefinder->peakmask[i] = 1;
+		icefinder.peakmask[i] = 1;
 	
 	
 	// Check whether file exists!
@@ -1098,7 +1099,7 @@ void cGlobal::readIcemask(char *filename){
 	
 	// Copy into peakmask array
 	for(long i=0;i<pix_nn;i++)
-		icefinder->peakmask[i] = (int16_t) temp2d.data[i];
+		icefinder.peakmask[i] = (int16_t) temp2d.data[i];
 }
 
 
@@ -1112,9 +1113,9 @@ void cGlobal::readWatermask(char *filename){
 	
 	
 	// Create memory space and default to searching for peaks everywhere
-	waterfinder->peakmask = (int16_t*) calloc(pix_nn, sizeof(int16_t));
+	waterfinder.peakmask = (int16_t*) calloc(pix_nn, sizeof(int16_t));
 	for(long i=0;i<pix_nn;i++)
-		waterfinder->peakmask[i] = 1;
+		waterfinder.peakmask[i] = 1;
 	
 	
 	// Check whether file exists!
@@ -1143,7 +1144,7 @@ void cGlobal::readWatermask(char *filename){
 	
 	// Copy into peakmask array
 	for(long i=0;i<pix_nn;i++)
-		waterfinder->peakmask[i] = (int16_t) temp2d.data[i];
+		waterfinder.peakmask[i] = (int16_t) temp2d.data[i];
 }
 
 
@@ -1157,9 +1158,9 @@ void cGlobal::readBackgroundmask(char *filename){
 	
 	
 	// Create memory space and default to searching for peaks everywhere
-	backgroundfinder->peakmask = (int16_t*) calloc(pix_nn, sizeof(int16_t));
+	backgroundfinder.peakmask = (int16_t*) calloc(pix_nn, sizeof(int16_t));
 	for(long i=0;i<pix_nn;i++)
-		backgroundfinder->peakmask[i] = 1;
+		backgroundfinder.peakmask[i] = 1;
 	
 	
 	// Check whether file exists!
@@ -1188,5 +1189,5 @@ void cGlobal::readBackgroundmask(char *filename){
 	
 	// Copy into peakmask array
 	for(long i=0;i<pix_nn;i++)
-		backgroundfinder->peakmask[i] = (int16_t) temp2d.data[i];
+		backgroundfinder.peakmask[i] = (int16_t) temp2d.data[i];
 }

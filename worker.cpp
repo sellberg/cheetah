@@ -43,7 +43,6 @@
 #include "background.h"
 
 
-
 /*
  *	Worker thread function for processing each cspad data frame
  */
@@ -54,7 +53,7 @@ void *worker(void *threadarg) {
 	 */
 	cGlobal			*global;
 	tThreadInfo		*threadInfo;
-	tHit 			*hit;
+	cHit 			hit;
 
 	threadInfo = (tThreadInfo*) threadarg; 	
 	global = threadInfo->pGlobal;
@@ -139,42 +138,42 @@ void *worker(void *threadarg) {
 	/*
 	 *	Hitfinding
 	 */
-	hit->standard = 0;
-	if(global->hitfinder->use){
-		hit->standard = hitfinder(threadInfo, global, global->hitfinder);
+	hit.standard = 0;
+	if(global->hitfinder.use){
+		hit.standard = hitfinder(threadInfo, global, global->hitfinder);
 	}
 	
 	/*
 	 *	Hitfinding - Water
 	 */
-	hit->water = 0;
-	if(global->waterfinder->use){
-		hit->water = hitfinder(threadInfo, global, global->waterfinder);
+	hit.water = 0;
+	if(global->waterfinder.use){
+		hit.water = hitfinder(threadInfo, global, global->waterfinder);
 	}
 
 	/*
 	 *	Hitfinding - Ice
 	 */
-	hit->ice = 0;
-	if(global->icefinder->use){
-		hit->ice = hitfinder(threadInfo, global, global->icefinder);
+	hit.ice = 0;
+	if(global->icefinder.use){
+		hit.ice = hitfinder(threadInfo, global, global->icefinder);
 	}
 	 
 	/*
 	 *	Hitfinding - Background
 	 */
-	hit->background = 0;
-	if(global->backgroundfinder->use){
-		hit->background = hitfinder(threadInfo, global, global->backgroundfinder);
+	hit.background = 0;
+	if(global->backgroundfinder.use){
+		hit.background = hitfinder(threadInfo, global, global->backgroundfinder);
 	}
 	
 	/*
 	 *	Update the running background
 	 */
-	if (global->backgroundfinder->use){	
-		updatePersistentBackground(threadInfo, global, hit->background);
+	if (global->backgroundfinder.use){	
+		updatePersistentBackground(threadInfo, global, hit.background);
 	} else {
-		updatePersistentBackground(threadInfo, global, hit->standard);
+		updatePersistentBackground(threadInfo, global, hit.standard);
 	}
 
 	/*
@@ -197,7 +196,7 @@ void *worker(void *threadarg) {
 	/*
 	 *	Maintain a running sum of data
 	 */
-	addToPowder(threadInfo, global, hit);
+	addToPowder(threadInfo, global, &hit);
 	
 	
 	
@@ -206,7 +205,7 @@ void *worker(void *threadarg) {
 	 */
 	if(global->hdf5dump) 
 		writeHDF5(threadInfo, global);
-	else if(hit && global->savehits)
+	else if(hit.standard && global->savehits)
 		writeHDF5(threadInfo, global);
 	else
 		printf("r%04u:%i (%3.1fHz): Processed (npeaks=%i)\n", global->runNumber,threadInfo->threadNum,global->datarate, threadInfo->nPeaks);
@@ -311,7 +310,7 @@ void killHotpixels(tThreadInfo *threadInfo, cGlobal *global){
 /*
  *	Maintain running powder patterns
  */
-void addToPowder(tThreadInfo *threadInfo, cGlobal *global, tHit *hit){
+void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 	
 	if (hit->standard){
 		// Sum raw format data
@@ -873,7 +872,7 @@ void saveRunningSums(cGlobal *global) {
 		writeSimpleHDF5(filename, buffer1, global->pix_nx, global->pix_ny, H5T_NATIVE_FLOAT);	
 		free(buffer5);
 
-/*
+		/*
 		 *	Save assembled powder pattern : water
 		 */
 		printf("Saving assembled sum data to file\n");

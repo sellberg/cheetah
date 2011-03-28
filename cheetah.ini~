@@ -5,6 +5,9 @@
 # Geometry
 geometry=/cfel/tempdata/LCLS/LCLS-201102//cspad-cryst/cspad_pixelmap_SKassem.h5
 peakmask=/cfel/tempdata/LCLS/LCLS-201102/cspad-cryst/peakmask-inner400.h5
+watermask=/cfel/tempdata/LCLS/LCLS-201102/cspad-cryst/peakmask-inner400.h5
+icemask=/cfel/tempdata/LCLS/LCLS-201102/cspad-cryst/peakmask-inner400.h5
+backgroundmask=/cfel/tempdata/LCLS/LCLS-201102/cspad-cryst/peakmask-inner400.h5
 pixelSize=110e-6
 #
 # Bad pixel mask
@@ -91,7 +94,7 @@ backgroundfinderNAT=20
 # Powder pattern generation
 powdersum=1
 powderthresh=500
-saveInterval=500
+saveInterval=10
 #
 # Saving stuff
 savehits=1

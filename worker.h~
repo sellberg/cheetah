@@ -20,13 +20,16 @@
 
 
 
-
-typedef struct {
+/*
+ *	Structure to hold various hit parameters
+ */
+class cHit {
+public:
 	int standard;
 	int water;
 	int ice;
 	int background;
-} tHit;
+};
 
 
 /*

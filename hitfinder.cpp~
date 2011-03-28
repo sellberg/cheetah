@@ -43,7 +43,7 @@
 /*
  *	A basic hitfinder
  */
-int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, tHitfinder *hitfinder){
+int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder hitfinder){
 
 	long	nat, lastnat;
 	long	counter;

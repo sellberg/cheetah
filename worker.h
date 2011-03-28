@@ -23,12 +23,13 @@
 /*
  *	Structure to hold various hit parameters
  */
-typedef struct {
+class cHit {
+public:
 	int standard;
 	int water;
 	int ice;
 	int background;
-} tHit;
+};
 
 
 /*
@@ -128,7 +129,7 @@ void subtractDarkcal(tThreadInfo*, cGlobal*);
 void applyGainCorrection(tThreadInfo*, cGlobal*);
 void applyBadPixelMask(tThreadInfo*, cGlobal*);
 void killHotpixels(tThreadInfo*, cGlobal*);
-void addToPowder(tThreadInfo*, cGlobal*, tHit*);
+void addToPowder(tThreadInfo*, cGlobal*, cHit*);
 void assemble2Dimage(tThreadInfo*, cGlobal*);
 void nameEvent(tThreadInfo*, cGlobal*);
 void writeHDF5(tThreadInfo*, cGlobal*);

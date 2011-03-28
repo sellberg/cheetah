@@ -145,12 +145,12 @@ void beginjob() {
 	global.setup();
 	global.readDarkcal(global.darkcalFile);
 	global.readGaincal(global.gaincalFile);
-	global.readPeakmask(global.hitfinder->peaksearchFile);
+	global.readPeakmask(global.hitfinder.peaksearchFile);
 	global.readBadpixelMask(global.badpixelFile);
 	global.writeInitialLog();
-	global.readIcemask(global.icefinder->peaksearchFile);
-	global.readWatermask(global.waterfinder->peaksearchFile);
-	global.readBackgroundmask(global.backgroundfinder->peaksearchFile);
+	global.readIcemask(global.icefinder.peaksearchFile);
+	global.readWatermask(global.waterfinder.peaksearchFile);
+	global.readBackgroundmask(global.backgroundfinder.peaksearchFile);
 }
 
 
@@ -563,10 +563,10 @@ void endjob()
 	free(global.hotpixelmask);
 	free(global.selfdark);
 	free(global.gaincal);
-	free(global.hitfinder->peakmask);
-	free(global.icefinder->peakmask);
-	free(global.waterfinder->peakmask);
-	free(global.backgroundfinder->peakmask);
+	free(global.hitfinder.peakmask);
+	free(global.icefinder.peakmask);
+	free(global.waterfinder.peakmask);
+	free(global.backgroundfinder.peakmask);
 
 	pthread_mutex_destroy(&global.nActiveThreads_mutex);
 	pthread_mutex_destroy(&global.powdersum1_mutex);
