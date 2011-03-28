@@ -556,18 +556,10 @@ void endjob()
 	free(global.darkcal);
 	free(global.powderAssembled);
 	free(global.powderRaw);
-	free(global.iceAssembled);
-	free(global.iceRaw);
-	free(global.waterAssembled);
-	free(global.waterRaw);
 	free(global.hotpixelmask);
 	free(global.selfdark);
 	free(global.gaincal);
-	free(global.hitfinder->peakmask);
-	free(global.icefinder->peakmask);
-	free(global.waterfinder->peakmask);
-	free(global.backgroundfinder->peakmask);
-
+	free(global.peakmask);
 	pthread_mutex_destroy(&global.nActiveThreads_mutex);
 	pthread_mutex_destroy(&global.powdersum1_mutex);
 	pthread_mutex_destroy(&global.powdersum2_mutex);

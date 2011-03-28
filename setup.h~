@@ -91,10 +91,10 @@ public:
 	int			startFrames;			 // number of frames to use for forming initial background and hot pixel estimate (no frames outputed; digesting)
 	
 	// Hitfinding
-	tHitfinder 	*hitfinder				// instance of the standard hitfinder
-	tHitfinder	*icefinder				// hitfinder to finder patterns with ice peaks
-	tHitfinder	*waterfinder				// hitfinder to identify shots with water
-	tHitfinder	*backgroundfinder			// identify shots that are definitely part of the background (to make a more conservative background estimate)	
+	tHitfinder 	*hitfinder;				// instance of the standard hitfinder
+	tHitfinder	*icefinder;				// hitfinder to finder patterns with ice peaks
+	tHitfinder	*waterfinder;				// hitfinder to identify shots with water
+	tHitfinder	*backgroundfinder;			// identify shots that are definitely part of the background (to make a more conservative background estimate)	
 
 	
 	// Powder pattern generation
@@ -138,6 +138,10 @@ public:
 	pthread_mutex_t	powdersum2_mutex;
 	pthread_mutex_t	nhits_mutex;
 	pthread_mutex_t	framefp_mutex;
+	pthread_mutex_t	watersumassembled_mutex;
+	pthread_mutex_t	watersumraw_mutex;
+	pthread_mutex_t	icesumassembled_mutex;
+	pthread_mutex_t	icesumraw_mutex;	
 	
 	
 	// Detector geometry
@@ -158,6 +162,10 @@ public:
 	int32_t			*darkcal;		//stores darkcal from the file darkcalFile
 	int64_t			*powderRaw;		//stores powder pattern in raw format
 	int64_t			*powderAssembled;	//stores the assembled powder pattern
+	int64_t			*waterRaw;		//stores powder pattern in raw format
+	int64_t			*waterAssembled;	//stores the assembled powder pattern
+	int64_t			*iceRaw;		//stores powder pattern in raw format
+	int64_t			*iceAssembled;		//stores the assembled powder pattern
 	int16_t			*badpixelmask;		//stores the bad pixel mask from the file badpixelmaskFile
 	float			*hotpixelmask;		//stores the hot pixel mask calculated by the auto hot pixel finder
 	float			*selfdark;		//stores the background calculated by the running (persistant) background subtraction

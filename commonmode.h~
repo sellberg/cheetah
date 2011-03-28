@@ -1,5 +1,5 @@
 /*
- *  background.h
+ *  commonmode.h
  *  cheetah
  *
  *  Created by Anton Barty on 6/2/11.
@@ -21,6 +21,5 @@
 /*
  *	Function prototypes
  */
-void updatePersistentBackground(tThreadInfo*, cGlobal*, int);
-void subtractPersistentBackground(tThreadInfo*, cGlobal*);
-
+void cmModuleSubtract(tThreadInfo*, cGlobal*);
+void cmSubModuleSubtract(tThreadInfo*, cGlobal*);

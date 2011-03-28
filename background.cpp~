@@ -44,7 +44,7 @@
  *	Update self generated darkcal file
  */
 void updatePersistentBackground(tThreadInfo *threadInfo, cGlobal *global, int hit){
-	float	gmd;
+
 	// Add current (uncorrected) image to self darkcal
 	if (!hit) {	
 		pthread_mutex_lock(&global->selfdark_mutex);
@@ -69,7 +69,7 @@ void subtractPersistentBackground(tThreadInfo *threadInfo, cGlobal *global){
 	float	s2 = 0;
 	float	v1, v2;
 	float	factor;
-	
+	float	gmd;
 	
 	
 	// Find appropriate scaling factor 
