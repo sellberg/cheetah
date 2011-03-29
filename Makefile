@@ -19,8 +19,10 @@ MYANADIR		= myana
 CSPADDIR		= cspad-gjw
 #LCLSDIR 		= /reg/neh/home/barty/c/cspad-cryst/release
 #HDF5DIR 		= /reg/neh/home/barty/hdf5
-LCLSDIR 		= /cfel/user/barty/c/cspad-cryst/release
-HDF5DIR 		= /cfel/common
+#LCLSDIR 		= /cfel/user/barty/c/cspad-cryst/release
+#HDF5DIR 		= /cfel/common
+LCLSDIR 		= release
+HDF5DIR 		= /reg/g/psdm/sw/releases/ana-current/arch/x86_64-rhel5-gcc41-opt
 ROOTSYS			= /reg/g/pcds/package/root
 OBJFILES		= main.o XtcRun.o
 
