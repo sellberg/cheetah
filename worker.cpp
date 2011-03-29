@@ -311,8 +311,25 @@ void killHotpixels(tThreadInfo *threadInfo, cGlobal *global){
  *	Maintain running powder patterns
  */
 void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
-	
-	if (hit->standard || global->generateDarkcal){
+
+    if (global->generateDarkcal){
+		// Sum raw format data
+		pthread_mutex_lock(&global->powdersum1_mutex);
+		global->npowder += 1;
+		for(long i=0; i<global->pix_nn; i++)
+			global->powderRaw[i] += threadInfo->corrected_data[i];
+		pthread_mutex_unlock(&global->powdersum1_mutex);
+        
+        
+		// Sum assembled data
+		pthread_mutex_lock(&global->powdersum2_mutex);
+		for(long i=0; i<global->image_nn; i++)
+            global->powderAssembled[i] += threadInfo->image[i];
+		pthread_mutex_unlock(&global->powdersum2_mutex);
+	}
+
+    
+	if (hit->standard){
 		// Sum raw format data
 		pthread_mutex_lock(&global->powdersum1_mutex);
 		global->npowder += 1;
