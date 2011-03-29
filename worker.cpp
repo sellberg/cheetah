@@ -194,7 +194,7 @@ void *worker(void *threadarg) {
 	
 	
 	/*
-	 *	Maintain a running sum of data
+	 *	Add to powder if it's a hit or if we wish to generateDarkcal(member data of global)
 	 */
 	addToPowder(threadInfo, global, &hit);
 	
@@ -312,7 +312,7 @@ void killHotpixels(tThreadInfo *threadInfo, cGlobal *global){
  */
 void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 	
-	if (hit->standard){
+	if (hit->standard || global->generateDarkcal){
 		// Sum raw format data
 		pthread_mutex_lock(&global->powdersum1_mutex);
 		global->npowder += 1;
