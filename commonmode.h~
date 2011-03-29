@@ -1,5 +1,5 @@
 /*
- *  hitfinder.h
+ *  commonmode.h
  *  cheetah
  *
  *  Created by Anton Barty on 6/2/11.
@@ -21,5 +21,5 @@
 /*
  *	Function prototypes
  */
-int  hitfinder(tThreadInfo*, cGlobal*, cHitfinder);
-
+void cmModuleSubtract(tThreadInfo*, cGlobal*);
+void cmSubModuleSubtract(tThreadInfo*, cGlobal*);

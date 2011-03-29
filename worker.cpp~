@@ -872,7 +872,7 @@ void saveRunningSums(cGlobal *global) {
 		writeSimpleHDF5(filename, buffer1, global->pix_nx, global->pix_ny, H5T_NATIVE_FLOAT);	
 		free(buffer5);
 
-		/*
+/*
 		 *	Save assembled powder pattern : water
 		 */
 		printf("Saving assembled sum data to file\n");

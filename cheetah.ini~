@@ -32,7 +32,7 @@ invertGain=1
 # Running background subtraction (persistent photon background)
 useSubtractPersistentBackground=1
 bgMemory=50
-startFrames=10
+startFrames=200
 scaleBackground=1
 #
 # Suppress consistently hot pixels

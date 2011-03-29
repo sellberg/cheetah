@@ -565,7 +565,7 @@ void endjob()
 	free(global.gaincal);
 	free(global.hitfinder.peakmask);
 	free(global.icefinder.peakmask);
-	free(global.waterfinder.peakmask);
+	free(global.waterfinder.eakmask);
 	free(global.backgroundfinder.peakmask);
 
 	pthread_mutex_destroy(&global.nActiveThreads_mutex);

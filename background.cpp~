@@ -79,7 +79,7 @@ void subtractPersistentBackground(tThreadInfo *threadInfo, cGlobal *global){
 			//v2 = pow(threadInfo->corrected_data[i], 0.25);
 			v1 = global->selfdark[i];
 			v2 = threadInfo->corrected_data[i];
-			if(v2 > global->hitfinder.ADC)
+			if(v2 > global->hitfinder->ADC)
 				continue;
 			
 			// Simple inner product gives cos(theta), which is always less than zero

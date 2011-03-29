@@ -21,5 +21,5 @@
 /*
  *	Function prototypes
  */
-int  hitfinder(tThreadInfo*, cGlobal*, cHitfinder);
+int  hitfinder(tThreadInfo*, cGlobal*, cHitfinder*);
 
