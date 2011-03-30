@@ -98,6 +98,7 @@ void cGlobal::defaultConfiguration(void) {
 	hitfinder.MinPixCount = 3;
 	hitfinder.MaxPixCount = 20;
 	hitfinder.UsePeakmask = 0;
+	hitfinder.savehits = 0;
 	strcpy(hitfinder.peaksearchFile, "peakmask.h5");
 
 	waterfinder.use = 0;
@@ -109,6 +110,7 @@ void cGlobal::defaultConfiguration(void) {
 	waterfinder.MinPixCount = 3;
 	waterfinder.MaxPixCount = 20;
 	waterfinder.UsePeakmask = 0;
+	waterfinder.savehits = 0;
 	strcpy(waterfinder.peaksearchFile, "watermask.h5");
 
 	icefinder.use = 0;
@@ -120,6 +122,7 @@ void cGlobal::defaultConfiguration(void) {
 	icefinder.MinPixCount = 3;
 	icefinder.MaxPixCount = 20;
 	icefinder.UsePeakmask = 0;
+	icefinder.savehits = 0;
 	strcpy(icefinder.peaksearchFile, "icemask.h5");
 
 	backgroundfinder.use = 0;
@@ -131,6 +134,7 @@ void cGlobal::defaultConfiguration(void) {
 	backgroundfinder.MinPixCount = 3;
 	backgroundfinder.MaxPixCount = 20;
 	backgroundfinder.UsePeakmask = 0;
+	backgroundfinder.savehits = 0;
 	strcpy(backgroundfinder.peaksearchFile, "backgroundmask.h5");
 
 	// Powder pattern generation
@@ -138,7 +142,7 @@ void cGlobal::defaultConfiguration(void) {
 	powderthresh = 0;
 	
 	// Saving options
-	savehits = 0;
+	//savehits = 0;
 	saveRaw = 0;
 	hdf5dump = 0;
 	saveInterval = 500;
@@ -153,7 +157,9 @@ void cGlobal::defaultConfiguration(void) {
 	strcpy(logfile, "log.txt");
 	strcpy(framefile, "frames.txt");
 	strcpy(cleanedfile, "cleaned.txt");
-	
+	strcpy(icefile, "icehits.txt");
+	strcpy(waterfile, "waterhits.txt");
+	strcpy(backgroundfile, "backgroundhits.txt");
 	
 }
 
@@ -218,7 +224,10 @@ void cGlobal::setup() {
 		waterfinder.use = 0;
 		icefinder.use = 0;
 		backgroundfinder.use = 0;
-		savehits = 0;
+		hitfinder.savehits = 0;
+		waterfinder.savehits = 0;
+		icefinder.savehits = 0;
+		backgroundfinder.savehits = 0;		
 		hdf5dump = 0;
 		saveRaw = 0;
 		useAutoHotpixel = 0;
@@ -393,7 +402,7 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 		hitfinder.use = atoi(value);
 	}
 	else if (!strcmp(tag, "savehits")) {
-		savehits = atoi(value);
+		hitfinder.savehits = atoi(value);
 	}
 	else if (!strcmp(tag, "powdersum")) {
 		powdersum = atoi(value);
@@ -490,7 +499,7 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	/* 	
 	 *	Tags for water, ice, background finder
 	 */
-	else if (!strcmp(tag, "icepeakmask")) {
+	else if (!strcmp(tag, "icemask")) {
 		strcpy(icefinder.peaksearchFile, value);	
 	}	
 	else if (!strcmp(tag, "icefinder")) {
@@ -523,8 +532,11 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "icefinderusepeakmask")) {
 		icefinder.UsePeakmask = atoi(value);
 	}
+	else if (!strcmp(tag, "saveicehits")) {
+		icefinder.savehits = atoi(value);
+	}
 
-	else if (!strcmp(tag, "waterpeakmask")) {
+	else if (!strcmp(tag, "watermask")) {
 		strcpy(waterfinder.peaksearchFile, value);	
 	}
 	else if (!strcmp(tag, "waterfinder")) {
@@ -557,9 +569,11 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "waterfinderusepeakmask")) {
 		waterfinder.UsePeakmask = atoi(value);
 	}
+	else if (!strcmp(tag, "savewaterhits")) {
+		waterfinder.savehits = atoi(value);
+	}
 
-
-	else if (!strcmp(tag, "backgroundpeakmask")) {
+	else if (!strcmp(tag, "backgroundmask")) {
 		strcpy(backgroundfinder.peaksearchFile, value);	
 	}
 	else if (!strcmp(tag, "backgroundfinder")) {
@@ -591,6 +605,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "backgroundfinderusepeakmask")) {
 		backgroundfinder.UsePeakmask = atoi(value);
+	}
+	else if (!strcmp(tag, "savebackgroundhits")) {
+		backgroundfinder.savehits = atoi(value);
 	}
 
 
@@ -945,10 +962,23 @@ void cGlobal::writeInitialLog(void){
 	fprintf(framefp, "# FrameNumber, UnixTime, EventName, npeaks\n");
 
 	sprintf(cleanedfile,"r%04u-cleaned.txt",getRunNumber());
-	cleanedfp = fopen (cleanedfile,"w");
-	fprintf(cleanedfp, "# Filename, npeaks\n");
+	hitfinder.cleanedfp = fopen (cleanedfile,"w");
+	fprintf(hitfinder.cleanedfp, "# Filename, npeaks\n");
 	
+	sprintf(icefile,"r%04u-icehits.txt",getRunNumber());
+	icefinder.cleanedfp = fopen (icefile,"w");
+	fprintf(icefinder.cleanedfp, "# Filename, npeaks\n");
+
+	sprintf(waterfile,"r%04u-waterhits.txt",getRunNumber());
+	waterfinder.cleanedfp = fopen (waterfile,"w");
+	fprintf(waterfinder.cleanedfp, "# Filename, npeaks\n");
+
+	sprintf(backgroundfile,"r%04u-backgroundhits.txt",getRunNumber());
+	backgroundfinder.cleanedfp = fopen (backgroundfile,"w");
+	fprintf(backgroundfinder.cleanedfp, "# Filename, npeaks\n");
+
 	pthread_mutex_unlock(&framefp_mutex);
+	
 }
 
 
@@ -987,8 +1017,14 @@ void cGlobal::updateLogfile(void){
 	pthread_mutex_lock(&framefp_mutex);
 	fclose(framefp);
 	framefp = fopen (framefile,"a");
-	fclose(cleanedfp);
-	cleanedfp = fopen (cleanedfile,"a");
+	fclose(hitfinder.cleanedfp);
+	hitfinder.cleanedfp = fopen (cleanedfile,"a");
+	fclose(icefinder.cleanedfp);
+	icefinder.cleanedfp = fopen (icefile,"a");
+	fclose(waterfinder.cleanedfp);
+	waterfinder.cleanedfp = fopen (waterfile,"a");
+	fclose(backgroundfinder.cleanedfp);
+	backgroundfinder.cleanedfp = fopen (backgroundfile,"a");
 	pthread_mutex_unlock(&framefp_mutex);
 	
 }
@@ -1052,7 +1088,10 @@ void cGlobal::writeFinalLog(void){
 	// Flush frame file buffer
 	pthread_mutex_lock(&framefp_mutex);
 	fclose(framefp);
-	fclose(cleanedfp);
+	fclose(hitfinder.cleanedfp);
+	fclose(icefinder.cleanedfp);
+	fclose(waterfinder.cleanedfp);
+	fclose(backgroundfinder.cleanedfp);
 	pthread_mutex_unlock(&framefp_mutex);
 	
 	

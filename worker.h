@@ -132,7 +132,7 @@ void killHotpixels(tThreadInfo*, cGlobal*);
 void addToPowder(tThreadInfo*, cGlobal*, cHit*);
 void assemble2Dimage(tThreadInfo*, cGlobal*);
 void nameEvent(tThreadInfo*, cGlobal*);
-void writeHDF5(tThreadInfo*, cGlobal*);
+void writeHDF5(tThreadInfo*, cGlobal*,char*, FILE*);
 void writeSimpleHDF5(const char*, const void*, int, int, int);
 void saveRunningSums(cGlobal*);
 
