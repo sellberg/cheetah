@@ -3,6 +3,8 @@ Usage help::
 	python viewRun.py --help 
 	python viewAssembledSum.py --help
 
+Remember to change the "source_dir" and "write_dir" fields in these two Python scripts before execution.
+
 --------------------------------------------------------------
 Getting PYTHON to work on SLAC's Unix computers:
 
