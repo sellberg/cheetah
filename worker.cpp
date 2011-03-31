@@ -140,7 +140,7 @@ void *worker(void *threadarg) {
 	 */
 	hit.standard = 0;
 	if(global->hitfinder.use){
-		hit.standard = hitfinder(threadInfo, global, global->hitfinder);
+		hit.standard = hitfinder(threadInfo, global, &(global->hitfinder));
 	}
 	
 	/*
@@ -148,7 +148,7 @@ void *worker(void *threadarg) {
 	 */
 	hit.water = 0;
 	if(global->waterfinder.use){
-		hit.water = hitfinder(threadInfo, global, global->waterfinder);
+		hit.water = hitfinder(threadInfo, global, &(global->waterfinder));
 	}
 
 	/*
@@ -156,7 +156,7 @@ void *worker(void *threadarg) {
 	 */
 	hit.ice = 0;
 	if(global->icefinder.use){
-		hit.ice = hitfinder(threadInfo, global, global->icefinder);
+		hit.ice = hitfinder(threadInfo, global, &(global->icefinder));
 	}
 	 
 	/*
@@ -164,7 +164,7 @@ void *worker(void *threadarg) {
 	 */
 	hit.background = 0;
 	if(global->backgroundfinder.use){
-		hit.background = hitfinder(threadInfo, global, global->backgroundfinder);
+		hit.background = hitfinder(threadInfo, global, &(global->backgroundfinder));
 	}
 	
 	/*
