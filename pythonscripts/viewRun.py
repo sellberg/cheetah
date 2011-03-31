@@ -1,15 +1,15 @@
 # Usage:
 # In this directory, type:
-#    python viewRun.py -rxxxx
+#    ./viewRun.py -rxxxx
 # where rxxxx is the run number of hits and nonhits found using the hitfinder executable. 
 # By default, this script looks into the h5 files that are in the appropriate rxxxx directory
 #
+
+#!/usr/bin/python
 import numpy as N
 import h5py as H
-
 import matplotlib
 import matplotlib.pyplot as P
-
 import sys
 import os
 import re
