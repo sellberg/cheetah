@@ -204,11 +204,26 @@ void *worker(void *threadarg) {
 	 *	If this is a hit, write out to our favourite HDF5 format
 	 */
 	if(global->hdf5dump) 
-		writeHDF5(threadInfo, global);
-	else if(hit.standard && global->savehits)
-		writeHDF5(threadInfo, global);
-	else
-		printf("r%04u:%i (%3.1fHz): Processed (npeaks=%i)\n", global->runNumber,threadInfo->threadNum,global->datarate, threadInfo->nPeaks);
+		writeHDF5(threadInfo, global, threadInfo->eventname, global->hitfinder.cleanedfp);
+	else {
+		if(hit.standard && global->hitfinder.savehits)
+			writeHDF5(threadInfo, global, threadInfo->eventname, global->hitfinder.cleanedfp);
+
+		char eventname[1024];
+		if(hit.water && global->waterfinder.savehits) {
+			sprintf(eventname,"%s_waterhit",threadInfo->eventname);
+			writeHDF5(threadInfo, global, eventname, global->waterfinder.cleanedfp);
+		}
+		if(hit.ice && global->icefinder.savehits) {
+			sprintf(eventname,"%s_icehit",threadInfo->eventname);
+			writeHDF5(threadInfo, global, eventname, global->icefinder.cleanedfp);
+		}
+		if(!hit.background && global->backgroundfinder.savehits) {
+			sprintf(eventname,"%s_background",threadInfo->eventname);
+			writeHDF5(threadInfo, global, eventname, global->backgroundfinder.cleanedfp);
+		}
+	}
+	printf("r%04u:%i (%3.1fHz): Processed (npeaks=%i)\n", global->runNumber,threadInfo->threadNum,global->datarate, threadInfo->nPeaks);
 
 	
 
@@ -489,14 +504,14 @@ void nameEvent(tThreadInfo *info, cGlobal *global){
 	timestatic=localtime_r( &eventTime, &timelocal );	
 	strftime(buffer1,80,"%Y_%b%d",&timelocal);
 	strftime(buffer2,80,"%H%M%S",&timelocal);
-	sprintf(info->eventname,"LCLS_%s_r%04u_%s_%x_cspad.h5",buffer1,global->runNumber,buffer2,info->fiducial);
+	sprintf(info->eventname,"LCLS_%s_r%04u_%s_%x_cspad",buffer1,global->runNumber,buffer2,info->fiducial);
 }
 	
 	
 /*
  *	Write out processed data to our 'standard' HDF5 format
  */
-void writeHDF5(tThreadInfo *info, cGlobal *global){
+void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp){
 	/*
 	 *	Create filename based on date, time and fiducial for this image
 	 */
@@ -512,11 +527,12 @@ void writeHDF5(tThreadInfo *info, cGlobal *global){
 	//strftime(buffer2,80,"%H%M%S",&timelocal);
 	//sprintf(outfile,"LCLS_%s_r%04u_%s_%x_cspad.h5",buffer1,global->runNumber,buffer2,info->fiducial);
 
-	strcpy(outfile, info->eventname);
+	sprintf(outfile,"%s.h5",eventname);
+	//strcpy(outfile, info->eventname);
 	printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n",global->runNumber, info->threadNum,global->datarate, outfile);
 
 	pthread_mutex_lock(&global->framefp_mutex);
-	fprintf(global->cleanedfp, "r%04u/%s, %i\n",global->runNumber, info->eventname, info->nPeaks);
+	fprintf(hitfp, "r%04u/%s, %i\n",global->runNumber, info->eventname, info->nPeaks);
 	pthread_mutex_unlock(&global->framefp_mutex);
 	
 		
