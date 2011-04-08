@@ -36,8 +36,10 @@ public:
 	int			MaxPixCount;		 // Max number of pixels in peaks required for hit (Algorithm 3 only)
 	int			Cluster;		 // minimum number of pixels to define a cluster (Algorithm 2)
 	int			UsePeakmask;		 // set if you want to look for peaks in the region defined by the peak mask
+	int 			savehits;		 // set if you want to save the hits
 	char		peaksearchFile[1024];			 // the name of the file containing the peak mask (Raw format)
 	int16_t			*peakmask;		//stores the peakmask from the file peakmaskFile
+	FILE			*cleanedfp;		// file name where the hits of this hitfinder are written.
 };
 
 
@@ -105,7 +107,7 @@ public:
 	int			saveInterval;			 // powder pattern is repeatedly saved according to this interval
 	
 	// Saving options
-	int			savehits;			 // set to save hits
+	//int			savehits;			 // set to save hits
 	int			saveRaw;			 // set to save each hit in raw format, in addition to assembled format. Powders are automatically saved as both
 	int			hdf5dump;			 // set to write every frame to h5 format 
 	
@@ -116,6 +118,9 @@ public:
 	char		logfile[1024];
 	char		framefile[1024];
 	char		cleanedfile[1024];
+	char		icefile[1024];
+	char 		waterfile[1024];
+	char		backgroundfile[1024];
 	
 	
 	/*
@@ -126,7 +131,7 @@ public:
 
 	// Log file pointers
 	FILE		*framefp;
-	FILE		*cleanedfp;
+	//FILE		*cleanedfp;
 	
 	// Thread management
 	long			nThreads;

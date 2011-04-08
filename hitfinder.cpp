@@ -43,7 +43,7 @@
 /*
  *	A basic hitfinder
  */
-int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder hitfinder){
+int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder *hitf){
 
 	long	nat, lastnat;
 	long	counter;
@@ -64,9 +64,9 @@ int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder hitfinder){
 	 *	Apply peak search mask 
 	 *	(multiply data by 0 to ignore regions)
 	 */
-	if(hitfinder.UsePeakmask) {
+	if(hitf->UsePeakmask) {
 		for(long i=0;i<global->pix_nn;i++){
-			temp[i] *= hitfinder.peakmask[i]; 
+			temp[i] *= hitf->peakmask[i]; 
 		}
 	}
 	
@@ -74,15 +74,15 @@ int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder hitfinder){
 	/*
 	 *	Use one of various hitfinder algorithms
 	 */
-	switch(hitfinder.Algorithm) {
+	switch(hitf->Algorithm) {
 		
 		case 1 :	// Simply count the number of pixels above ADC threshold (very basic)
 			for(long i=0;i<global->pix_nn;i++){
-				if(temp[i] > hitfinder.ADC){
+				if(temp[i] > hitf->ADC){
 					nat++;
 				}
 			}
-			if(nat >= hitfinder.NAT)
+			if(nat >= hitf->NAT)
 				hit = 1;
 			break;
 
@@ -92,18 +92,18 @@ int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder hitfinder){
 				for(long i=1; i<8*ROWS-1; i++) {
 					nn = 0;
 					ii = i+(8*ROWS)*j;
-					if(temp[i+(8*ROWS)*j] > hitfinder.ADC) {
+					if(temp[i+(8*ROWS)*j] > hitf->ADC) {
 						nn += 1;
-						if(temp[i+1+(8*ROWS)*j] > hitfinder.ADC) nn++;
-						if(temp[i-1+(8*ROWS)*j] > hitfinder.ADC) nn++;
-						if(temp[i+(8*ROWS)*(j+1)] > hitfinder.ADC) nn++;
-						if(temp[i+1+(8*ROWS)*(j+1)] > hitfinder.ADC) nn++;
-						if(temp[i-1+(8*ROWS)*(j+1)] > hitfinder.ADC) nn++;
-						if(temp[i+(8*ROWS)*(j-1)] > hitfinder.ADC) nn++;
-						if(temp[i+1+(8*ROWS)*(j-1)] > hitfinder.ADC) nn++;
-						if(temp[i-1+(8*ROWS)*(j-1)] > hitfinder.ADC) nn++;
+						if(temp[i+1+(8*ROWS)*j] > hitf->ADC) nn++;
+						if(temp[i-1+(8*ROWS)*j] > hitf->ADC) nn++;
+						if(temp[i+(8*ROWS)*(j+1)] > hitf->ADC) nn++;
+						if(temp[i+1+(8*ROWS)*(j+1)] > hitf->ADC) nn++;
+						if(temp[i-1+(8*ROWS)*(j+1)] > hitf->ADC) nn++;
+						if(temp[i+(8*ROWS)*(j-1)] > hitf->ADC) nn++;
+						if(temp[i+1+(8*ROWS)*(j-1)] > hitf->ADC) nn++;
+						if(temp[i-1+(8*ROWS)*(j-1)] > hitf->ADC) nn++;
 					}
-					if(nn >= hitfinder.Cluster) {
+					if(nn >= hitf->Cluster) {
 						nat++;
 						temp[i+(8*ROWS)*j] = 0;
 						temp[i+1+(8*ROWS)*j] = 0;
@@ -118,7 +118,7 @@ int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder hitfinder){
 				}
 			}
 			threadInfo->nPeaks = nat;
-			if(nat >= hitfinder.MinPixCount)
+			if(nat >= hitf->MinPixCount)
 				hit = 1;
 			break;
 
@@ -147,7 +147,7 @@ int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder hitfinder){
 							//if(e >= global->pix_nn)
 							//	printf("Array bounds error: e=%i\n");
 							
-							if(temp[e] > hitfinder.ADC){
+							if(temp[e] > hitf->ADC){
 								// This might be the start of a peak - start searching
 								inx[0] = i;
 								iny[0] = j;
@@ -180,7 +180,7 @@ int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder hitfinder){
 											//}
 											
 											// Above threshold?
-											if(temp[e] > hitfinder.ADC){
+											if(temp[e] > hitf->ADC){
 												//if(nat < 0 || nat >= global->pix_nn) {
 												//	printf("Array bounds error: nat=%i\n",nat);
 												//	break
@@ -195,7 +195,7 @@ int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder hitfinder){
 								} while(lastnat != nat);
 								
 								// Peak or junk?
-								if(nat>=hitfinder.MinPixCount && nat<=hitfinder.MaxPixCount) {
+								if(nat>=hitf->MinPixCount && nat<=hitf->MaxPixCount) {
 									counter ++;
 								}
 							}
@@ -205,7 +205,7 @@ int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder hitfinder){
 			}	
 			// Hit?
 			threadInfo->nPeaks = counter;
-			if(counter >= hitfinder.Npeaks && counter <= hitfinder.NpeaksMax)
+			if(counter >= hitf->Npeaks && counter <= hitf->NpeaksMax)
 				hit = 1;
 			
 			free(inx);

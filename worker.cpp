@@ -140,7 +140,7 @@ void *worker(void *threadarg) {
 	 */
 	hit.standard = 0;
 	if(global->hitfinder.use){
-		hit.standard = hitfinder(threadInfo, global, global->hitfinder);
+		hit.standard = hitfinder(threadInfo, global, &(global->hitfinder));
 	}
 	
 	/*
@@ -148,7 +148,7 @@ void *worker(void *threadarg) {
 	 */
 	hit.water = 0;
 	if(global->waterfinder.use){
-		hit.water = hitfinder(threadInfo, global, global->waterfinder);
+		hit.water = hitfinder(threadInfo, global, &(global->waterfinder));
 	}
 
 	/*
@@ -156,7 +156,7 @@ void *worker(void *threadarg) {
 	 */
 	hit.ice = 0;
 	if(global->icefinder.use){
-		hit.ice = hitfinder(threadInfo, global, global->icefinder);
+		hit.ice = hitfinder(threadInfo, global, &(global->icefinder));
 	}
 	 
 	/*
@@ -164,7 +164,7 @@ void *worker(void *threadarg) {
 	 */
 	hit.background = 0;
 	if(global->backgroundfinder.use){
-		hit.background = hitfinder(threadInfo, global, global->backgroundfinder);
+		hit.background = hitfinder(threadInfo, global, &(global->backgroundfinder));
 	}
 	
 	/*
@@ -194,7 +194,7 @@ void *worker(void *threadarg) {
 	
 	
 	/*
-	 *	Maintain a running sum of data
+	 *	Add to powder if it's a hit or if we wish to generateDarkcal(member data of global)
 	 */
 	addToPowder(threadInfo, global, &hit);
 	
@@ -204,11 +204,26 @@ void *worker(void *threadarg) {
 	 *	If this is a hit, write out to our favourite HDF5 format
 	 */
 	if(global->hdf5dump) 
-		writeHDF5(threadInfo, global);
-	else if(hit.standard && global->savehits)
-		writeHDF5(threadInfo, global);
-	else
-		printf("r%04u:%i (%3.1fHz): Processed (npeaks=%i)\n", global->runNumber,threadInfo->threadNum,global->datarate, threadInfo->nPeaks);
+		writeHDF5(threadInfo, global, threadInfo->eventname, global->hitfinder.cleanedfp);
+	else {
+		if(hit.standard && global->hitfinder.savehits)
+			writeHDF5(threadInfo, global, threadInfo->eventname, global->hitfinder.cleanedfp);
+
+		char eventname[1024];
+		if(hit.water && global->waterfinder.savehits) {
+			sprintf(eventname,"%s_waterhit",threadInfo->eventname);
+			writeHDF5(threadInfo, global, eventname, global->waterfinder.cleanedfp);
+		}
+		if(hit.ice && global->icefinder.savehits) {
+			sprintf(eventname,"%s_icehit",threadInfo->eventname);
+			writeHDF5(threadInfo, global, eventname, global->icefinder.cleanedfp);
+		}
+		if(!hit.background && global->backgroundfinder.savehits) {
+			sprintf(eventname,"%s_background",threadInfo->eventname);
+			writeHDF5(threadInfo, global, eventname, global->backgroundfinder.cleanedfp);
+		}
+	}
+	printf("r%04u:%i (%3.1fHz): Processed (npeaks=%i)\n", global->runNumber,threadInfo->threadNum,global->datarate, threadInfo->nPeaks);
 
 	
 
@@ -311,7 +326,24 @@ void killHotpixels(tThreadInfo *threadInfo, cGlobal *global){
  *	Maintain running powder patterns
  */
 void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
-	
+
+    if (global->generateDarkcal){
+		// Sum raw format data
+		pthread_mutex_lock(&global->powdersum1_mutex);
+		global->npowder += 1;
+		for(long i=0; i<global->pix_nn; i++)
+			global->powderRaw[i] += threadInfo->corrected_data[i];
+		pthread_mutex_unlock(&global->powdersum1_mutex);
+        
+        
+		// Sum assembled data
+		pthread_mutex_lock(&global->powdersum2_mutex);
+		for(long i=0; i<global->image_nn; i++)
+            global->powderAssembled[i] += threadInfo->image[i];
+		pthread_mutex_unlock(&global->powdersum2_mutex);
+	}
+
+    
 	if (hit->standard){
 		// Sum raw format data
 		pthread_mutex_lock(&global->powdersum1_mutex);
@@ -472,14 +504,14 @@ void nameEvent(tThreadInfo *info, cGlobal *global){
 	timestatic=localtime_r( &eventTime, &timelocal );	
 	strftime(buffer1,80,"%Y_%b%d",&timelocal);
 	strftime(buffer2,80,"%H%M%S",&timelocal);
-	sprintf(info->eventname,"LCLS_%s_r%04u_%s_%x_cspad.h5",buffer1,global->runNumber,buffer2,info->fiducial);
+	sprintf(info->eventname,"LCLS_%s_r%04u_%s_%x_cspad",buffer1,global->runNumber,buffer2,info->fiducial);
 }
 	
 	
 /*
  *	Write out processed data to our 'standard' HDF5 format
  */
-void writeHDF5(tThreadInfo *info, cGlobal *global){
+void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp){
 	/*
 	 *	Create filename based on date, time and fiducial for this image
 	 */
@@ -495,11 +527,12 @@ void writeHDF5(tThreadInfo *info, cGlobal *global){
 	//strftime(buffer2,80,"%H%M%S",&timelocal);
 	//sprintf(outfile,"LCLS_%s_r%04u_%s_%x_cspad.h5",buffer1,global->runNumber,buffer2,info->fiducial);
 
-	strcpy(outfile, info->eventname);
+	sprintf(outfile,"%s.h5",eventname);
+	//strcpy(outfile, info->eventname);
 	printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n",global->runNumber, info->threadNum,global->datarate, outfile);
 
 	pthread_mutex_lock(&global->framefp_mutex);
-	fprintf(global->cleanedfp, "r%04u/%s, %i\n",global->runNumber, info->eventname, info->nPeaks);
+	fprintf(hitfp, "r%04u/%s, %i\n",global->runNumber, info->eventname, info->nPeaks);
 	pthread_mutex_unlock(&global->framefp_mutex);
 	
 		
