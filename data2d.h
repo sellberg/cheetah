@@ -1,3 +1,6 @@
+#ifndef _data2d_h
+#define _data2d_h
+
 /*
  *  data2d.h
  *  cheetah
@@ -45,3 +48,4 @@ private:
 };
 
 
+#endif

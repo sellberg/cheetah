@@ -91,7 +91,10 @@ commonmode.o: commonmode.cpp commonmode.h
 background.o: background.cpp background.h 
 	$(CPP) $(CFLAGS) $<
 
-cheetah: cheetah.o setup.o worker.o data2d.o hitfinder.o commonmode.o background.o $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
+correlation.o: correlation.cpp correlation.h 
+	$(CPP) $(CFLAGS) $<
+
+cheetah: cheetah.o setup.o worker.o data2d.o hitfinder.o commonmode.o correlation.o background.o $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
 	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^
 
 

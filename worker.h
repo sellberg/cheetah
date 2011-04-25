@@ -1,3 +1,5 @@
+#ifndef _worker_h
+#define _worker_h
 /*
  *  worker.h
  *  cheetah
@@ -17,8 +19,15 @@
  *	You should have received a copy of the GNU General Public License
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
+ 
+#include <stdio.h>
+#include <pthread.h>
 
+#include "cspad-gjw/CspadCorrector.hh"
+#include "release/pdsdata/cspad/ConfigV1.hh"
+#include "release/pdsdata/cspad/ConfigV2.hh"
 
+#include "setup.h"
 
 /*
  *	Structure to hold various hit parameters
@@ -139,3 +148,4 @@ void saveRunningSums(cGlobal*);
 
 
 
+#endif

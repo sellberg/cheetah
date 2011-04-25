@@ -1,3 +1,5 @@
+#ifndef _background_h
+#define _background_h
 /*
  *  background.h
  *  cheetah
@@ -17,6 +19,9 @@
  *	You should have received a copy of the GNU General Public License
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
+ 
+#include "setup.h"
+#include "worker.h"
 
 /*
  *	Function prototypes
@@ -24,3 +29,4 @@
 void updatePersistentBackground(tThreadInfo*, cGlobal*, int);
 void subtractPersistentBackground(tThreadInfo*, cGlobal*);
 
+#endif

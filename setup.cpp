@@ -29,9 +29,7 @@
 #include "cspad-gjw/CspadCorrector.hh"
 #include "cspad-gjw/CspadGeometry.hh"
 
-#include <stdio.h>
 #include <string.h>
-#include <pthread.h>
 #include <sys/time.h>
 #include <math.h>
 #include <hdf5.h>
@@ -140,6 +138,9 @@ void cGlobal::defaultConfiguration(void) {
 	// Powder pattern generation
 	powdersum = 1;
 	powderthresh = 0;
+    
+    // Correlation analysis
+    correlationUse = 0;
 	
 	// Saving options
 	//savehits = 0;
@@ -201,7 +202,8 @@ void cGlobal::setup() {
 	pthread_mutex_init(&selfdark_mutex, NULL);
 	pthread_mutex_init(&powdersum1_mutex, NULL);
 	pthread_mutex_init(&powdersum2_mutex, NULL);
-	pthread_mutex_init(&nhits_mutex, NULL);
+	pthread_mutex_init(&correlation_mutex, NULL);
+    pthread_mutex_init(&nhits_mutex, NULL);
 	pthread_mutex_init(&framefp_mutex, NULL);
 	pthread_mutex_init(&icesumraw_mutex, NULL);
 	pthread_mutex_init(&icesumassembled_mutex, NULL);
@@ -345,6 +347,7 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	
 	/*
 	 *	Convert to lowercase
+     *  --> config file is not case sensitive!
 	 */
 	for(int i=0; i<strlen(tag); i++) 
 		tag[i] = tolower(tag[i]);
@@ -406,6 +409,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "powdersum")) {
 		powdersum = atoi(value);
+	}
+	else if (!strcmp(tag, "usecorrelation")) {
+		correlationUse = atoi(value);
 	}
 	else if (!strcmp(tag, "saveraw")) {
 		saveRaw = atoi(value);

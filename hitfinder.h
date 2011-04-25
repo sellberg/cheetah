@@ -1,3 +1,5 @@
+#ifndef _hitfinder_h
+#define _hitfinder_h
 /*
  *  hitfinder.h
  *  cheetah
@@ -18,8 +20,13 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
 
+#include "setup.h"
+#include "worker.h"
+
 /*
  *	Function prototypes
  */
 int  hitfinder(tThreadInfo*, cGlobal*, cHitfinder*);
 
+
+#endif

@@ -1,5 +1,7 @@
+#ifndef _setup_h
+#define _setup_h
 /*
- *  setup.cpp
+ *  setup.h
  *  cheetah
  *
  *  Created by Anton Barty on 7/2/11.
@@ -17,6 +19,9 @@
  *	You should have received a copy of the GNU General Public License
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
+
+#include <stdio.h>
+#include <pthread.h>
 
 
 /*
@@ -105,6 +110,9 @@ public:
 	int			powdersum;			 // Not implemented (I guess it should say whether to calculate the powder or not)
 	int			powderthresh;			 // pixels with an ADC value above this threshold will be added to the powder
 	int			saveInterval;			 // powder pattern is repeatedly saved according to this interval
+    
+    // Correlation analysis
+    int         correlationUse;     // set to nonzero to turn on angular cross correlation module
 	
 	// Saving options
 	//int			savehits;			 // set to save hits
@@ -143,7 +151,8 @@ public:
 	pthread_mutex_t	selfdark_mutex;
 	pthread_mutex_t	powdersum1_mutex;
 	pthread_mutex_t	powdersum2_mutex;
-	pthread_mutex_t	nhits_mutex;
+	pthread_mutex_t correlation_mutex;
+    pthread_mutex_t	nhits_mutex;
 	pthread_mutex_t	framefp_mutex;
 	pthread_mutex_t	watersumassembled_mutex;
 	pthread_mutex_t	watersumraw_mutex;
@@ -214,3 +223,4 @@ private:
 	
 };
 
+#endif

@@ -21,26 +21,22 @@
 #include "myana/myana.hh"
 #include "myana/main.hh"
 #include "myana/XtcRun.hh"
-#include "release/pdsdata/cspad/ConfigV1.hh"
-#include "release/pdsdata/cspad/ConfigV2.hh"
 #include "release/pdsdata/cspad/ElementHeader.hh"
 #include "release/pdsdata/cspad/ElementIterator.hh"
 #include "cspad-gjw/CspadTemp.hh"
-#include "cspad-gjw/CspadCorrector.hh"
 #include "cspad-gjw/CspadGeometry.hh"
 
-#include <stdio.h>
 #include <string.h>
-#include <pthread.h>
 #include <math.h>
 #include <hdf5.h>
 #include <stdlib.h>
 
-#include "setup.h"
+
 #include "worker.h"
 #include "hitfinder.h"
 #include "commonmode.h"
 #include "background.h"
+#include "correlation.h"
 
 
 /*
@@ -183,6 +179,8 @@ void *worker(void *threadarg) {
 		printf("r%04u:%i (%3.1fHz): Digesting initial frames\n", global->runNumber, threadInfo->threadNum,global->datarate);
 		threadInfo->image = NULL;
 		goto cleanup;
+        //ATTENTION! goto should not be used at all ( see http://www.cplusplus.com/forum/general/29190/ )
+        //should be replaced by a while loop with a break statement... by JF (2011/04/25)
 	}
 
 	
@@ -198,8 +196,15 @@ void *worker(void *threadarg) {
 	 */
 	addToPowder(threadInfo, global, &hit);
 	
-	
-	
+	/*
+     *  Perform cross-correlation analysis
+     */
+    if (global->correlationUse){
+        pthread_mutex_lock(&global->powdersum1_mutex);
+        correlate(threadInfo, global);
+        pthread_mutex_unlock(&global->powdersum1_mutex);
+	}
+    
 	/*
 	 *	If this is a hit, write out to our favourite HDF5 format
 	 */

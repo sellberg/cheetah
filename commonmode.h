@@ -1,3 +1,5 @@
+#ifndef _commonmode_h
+#define _commonmode_h
 /*
  *  commonmode.h
  *  cheetah
@@ -18,8 +20,14 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
 
+#include "setup.h"
+#include "worker.h"
+
 /*
  *	Function prototypes
  */
 void cmModuleSubtract(tThreadInfo*, cGlobal*);
 void cmSubModuleSubtract(tThreadInfo*, cGlobal*);
+
+
+#endif
