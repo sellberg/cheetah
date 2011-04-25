@@ -18,6 +18,8 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
 
+#ifndef _SETUP_H
+#define _SETUP_H
 
 /*
  *	Structure for hitfinder parameters
@@ -41,7 +43,6 @@ public:
 	int16_t			*peakmask;		//stores the peakmask from the file peakmaskFile
 	FILE			*cleanedfp;		// file name where the hits of this hitfinder are written.
 };
-
 
 
 /*
@@ -91,6 +92,10 @@ public:
 	int			hotpixADC;			 // threshold above which to count as hot pixels
 	int			hotpixMemory;			 // number of frames to look for hot pixels in
 	float		hotpixFreq;				 // hot often a pixel needs to be above the threshold to be regarded as hot.
+	
+	// Attenuation correction
+	int			useAttenuationCorrection;		// Whether to correct each event's intensity with the calculated attenuation
+	char		attenuationFile[1024];			// Name of the file containing the attenuation list
 	
 	int			startFrames;			 // number of frames to use for forming initial background and hot pixel estimate (no frames outputed; digesting)
 	
@@ -165,6 +170,20 @@ public:
 	long			image_nn;
 	
 	
+	// Attenuation variables
+	unsigned		nFilters;		// Counter for Si filters in XRT
+	unsigned		nThicknesses;	// Counter for number of possible thicknesses
+	unsigned		*filterThicknesses;		// Pointer to array of filter thicknesses
+	unsigned		*possibleThicknesses;	// Pointer to array of all possible combinations of filter thicknesses
+	double			*possibleAttenuations;	// Pointer to array of all possible attenuations obtained from possibleThicknesses
+	double			*attenuations;	// Pointer to dynamic array of all calculated attenuations during the run
+	unsigned		*changedAttenuationEvents;		// Pointer to dynamic array of all events where the attenuation changed during the run
+	unsigned		*totalThicknesses;		// Pointer to dynamic array of all total thicknesses from used Si filters during the run
+	unsigned		attenuationCapacity;	// Allocated size of dynamic attenuation array
+	unsigned		nAttenuations;	// Number of attenuations saved in attenuation array
+	int				attenuationOffset;		// Integer to compensate for the offset of nevents w.r.t. the recorded attenuations
+
+	
 	// Common variables
 	int32_t			*darkcal;		//stores darkcal from the file darkcalFile
 	int64_t			*powderRaw;		//stores powder pattern in raw format
@@ -181,7 +200,7 @@ public:
 	long			npowder;		// number of frames in the powder??
 	long			nprocessedframes;	// number of frames that have been processed by the worker program
 	long			nhits;			// number of hits that have been found
-	double			detectorZ;		// mm (?); position of the detector along the beam direction
+	double			detectorZ;		// position (mm) of the detector along the beam direction
 	
 	clock_t			lastclock;		// variables for keeping track of time the program has been running
 	timeval			lasttime;	
@@ -202,7 +221,9 @@ public:
 	void readBadpixelMask(char *);
 	void readIcemask(char *);
 	void readWatermask(char *);
-	void readBackgroundmask(char *);	
+	void readBackgroundmask(char *);
+	void readAttenuations(char *);
+	void expandAttenuationCapacity();
 
 	void writeInitialLog(void);			// functions to write the log file
 	void updateLogfile(void);			
@@ -214,3 +235,4 @@ private:
 	
 };
 
+#endif

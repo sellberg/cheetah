@@ -134,7 +134,6 @@ void *worker(void *threadarg) {
 	}
 	
 	
-	
 	/*
 	 *	Hitfinding
 	 */
@@ -184,7 +183,15 @@ void *worker(void *threadarg) {
 		threadInfo->image = NULL;
 		goto cleanup;
 	}
-
+	
+	
+	/*
+	 *	Apply attenuation correction
+	 */
+	if(global->useAttenuationCorrection) {
+		applyAttenuationCorrection(threadInfo, global);
+	}
+	
 	
 	/*
 	 *	Assemble quadrants into a 'realistic' 2D image
@@ -320,7 +327,18 @@ void killHotpixels(tThreadInfo *threadInfo, cGlobal *global){
 	pthread_mutex_unlock(&global->hotpixel_mutex);
 	threadInfo->nHot = nhot;
 }
+
+
+/*
+ *	Apply attenuation correction
+ */
+void applyAttenuationCorrection(tThreadInfo *threadInfo, cGlobal *global){
 	
+	for(long i=0; i<global->pix_nn; i++) 
+		threadInfo->corrected_data[i] *= threadInfo->attenuation;
+
+}
+
 
 /*
  *	Maintain running powder patterns
@@ -717,7 +735,13 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	
 	// Motor positions
 	dataset_id = H5Dcreate1(hdf_fileID, "/LCLS/detectorPosition", H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT);
-	H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &global->detectorZ );	
+	H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &info->detectorPosition );	
+	H5Dclose(dataset_id);
+	
+	
+	// Attenuation
+	dataset_id = H5Dcreate1(hdf_fileID, "/LCLS/attenuation", H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT);
+	H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &info->attenuation );	
 	H5Dclose(dataset_id);
 	
 	

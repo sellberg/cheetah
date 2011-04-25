@@ -28,7 +28,6 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "myana/myana.hh"
 #include "myana/main.hh"
 #include "myana/XtcRun.hh"
@@ -51,6 +50,7 @@
 
 #include "setup.h"
 #include "worker.h"
+#include "attenuation.h"
 
 
 static cGlobal		global;
@@ -151,6 +151,7 @@ void beginjob() {
 	global.readIcemask(global.icefinder.peaksearchFile);
 	global.readWatermask(global.waterfinder.peaksearchFile);
 	global.readBackgroundmask(global.backgroundfinder.peaksearchFile);
+	global.readAttenuations(global.attenuationFile);
 }
 
 
@@ -239,7 +240,7 @@ void event() {
 		fail = getEvrData( i, eventCode, fiducial, timeStamp );
 	}
 	// EventCode==140 = Beam On
-	
+	//printf("fiducial: %x\n", fiducial);
 	
 	
 	/*
@@ -369,8 +370,43 @@ void event() {
 	}
 
 	
-	
 
+	/*
+	 *	Attenuation information is only saved for every 1/123 event
+	 */
+	if ((nevents-global.attenuationOffset) % 123 == 0) {
+		
+		/*
+		 *	Get total thickness for Si filters in XRT
+		 */
+		unsigned totalThickness;
+		fail = getSiThickness(totalThickness, global.nFilters, global.filterThicknesses);
+		// std::cout << "Total thickness: " << totalThickness << endl;
+		if (fail) {
+			std::cout << "Failed to retrieve attenuation for EVENT #" << nevents+1 << " [failcode " << fail << "]" << endl;
+			if (fail == 30) global.attenuationOffset++;
+		} else {
+		
+			/*
+			 *	Calculate attenuation from Si filters
+			 */
+			double attenuation;
+			attenuation = getAttenuation(totalThickness, global.nThicknesses, global.possibleThicknesses, global.possibleAttenuations);
+			// std::cout << "Calculated attenuation is: " << attenuation << endl;
+		
+			/*
+			 *	Add attenuation to dynamic array
+			 */
+			if (global.nAttenuations >= global.attenuationCapacity) global.expandAttenuationCapacity();
+			if (global.nAttenuations == 0 || global.attenuations[global.nAttenuations-1] != attenuation) {
+				global.attenuations[global.nAttenuations] = attenuation;
+				global.changedAttenuationEvents[global.nAttenuations] = nevents+1;
+				global.totalThicknesses[global.nAttenuations++] = totalThickness;
+			}
+		}
+	}
+	
+	
 	/*
 	 *	Create a new threadInfo structure in which to place all information
 	 */
@@ -408,6 +444,10 @@ void event() {
 	threadInfo->phaseCavityTime2 = phaseCavityTime2;
 	threadInfo->phaseCavityCharge1 = phaseCavityCharge1;
 	threadInfo->phaseCavityCharge1 = phaseCavityCharge2;
+	
+	threadInfo->detectorPosition = global.detectorZ;
+	
+	threadInfo->attenuation = global.attenuations[global.nAttenuations-1];	// 1/transmission taken from last succesful readout of the Si filters
 	
 	threadInfo->pGlobal = &global;
 	
@@ -547,6 +587,14 @@ void endjob()
 	// Save powder patterns
 	saveRunningSums(&global);
 	global.writeFinalLog();
+
+	
+	// Attenuation?
+	printf("%i attenuations calculated:\n", global.nAttenuations);
+	for (int i=0; i<global.nAttenuations; i++) {
+		std::cout << "\t" << global.attenuations[i] << " [first recorded for EVENT #" << global.changedAttenuationEvents[i] << "] corresponding to " << global.totalThicknesses[i] << " um Si" << endl;
+	}
+	
 	
 	// Hitrate?
 	printf("%i files processed, %i hits (%2.2f%%)\n",global.nprocessedframes, global.nhits, 100.*( global.nhits / (float) global.nprocessedframes));
@@ -567,7 +615,14 @@ void endjob()
 	free(global.icefinder.peakmask);
 	free(global.waterfinder.peakmask);
 	free(global.backgroundfinder.peakmask);
-
+	
+	delete[] global.filterThicknesses;
+	delete[] global.possibleThicknesses;
+	delete[] global.possibleAttenuations;
+	delete[] global.attenuations;
+	delete[] global.changedAttenuationEvents;
+	delete[] global.totalThicknesses;
+	
 	pthread_mutex_destroy(&global.nActiveThreads_mutex);
 	pthread_mutex_destroy(&global.powdersum1_mutex);
 	pthread_mutex_destroy(&global.powdersum2_mutex);

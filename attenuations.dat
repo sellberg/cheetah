@@ -1,0 +1,57 @@
+# List of attenuations (transmitted intensities) from silicon filters
+# Written by Jonas Sellberg, 2011-04-17
+# Calculated using http://henke.lbl.gov/optical_constants/filter2.html
+# with Si density 2.33 g/cm3 and photon energy 9367 eV for Feb LCLS measurement
+# The possible attenuations ranges from 0 um to 20460 um in 20 um steps
+# So far only 0-1000 um attenuations have been added
+1.00000
+0.83427
+0.69600
+0.58065
+0.48442
+0.40414
+0.33716
+0.28128
+0.23466
+0.19577
+0.16333
+0.13626
+0.11368
+0.094836
+0.079118
+0.066006
+0.055067
+0.045940
+0.038327
+0.031975
+0.026675
+0.022254
+0.018566
+0.015489
+0.012922
+0.010781
+0.0089938
+0.0075033
+0.0062597
+0.0052223
+0.0043568
+0.0036347
+0.0030323
+0.0025298
+0.0021105
+0.0017607
+0.0014689
+0.0012255
+0.0010224
+0.00085294
+0.00071158
+0.00059365
+0.00049526
+0.00041318
+0.00034470
+0.00028757
+0.00023991
+0.00020015
+0.00016698
+0.00013931
+0.00011622

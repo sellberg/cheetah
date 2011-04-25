@@ -37,10 +37,13 @@
 #include <hdf5.h>
 #include <fenv.h>
 #include <stdlib.h>
+#include <iostream>
+#include <fstream>
 
 #include "setup.h"
 #include "worker.h"
 #include "data2d.h"
+#include "attenuation.h"
 
 
 /*
@@ -86,6 +89,10 @@ void cGlobal::defaultConfiguration(void) {
 	hotpixFreq = 0.9;
 	hotpixADC = 1000;
 	hotpixMemory = 50;
+	
+	// Attenuation correction
+	useAttenuationCorrection = 0;
+	strcpy(attenuationFile, "attenuations.dat");
 	
 	// Hitfinding
 	
@@ -248,7 +255,31 @@ void cGlobal::setup() {
 	runNumber = getRunNumber();
 	time(&tstart);
 	avgGMD = 0;
-
+	
+	/*
+	 *	Setup global attenuation variables
+	 */
+	nFilters = 10; // Counter for Si filters in XRT
+	filterThicknesses = new unsigned[nFilters]; // Array of filter thicknesses
+	for (int i=0; i<nFilters; i++) {
+		filterThicknesses[i] = int(20*pow(2,i));
+	}
+	nThicknesses = 1; // Counter for number of possible thicknesses (0 um => counter starts at 1)
+	for (int i=1; i<=nFilters; i++) {
+		nThicknesses += factorial(nFilters)/(factorial(nFilters-i)*factorial(i));
+	} // 1023 combinations added
+	possibleThicknesses = new unsigned[nThicknesses]; // Array of all possible combinations of filter thicknesses
+	for (int i=0; i<=nThicknesses; i++) {
+		possibleThicknesses[i] = 20*i;
+	}
+	possibleAttenuations = new double[nThicknesses]; // Array of all possible attenuations obtained from possibleThicknesses
+	attenuationCapacity = 100; // Starting capacity of dynamic array
+	attenuations = new double[attenuationCapacity]; // Dynamic array of all calculated attenuations during the run
+	changedAttenuationEvents = new unsigned[attenuationCapacity]; // Dynamic array of all events where the attenuation changed during the run
+	totalThicknesses = new unsigned[attenuationCapacity]; // Dynamic array of all total thicknesses from used Si filters during the run
+	nAttenuations = 0; // Number of attenuations saved in attenuation array
+	attenuationOffset = 0; // Integer to compensate for the offset of nevents w.r.t. the recorded attenuations
+	
 	// Make sure to use SLAC timezone!
 	setenv("TZ","US/Pacific",1);
 	
@@ -370,6 +401,10 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "badpixelmask")) {
 		strcpy(badpixelFile, value);
 	}
+	else if (!strcmp(tag, "attenuation")) {
+		strcpy(attenuationFile, value);
+	}
+	
 	// Processing options
 	else if (!strcmp(tag, "subtractcmmodule")) {
 		cmModule = atoi(value);
@@ -425,8 +460,10 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "usesubtractpersistentbackground")) {
 		useSubtractPersistentBackground = atoi(value);
 	}
+	else if (!strcmp(tag, "useattenuationcorrection")) {
+		useAttenuationCorrection = atoi(value);
+	}
 	
-
 	// Power user settings
 	else if (!strcmp(tag, "cmfloor")) {
 		cmFloor = atof(value);
@@ -473,9 +510,6 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "hitfindermaxpixcount")) {
 		hitfinder.MaxPixCount = atoi(value);
 	}
-	
-	
-	
 	else if (!strcmp(tag, "hitfinderusepeakmask")) {
 		hitfinder.UsePeakmask = atoi(value);
 	}
@@ -494,7 +528,6 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "startframes")) {
 		startFrames = atoi(value);
 	}
-	
 	
 	/* 	
 	 *	Tags for water, ice, background finder
@@ -609,7 +642,6 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "savebackgroundhits")) {
 		backgroundfinder.savehits = atoi(value);
 	}
-
 
 	// Unknown tags
 	else {
@@ -929,6 +961,67 @@ void cGlobal::readBadpixelMask(char *filename){
 
 
 /*
+ *	Read in list of attenuations
+ */
+void cGlobal::readAttenuations(char *filename) {
+	
+	printf("Reading list of attenuations:\n");
+	printf("\t%s\n",filename);
+	
+	std::ifstream infile;
+	infile.open(filename);
+	if (infile.fail()) {
+		std::cout << "\tUnable to open " << filename << endl;
+		infile.clear();
+		printf("\tReading default list of attenuations\n");
+		infile.open("attenuations.dat");
+		if (infile.fail()) {
+			std::cout << "\tUnable to open default file" << endl;
+			infile.clear();
+			printf("\tDisabling atteunation correction\n");
+			useAttenuationCorrection = 0;
+			return;
+		}
+	}
+
+	std::string line;
+	int counter = 0;
+	while (true) {
+		getline(infile, line);
+		if (infile.fail()) break;
+		if (line[0] != '#') {
+			if (!fromString<double>(possibleAttenuations[counter], line, dec)) {
+				std::cout << "\tConversion of string to double failed" << endl;
+			}
+			counter++;
+		}
+	}
+}
+
+
+/*
+ *	Expand capacity of dynamic attenuation arrays
+ */
+void cGlobal::expandAttenuationCapacity() {
+	attenuationCapacity *= 2;
+	double *oldAttenuations = attenuations;
+	attenuations = new double[attenuationCapacity];
+	unsigned *oldChangedAttenuations = changedAttenuationEvents;
+	changedAttenuationEvents = new unsigned[attenuationCapacity];
+	unsigned *oldTotalThicknesses = totalThicknesses;
+	totalThicknesses = new unsigned[attenuationCapacity];		
+	for (int i=0; i<nAttenuations; i++) {
+		attenuations[i] = oldAttenuations[i];
+		changedAttenuationEvents[i] = oldChangedAttenuations[i];
+		totalThicknesses[i] = oldTotalThicknesses[i];
+	}
+	delete[] oldAttenuations;
+	delete[] oldChangedAttenuations;
+	delete[] oldTotalThicknesses;
+}
+
+
+/*
  *	Write initial log file
  */
 void cGlobal::writeInitialLog(void){
@@ -1230,3 +1323,4 @@ void cGlobal::readBackgroundmask(char *filename){
 	for(long i=0;i<pix_nn;i++)
 		backgroundfinder.peakmask[i] = (int16_t) temp2d.data[i];
 }
+

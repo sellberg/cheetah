@@ -17,11 +17,8 @@ ARCH 			= x86_64-linux
 
 MYANADIR		= myana
 CSPADDIR		= cspad-gjw
-#LCLSDIR 		= /reg/neh/home/barty/c/cspad-cryst/release
 LCLSDIR 		= release
 HDF5DIR 		= /reg/neh/home/barty/hdf5
-#LCLSDIR 		= /cfel/user/barty/c/cspad-cryst/release
-#HDF5DIR 		= /cfel/common
 ROOTSYS			= /reg/g/pcds/package/root
 OBJFILES		= main.o XtcRun.o
 
@@ -57,10 +54,10 @@ $(CSPADDIR)/myana_cspad-gjw.o: $(CSPADDIR)/myana_cspad-gjw.cc
 
 $(CSPADDIR)/CspadTemp.o: $(CSPADDIR)/CspadTemp.cc $(CSPADDIR)/CspadTemp.hh
 	$(CPP) $(CFLAGS) -o $(CSPADDIR)/CspadTemp.o $<
-	
+
 $(CSPADDIR)/CspadGeometry.o: $(CSPADDIR)/CspadGeometry.cc $(CSPADDIR)/CspadGeometry.hh
 	$(CPP) $(CFLAGS) -o $(CSPADDIR)/CspadGeometry.o $<
-	
+
 $(CSPADDIR)/CspadCorrector.o: $(CSPADDIR)/CspadCorrector.cc $(CSPADDIR)/CspadCorrector.hh
 	$(CPP) $(CFLAGS) -o $(CSPADDIR)/CspadCorrector.o $<
 
@@ -82,34 +79,29 @@ setup.o: setup.cpp setup.h
 data2d.o: data2d.cpp data2d.h 
 	$(CPP) $(CFLAGS) $<
 
-hitfinder.o: hitfinder.cpp hitfinder.h 
+commonmode.o: commonmode.cpp commonmode.h
 	$(CPP) $(CFLAGS) $<
 
-commonmode.o: commonmode.cpp commonmode.h 
+background.o: background.cpp background.h
 	$(CPP) $(CFLAGS) $<
 
-background.o: background.cpp background.h 
+hitfinder.o: hitfinder.cpp hitfinder.h
 	$(CPP) $(CFLAGS) $<
 
-cheetah: cheetah.o setup.o worker.o data2d.o hitfinder.o commonmode.o background.o $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
+attenuation.o: attenuation.cpp attenuation.h
+	$(CPP) $(CFLAGS) $<
+
+cheetah: cheetah.o setup.o worker.o data2d.o attenuation.o commonmode.o background.o hitfinder.o $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
 	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^
 
 
 
 # test data
-test: cheetah
-	#./cheetah -f ~gjwillms/cfel-cspad/e40-r0549-s00-c00.xtc -n 2
-	#./cheetah -f ~gjwillms/cfel-cspad/e55-r0435-s00-c00.xtc -n 2
-	./cheetah -f ~gjwillms/cfel-cspad/e55-r0461-s00-c00.xtc -n 2
+test: cspad_cryst
+	./cspad_cryst -f ~gjwillms/cfel-cspad/e55-r0461-s00-c00.xtc -n 2
 
-gdb: cheetah
-	#gdb ./cheetah -f ~gjwillms/cfel-cspad/e40-r0549-s00-c00.xtc -n 2
-	#gdb ./cheetah -f ~gjwillms/cfel-cspad/e55-r0435-s00-c00.xtc -n 2
-	gdb ./cheetah -f ~gjwillms/cfel-cspad/e55-r0461-s00-c00.xtc -n 2
+gdb: cspad_cryst
+	gdb ./cspad_cryst -f ~gjwillms/cfel-cspad/e55-r0461-s00-c00.xtc -n 2
 
-valgrind: cheetah
-	#valgrind ./cheetah -f ~gjwillms/cfel-cspad/e40-r0549-s00-c00.xtc -n 2
-	#valgrind ./cheetah -f ~gjwillms/cfel-cspad/e55-r0435-s00-c00.xtc -n 2
-	valgrind ./cheetah -f ~gjwillms/cfel-cspad/e55-r0461-s00-c00.xtc -n 2
-
-	
+valgrind: cspad_cryst
+	valgrind ./cspad_cryst -f ~gjwillms/cfel-cspad/e55-r0461-s00-c00.xtc -n 2

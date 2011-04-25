@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # Usage:
 # In this directory, type:
 #    ./viewRun.py -rxxxx
@@ -5,7 +7,6 @@
 # By default, this script looks into the h5 files that are in the appropriate rxxxx directory
 #
 
-#!/usr/bin/python
 import numpy as N
 import h5py as H
 import matplotlib
@@ -45,7 +46,7 @@ h5pattern = re.compile(searchstring)
 h5files = [h5pattern.findall(x) for x in os.listdir(source_dir+runtag)]
 h5files = [items for sublists in h5files for items in sublists]
 
-colmax = 10000
+colmax = 1000
 colmin = 0
 
 ########################################################

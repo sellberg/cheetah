@@ -18,7 +18,8 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
 
-
+#ifndef _WORKER_H
+#define _WORKER_H
 
 /*
  *	Structure to hold various hit parameters
@@ -85,6 +86,8 @@ typedef struct {
 	double		phaseCavityCharge1;
 	double		phaseCavityCharge2;
 	
+	double		attenuation;		// 1/transmission taken from last succesful readout of the Si filters
+	
 	// Thread management
 	int		threadID;
 	
@@ -129,6 +132,7 @@ void subtractDarkcal(tThreadInfo*, cGlobal*);
 void applyGainCorrection(tThreadInfo*, cGlobal*);
 void applyBadPixelMask(tThreadInfo*, cGlobal*);
 void killHotpixels(tThreadInfo*, cGlobal*);
+void applyAttenuationCorrection(tThreadInfo*, cGlobal*);
 void addToPowder(tThreadInfo*, cGlobal*, cHit*);
 void assemble2Dimage(tThreadInfo*, cGlobal*);
 void nameEvent(tThreadInfo*, cGlobal*);
@@ -137,5 +141,4 @@ void writeSimpleHDF5(const char*, const void*, int, int, int);
 void saveRunningSums(cGlobal*);
 
 
-
-
+#endif

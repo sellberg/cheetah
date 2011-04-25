@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # Usage:
 # In this directory, type:
 #    ./viewAssembledSum.py -rxxxx -a (optional) -m 10000
@@ -7,7 +9,6 @@
 # By default, this script looks into the h5 files that are in the appropriate rxxxx directory
 #
 
-#!/usr/bin/python
 import os
 import sys
 import string
