@@ -18,6 +18,9 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
 
+#ifndef _data2d_h
+#define _data2d_h
+
 #define	tData2d	float
 
 class cData2d {
@@ -44,4 +47,4 @@ private:
 	
 };
 
-
+#endif

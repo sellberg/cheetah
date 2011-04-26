@@ -29,9 +29,7 @@
 #include "cspad-gjw/CspadCorrector.hh"
 #include "cspad-gjw/CspadGeometry.hh"
 
-#include <stdio.h>
 #include <string.h>
-#include <pthread.h>
 #include <sys/time.h>
 #include <math.h>
 #include <hdf5.h>
@@ -147,9 +145,11 @@ void cGlobal::defaultConfiguration(void) {
 	// Powder pattern generation
 	powdersum = 1;
 	powderthresh = 0;
+    
+	// Correlation analysis
+	useCorrelation = 0;
 	
 	// Saving options
-	//savehits = 0;
 	saveRaw = 0;
 	hdf5dump = 0;
 	saveInterval = 500;
@@ -208,7 +208,8 @@ void cGlobal::setup() {
 	pthread_mutex_init(&selfdark_mutex, NULL);
 	pthread_mutex_init(&powdersum1_mutex, NULL);
 	pthread_mutex_init(&powdersum2_mutex, NULL);
-	pthread_mutex_init(&nhits_mutex, NULL);
+	pthread_mutex_init(&correlation_mutex, NULL);
+    pthread_mutex_init(&nhits_mutex, NULL);
 	pthread_mutex_init(&framefp_mutex, NULL);
 	pthread_mutex_init(&icesumraw_mutex, NULL);
 	pthread_mutex_init(&icesumassembled_mutex, NULL);
@@ -376,6 +377,7 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	
 	/*
 	 *	Convert to lowercase
+     *  --> config file is not case sensitive!
 	 */
 	for(int i=0; i<strlen(tag); i++) 
 		tag[i] = tolower(tag[i]);
@@ -441,6 +443,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "powdersum")) {
 		powdersum = atoi(value);
+	}
+	else if (!strcmp(tag, "usecorrelation")) {
+		useCorrelation = atoi(value);
 	}
 	else if (!strcmp(tag, "saveraw")) {
 		saveRaw = atoi(value);
@@ -642,7 +647,7 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "savebackgroundhits")) {
 		backgroundfinder.savehits = atoi(value);
 	}
-
+	
 	// Unknown tags
 	else {
 		printf("\tUnknown tag (ignored): %s = %s\n",tag,value);
@@ -1323,4 +1328,3 @@ void cGlobal::readBackgroundmask(char *filename){
 	for(long i=0;i<pix_nn;i++)
 		backgroundfinder.peakmask[i] = (int16_t) temp2d.data[i];
 }
-

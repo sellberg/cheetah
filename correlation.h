@@ -1,9 +1,9 @@
 /*
- *  commonmode.h
+ *  correlation.h
  *  cheetah
  *
- *  Created by Anton Barty on 6/2/11.
- *  Copyright 2011 CFEL. All rights reserved.
+ *  Created by Jan Feldkamp on 25/April/11.
+ *  Copyright 2011 SLAC. All rights reserved.
  *
  *	You can modify this software under the terms of the GNU General Public License 
  *	as published by the Free Software Foundation, either version 3 of the License, or
@@ -18,8 +18,8 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
 
-#ifndef _commonmode_h
-#define _commonmode_h
+#ifndef _correlation_h
+#define _correlation_h
 
 #include "setup.h"
 #include "worker.h"
@@ -27,7 +27,6 @@
 /*
  *	Function prototypes
  */
-void cmModuleSubtract(tThreadInfo*, cGlobal*);
-void cmSubModuleSubtract(tThreadInfo*, cGlobal*);
+void correlate(tThreadInfo*, cGlobal*);
 
 #endif

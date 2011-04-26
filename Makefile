@@ -91,7 +91,10 @@ hitfinder.o: hitfinder.cpp hitfinder.h
 attenuation.o: attenuation.cpp attenuation.h
 	$(CPP) $(CFLAGS) $<
 
-cheetah: cheetah.o setup.o worker.o data2d.o attenuation.o commonmode.o background.o hitfinder.o $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
+correlation.o: correlation.cpp correlation.h
+	$(CPP) $(CFLAGS) $<
+
+cheetah: cheetah.o setup.o worker.o data2d.o commonmode.o background.o hitfinder.o attenuation.o correlation.o $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
 	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^
 
 

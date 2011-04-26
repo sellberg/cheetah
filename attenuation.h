@@ -21,8 +21,8 @@
  *along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
 
-#ifndef _ATTENUATION_H
-#define _ATTENUATION_H
+#ifndef _attenuation_h
+#define _attenuation_h
 
 #include <string>
 #include <sstream>
