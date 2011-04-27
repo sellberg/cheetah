@@ -3,6 +3,7 @@
  *  xcca
  *
  *  Created by Feldkamp on 2/17/11.
+ *  Last changed on 04/27/11.
  *  Copyright 2011 SLAC National Accelerator Laboratory. All rights reserved.
  *
  */
@@ -32,18 +33,12 @@ using std::endl;
 
 
 // ***********************************************************************************
-// constructor & destructor
+// constructors & destructor
 // ***********************************************************************************
-CrossCorrelator::CrossCorrelator(){
-	//initialize private variables
-	p_matrixSize = 101;
-	p_arraySize = (int)(matrixSize()*matrixSize());
-	p_qmax = 1.;
-	
-	// creating test array
-	printf("initializing class: creating test array...\n");
-
-
+CrossCorrelator::CrossCorrelator(int arraylength){
+    //set basic properties
+    setArraySize( arraylength );
+    setQmax(1.);
 
 	// create array for data storage
 	// data stored COL by COL from (0,0) in agreement with Sections 0,1 for quad 0 in the first column, 
@@ -51,7 +46,6 @@ CrossCorrelator::CrossCorrelator(){
 	// y (3rd column) decreases towards floor, 
 	// detector viewed from front (upstream)
 	data = new array1D(arraySize());
-	data2D = new array2D;
 	
 	// create arrays to keep track of pixel locations in x and y directions
 	qx = new array1D(arraySize());
@@ -64,12 +58,34 @@ CrossCorrelator::CrossCorrelator(){
 	qave = new array1D(arraySize());
 	iave = new array1D(arraySize());
 	phiave = new array1D(samplingAngle());
+
+}
+
+CrossCorrelator::CrossCorrelator( int16_t *dataCArray, int arraylength ){
+
+    //set basic properties, just like the default case
+    setArraySize( arraylength );
+    setQmax(1.);
+	
+    //special feature: copy data from array over to internal data structure
+    data = new array1D( dataCArray, arraylength );
+    
+    //allocate all other internal objects
+    qx = new array1D(arraySize());
+	qy = new array1D(arraySize());
+    
+	q = new array1D(arraySize());
+	phi = new array1D(arraySize());
+	
+	qave = new array1D(arraySize());
+	iave = new array1D(arraySize());
+	phiave = new array1D(samplingAngle());    
+    
 }
 
 CrossCorrelator::~CrossCorrelator(){
 	//free memory for objects
 	delete data;
-	delete data2D;
 	
 	delete qx;
 	delete qy;
@@ -84,12 +100,6 @@ CrossCorrelator::~CrossCorrelator(){
 
 
 
-void CrossCorrelator::initWithCArray( int16_t *dataCArray ){
-    cout << "NOT IMPLEMENTED YET" << endl;
-    
-}
-
-
 // ***********************************************************************************
 // load data from file
 //		type 0: HDF5 file (output from Anton's hit finder code
@@ -102,7 +112,6 @@ void CrossCorrelator::initFromFile( std::string filename, int type ){
 		case 0:
 			cout << "FILE READ FOR HDF5 UNDER CONSTRUCTION!!!!!!!" << endl;
 			//data->readFromHDF5( filename );
-			data2D->readFromHDF5( filename );
 			break;
 		case 1:
 			data->readFromRawBinary( filename );
@@ -193,8 +202,8 @@ void CrossCorrelator::calculateSAXS(){
 	printf("average SAXS intensity:\n");
 	
 	int counter = 0;
-	for (int i=0; i<samplingLength(); i++) {
-		qave[i] = i*deltaq();
+	for (unsigned int i=0; i<samplingLength(); i++) {
+		qave->set(i, i*deltaq());
 		double itot = 0;
 		counter = 0; // reset counter
 		for (int j=0; j<arraySize(); j++) {
@@ -367,10 +376,16 @@ void CrossCorrelator::writeSAXS(){
 // dump results
 // ***********************************************************************************
 void CrossCorrelator::dumpResults( std::string filename ){
-	cout << "Writing results to " << filename << endl;
-	
-	//data2D->writeToTiff( filename );
-    cout << "NOT PROPERLY IMPLEMENTED YET!" << endl;
+	cout << "Writing results to TIFF file '" << filename << "'." << endl;
+    
+    //convert data to 2D array class (using known dimensions)
+    int dim1 = matrixSize();                // not exact.... will have to change this soon
+    int dim2 = matrixSize();
+    array2D *dataTwoD = new array2D( data, dim1, dim2 );
+    
+    //write to tiff image
+    dataTwoD->writeToTiff( filename );
+    delete dataTwoD;
 }
 
 
@@ -401,21 +416,21 @@ void CrossCorrelator::printRawData(uint16_t *buffer,long lSize) {
 // ***********************************************************************************
 // setters and getters for private variables
 // ***********************************************************************************
-int CrossCorrelator::matrixSize(){
-	return p_matrixSize;
-}
-
-void CrossCorrelator::setMatrixSize( int matrixSize_val ){
-	p_matrixSize = matrixSize_val;
-	updateDependentVariables();
-}
-
 int CrossCorrelator::arraySize(){
 	return p_arraySize;
 }
 
 void CrossCorrelator::setArraySize( int arraySize_val ){
 	p_arraySize = arraySize_val;
+}
+
+int CrossCorrelator::matrixSize(){
+	return (int)floor(sqrt( (double)arraySize() ));            //assuming a square image
+}
+
+void CrossCorrelator::setMatrixSize( int matrixSize_val ){
+	setArraySize( matrixSize_val*matrixSize_val );
+	updateDependentVariables();
 }
 
 double CrossCorrelator::qmax(){
@@ -447,9 +462,9 @@ int CrossCorrelator::samplingLag(){					//getter only, dependent variable
 	return p_samplingLag;
 }
 
-void CrossCorrelator::updateDependentVariables(){		//update the values that depend on qmax, matrixSize
+void CrossCorrelator::updateDependentVariables(){		//update the values that depend on qmax and matrixSize
 	p_deltaq = 2*qmax()/(matrixSize()-1);
-	
+    
 	p_samplingLength = int(1/p_deltaq+1+0.001);
 	p_deltaphi = 2*atan(1/(2*(p_samplingLength-1.0)));
 	p_samplingAngle = (int) floor(2*M_PI/p_deltaphi);

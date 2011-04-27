@@ -41,15 +41,10 @@ using std::endl;
 //-------------------------------------------------------------------
 void correlate(tThreadInfo *threadInfo, cGlobal *global){
 
+    cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 
-    cout << "CORRELATING!" << endl;
-    
-   	CrossCorrelator *cc = new CrossCorrelator();
-    
-    cc->initWithCArray( threadInfo->corrected_data );
-    
-//	cc->loadFromFile("f909-q0-corrected.raw");
-//	cc->loadFromFile("/Users/feldkamp/Desktop/LCLS_2011_Feb27_r0079_054306_2e71_cspad.h5");
+    int arraylength = RAW_DATA_LENGTH;    
+   	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, arraylength );
     
 
 	cc->calculatePolarCoordinates();

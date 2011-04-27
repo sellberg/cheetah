@@ -3,6 +3,7 @@
  *  xcca
  *
  *  Created by Feldkamp on 2/17/11.
+ *  Last changed on 04/27/11.
  *  Copyright 2011 SLAC National Accelerator Laboratory. All rights reserved.
  *
  */
@@ -16,7 +17,6 @@
 class CrossCorrelator {
 
 private:
-	int p_matrixSize;
 	int p_arraySize;
 	double p_qmax;
 	double p_deltaq;		// step size (bin length) in q-direction
@@ -26,7 +26,6 @@ private:
 	int p_samplingLag;
 
 	array1D *data;			//data storage
-	array2D *data2D;			//data storage TEST CASE FOR NOW
 	array1D *qx;				//pixel x coordinate
 	array1D *qy;				//pixel y coordinate
 	
@@ -42,34 +41,36 @@ private:
 	void updateDependentVariables();
 	
 public:
-	//constructor & destructor
-	CrossCorrelator();
+	//---------------------------------------------constructors & destructor
+    CrossCorrelator( int arraylength=100 );                     //init with 1D data size
+    CrossCorrelator( int16_t *dataCArray, int arraylength );    //init with actual data
 	~CrossCorrelator();
 	
-	//file input/output
-    void initWithCArray( int16_t *dataCArray );
+	//---------------------------------------------input/output
 	void initFromFile( std::string filename, int type=0 );
 	void printRawData(uint16_t *buffer,long lSize);
 	void writeSAXS();
 	void writeXCCA();
 	void dumpResults( std::string filename );
 	
-	//calculations
+	//---------------------------------------------calculations
 	void calculatePolarCoordinates();
 	void calculateSAXS();
 	void calculateXCCA();
 	
-	//setters & getters for the private variables
-	int matrixSize();
-	void setMatrixSize( int matrixSize_val );
-	
-	int arraySize();
+	//---------------------------------------------setters & getters
+	int arraySize();                                    // returns private variable p_arraySize
 	void setArraySize( int arraySize_val );
+	int matrixSize();                                   // returns sqrt(p_arraySize)
+	void setMatrixSize( int matrixSize_val );
+                                                        // matrixSize is just a little helper for now
+                                                        // to come up with a q-calibration
+                                                        // need to change this soon...
 	
 	double qmax();
 	void setQmax( double qmax_val );
 	
-	//getters for dependent variables
+	//---------------------------------------------getters for dependent variables
 	double deltaq();
 	double deltaphi();
 	int samplingLength();

@@ -3,6 +3,7 @@
  *  xcca
  *
  *  Created by Feldkamp on 2/17/11.
+ *  Last changed on 04/27/11.
  *  Copyright 2011 SLAC National Accelerator Laboratory. All rights reserved.
  *
  */
@@ -17,11 +18,14 @@ using std::cerr;
 #include <string>
 using std::string;
 
+#include <sstream>
+using std::ostringstream;
+
 #include <fstream>
 using std::ofstream;
 
 #include <hdf5.h>
-//#include <tiffio.h>
+#include <tiffio.h>
 
 #include <cmath>
 
@@ -33,10 +37,6 @@ using std::ofstream;
 //
 //*********************************************************************************
 //*********************************************************************************
-arraydata::arraydata(){
-	arraydata( 0 );
-}
-
 arraydata::arraydata( unsigned int size_val ){
 	p_size = size_val;
 	p_data = new double[size_val];
@@ -47,10 +47,37 @@ arraydata::arraydata( unsigned int size_val ){
 	setVerbose( 1 );		// set talkativity
 }
 
+arraydata::arraydata( int16_t *CArray, unsigned int size_val ){
+    p_size = size_val;
+    p_data = new double[size_val];
+    if (p_data == 0)
+        cerr << "Error in arraydata constructor: could not allocate memory." << endl;
+    
+    //fill array with data, convert int to double before
+    for (int i = 0; i < size_val; i++) {
+        p_data[i] = (double)CArray[i];
+    }
+}
+
 arraydata::~arraydata(){
 	delete []p_data;	
 }
 
+
+
+
+//--------------------------------------------------------------------
+double *arraydata::data(){
+    return p_data;
+}
+
+
+//--------------------------------------------------------------------
+double *arraydata::data_copy(){
+    double *copy = new double[size_absolute()];
+    memcpy( copy, p_data, size_absolute()*sizeof(double) );
+    return copy;
+}
 
 //--------------------------------------------------------------------
 double arraydata::get_atAbsoluteIndex( unsigned int i){
@@ -120,6 +147,16 @@ double arraydata::getMax(){
 }
 
 
+//------------------------------------------------------------- getASCIIdata
+string arraydata::getASCIIdata(){
+    ostringstream osst;
+    osst << "1D data:" << endl;
+	for (int i = 0; i<size_absolute(); i++) {
+        osst << " " << get_atAbsoluteIndex(i);
+	}
+    osst << endl;
+    return osst.str();
+}
 
 
 
@@ -209,14 +246,16 @@ void arraydata::setVerbose( int verbosity ){
 
 
 //-----------------------------------------------------constructors & destructors
-array1D::array1D() : arraydata(){
-	array1D( 0 );
-}
-
 array1D::array1D( unsigned int size_dim1 ) 
 		: arraydata(size_dim1){
-	p_dim1 = size_dim1;
+    setDim1( size_dim1 );
 }
+
+array1D::array1D( int16_t *CArray, unsigned int size_dim1 )
+        : arraydata( CArray, size_dim1 ){
+    setDim1( size_dim1 );
+}
+        
 
 array1D::~array1D(){
 }
@@ -261,6 +300,11 @@ void array1D::setDim1( unsigned int size_dim1 ){
 }
 
 
+//------------------------------------------------------------- getASCIIdata
+string array1D::getASCIIdata(){
+    return arraydata::getASCIIdata();
+}
+
 
 
 
@@ -279,15 +323,22 @@ void array1D::setDim1( unsigned int size_dim1 ){
 //*********************************************************************************
 
 //-----------------------------------------------------constructors & destructors
-array2D::array2D(){
-	array2D( 0, 0 );
-}
-
 array2D::array2D( unsigned int size_dim1, unsigned int size_dim2 )
 		: arraydata(size_dim1*size_dim2){
-	p_dim1 = size_dim1;
-	p_dim2 = size_dim2;
+ 	setDim1( size_dim1 );
+	setDim2( size_dim2 );
 }
+
+array2D::array2D( array1D* dataOneD, unsigned int size_dim1, unsigned int size_dim2) 
+        : arraydata( size_dim1*size_dim2 ){
+ 	setDim1( size_dim1 );
+	setDim2( size_dim2 );
+    if (p_data) {                       // if data exists, delete it first
+        delete[] p_data;
+    }
+    p_data = dataOneD->data_copy();     // get a copy of the data in 'dataOneD'
+}
+
 
 array2D::~array2D(){
 }
@@ -320,8 +371,21 @@ void array2D::set( unsigned int i, unsigned int j, double value ){
 }
 
 
+//------------------------------------------------------------- getASCIIdata
+std::string array2D::getASCIIdata(){
+    ostringstream osst;
+    osst << "2D data:" << endl;
+	for (int i = 0; i<dim1(); i++) {
+		osst << " [";
+		for (int j = 0; j<dim2(); j++){
+			osst << " " << get(i, j);
+		}
+		osst << "]" << endl;
+	}
+    return osst.str();
+}
 
-/*
+
 //-------------------------------------------------------------- writeToTiff
 // (needs TIFFLIB installation)
 //
@@ -414,7 +478,7 @@ int array2D::writeToTiff( std::string filename, int scaleFlag ){
 	else 
 		return(1);	
 }
-*/
+
 
 //-------------------------------------------------------------- writeToHDF5
 int array2D::writeToHDF5( std::string filename ){
@@ -509,26 +573,12 @@ int array2D::writeToHDF5( std::string filename ){
 int array2D::writeToASCII( std::string filename, bool printToConsole ){
 	
 	ofstream fout( filename.c_str() );
-	for (int i = 0; i<dim1(); i++) {
-		fout << " [";
-		for (int j = 0; j<dim2(); j++){
-			fout << " " << get(i, j);
-		}
-		fout << "]" << endl;
-	}
+	fout << getASCIIdata();
 	fout.close();
 	
-	
 	//option to print to std out as well
-	if ( printToConsole ) {
-		for (int i = 0; i<dim1(); i++) {
-			printf (" [");
-			for (int j = 0; j<dim2(); j++){
-				printf (" %3f", get(i, j));
-			}
-		printf ("]\n");
-		}
-	}
+	if ( printToConsole ) 
+        cout << getASCIIdata();
 	return 0;
 }
 
@@ -660,15 +710,11 @@ void array2D::generateTestPattern( int type ){
 //*********************************************************************************
 
 //-----------------------------------------------------constructors & destructors
-array3D::array3D(){
-	array3D( 0, 0, 0 );
-}
-
 array3D::array3D( unsigned int size_dim1, unsigned int size_dim2, unsigned int size_dim3 )
 		: arraydata(size_dim1*size_dim2*size_dim3){
-	p_dim1 = size_dim1;
-	p_dim2 = size_dim2;
-	p_dim3 = size_dim3;
+ 	setDim1( size_dim1 );
+	setDim2( size_dim2 );
+	setDim3( size_dim3 );
 }
 
 array3D::~array3D(){
@@ -725,6 +771,24 @@ void array3D::setDim3( unsigned int size_dim3 ){
 	p_dim3 = size_dim3;
 }
 
+
+//------------------------------------------------------------- getASCIIdata
+string array3D::getASCIIdata(){
+    ostringstream osst;
+    osst << "3D data:" << endl;
+	for (int i = 0; i<dim1(); i++) {
+		osst << " [[" << endl;
+		for (int j = 0; j<dim2(); j++){
+            osst << "  [";
+            for (int k = 0; k<dim3(); k++){
+                osst << " " << get(i, j, k);
+            }//k
+            osst << "]" << endl;
+        }//j
+		osst << "]]" << endl;
+	}//i
+    return osst.str();
+}
 
 
 
