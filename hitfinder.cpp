@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
-#include <math.h>
 #include <stdlib.h>
 
 #include "hitfinder.h"
@@ -32,10 +31,13 @@
  */
 int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder *hitf){
 
-	long	nat, lastnat;
+	long	nat;
+    long    lastnat;
 	long	counter;
 	int		hit=0;
-	long	ii,jj,nn;
+	long	ii;
+//    long    jj;
+    long    nn;
 
 	nat = 0;
 	counter = 0;
@@ -104,7 +106,7 @@ int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder *hitf){
 					}
 				}
 			}
-			threadInfo->nPeaks = nat;
+			threadInfo->nPeaks = (int)nat;
 			if(nat >= hitf->MinPixCount)
 				hit = 1;
 			break;
@@ -191,7 +193,7 @@ int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder *hitf){
 				}
 			}	
 			// Hit?
-			threadInfo->nPeaks = counter;
+			threadInfo->nPeaks = (int)counter;
 			if(counter >= hitf->Npeaks && counter <= hitf->NpeaksMax)
 				hit = 1;
 			

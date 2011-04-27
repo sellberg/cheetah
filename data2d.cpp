@@ -22,7 +22,7 @@
 #include "data2d.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
+#include <cmath>
 #include <string.h>
 //#include "/usr/local/include/hdf5.h"
 #include <hdf5.h>
@@ -182,7 +182,7 @@ void cData2d::readHDF5(char* filename, char* fieldname){
 
 	// Cleanup stale IDs
 	hid_t ids[256];
-	int n_ids = H5Fget_obj_ids(file_id, H5F_OBJ_ALL, 256, ids);
+	int n_ids = (int)H5Fget_obj_ids(file_id, H5F_OBJ_ALL, 256, ids);
 	for (long i=0; i<n_ids; i++ ) {
 		
 		hid_t id;
@@ -249,7 +249,7 @@ void cData2d::writeHDF5(char* filename){
 
 	// Cleanup stale IDs
 	hid_t ids[256];
-	int n_ids = H5Fget_obj_ids(file_id, H5F_OBJ_ALL, 256, ids);
+	int n_ids = (int)H5Fget_obj_ids(file_id, H5F_OBJ_ALL, 256, ids);
 	for (long i=0; i<n_ids; i++ ) {
 		
 		hid_t id;

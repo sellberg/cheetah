@@ -17,6 +17,7 @@
  *	You should have received a copy of the GNU General Public License
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
+ 
 
 #include "myana/myana.hh"
 #include "myana/main.hh"
@@ -29,13 +30,18 @@
 #include "cspad-gjw/CspadCorrector.hh"
 #include "cspad-gjw/CspadGeometry.hh"
 
+
 #include <string.h>
 #include <sys/time.h>
-#include <math.h>
+#include <cmath>
 #include <hdf5.h>
 #include <fenv.h>
 #include <stdlib.h>
 #include <iostream>
+using std::cout;
+using std::endl;
+using std::ios_base;
+
 #include <fstream>
 
 #include "setup.h"
@@ -263,7 +269,7 @@ void cGlobal::setup() {
 	nFilters = 10; // Counter for Si filters in XRT
 	filterThicknesses = new unsigned[nFilters]; // Array of filter thicknesses
 	for (int i=0; i<nFilters; i++) {
-		filterThicknesses[i] = int(20*pow(2,i));
+		filterThicknesses[i] = int(20*pow((float)2.,i));
 	}
 	nThicknesses = 1; // Counter for number of possible thicknesses (0 um => counter starts at 1)
 	for (int i=1; i<=nFilters; i++) {
@@ -331,8 +337,7 @@ void cGlobal::parseConfigFile(char* filename) {
 	/*
 	 *	Open configuration file for reading
 	 */
-	printf("Parsing input configuration file:\n",filename);
-	printf("\t%s\n",filename);
+	printf("Parsing input configuration file:\t%s\n",filename);
 	
 	fp = fopen(filename,"r");
 	if (fp == NULL) {
@@ -701,7 +706,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	// Sanity check that size matches what we expect for cspad (!)
 	if (detector_x.nx != 8*ROWS || detector_x.ny != 8*COLS) {
 		printf("readDetectorGeometry: array size mismatch\n");
-		printf("%ix%i != %ix%i\n", 8*ROWS, 8*COLS, detector_x.nx, detector_x.ny);
+		printf("%ix%i != %ix%i\n", 8*ROWS, 8*COLS, (int)detector_x.nx, (int)detector_x.ny);
 		exit(1);
 	}
 	
@@ -768,7 +773,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	if(fabs(ymin) > max) max = fabs(ymin);
 	image_nx = 2*(unsigned)max;
 	image_nn = image_nx*image_nx;
-	printf("\tImage output array will be %i x %i\n",image_nx,image_nx);
+	printf("\tImage output array will be %i x %i\n",(int)image_nx,(int)image_nx);
 	
 }
 
@@ -805,7 +810,7 @@ void cGlobal::readDarkcal(char *filename){
 	
 	// Correct geometry?
 	if(temp2d.nx != pix_nx || temp2d.ny != pix_ny) {
-		printf("\tGeometry mismatch: %ix%x != %ix%i\n",temp2d.nx, temp2d.ny, pix_nx, pix_ny);
+		printf("\tGeometry mismatch: %ix%x != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
 		printf("\tDefaulting to all-zero darkcal\n");
 		return;
 	} 
@@ -850,7 +855,7 @@ void cGlobal::readGaincal(char *filename){
 
 	// Correct geometry?
 	if(temp2d.nx != pix_nx || temp2d.ny != pix_ny) {
-		printf("\tGeometry mismatch: %ix%x != %ix%i\n",temp2d.nx, temp2d.ny, pix_nx, pix_ny);
+		printf("\tGeometry mismatch: %ix%x != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
 		printf("\tDefaulting to uniform gaincal\n");
 		return;
 	} 
@@ -908,7 +913,7 @@ void cGlobal::readPeakmask(char *filename){
 	
 	// Correct geometry?
 	if(temp2d.nx != pix_nx || temp2d.ny != pix_ny) {
-		printf("\tGeometry mismatch: %ix%x != %ix%i\n",temp2d.nx, temp2d.ny, pix_nx, pix_ny);
+		printf("\tGeometry mismatch: %ix%x != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
 		printf("\tDefaulting to uniform peak search mask\n");
 		return;
 	} 
@@ -953,7 +958,7 @@ void cGlobal::readBadpixelMask(char *filename){
 	
 	// Correct geometry?
 	if(temp2d.nx != pix_nx || temp2d.ny != pix_ny) {
-		printf("\tGeometry mismatch: %ix%x != %ix%i\n",temp2d.nx, temp2d.ny, pix_nx, pix_ny);
+		printf("\tGeometry mismatch: %ix%x != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
 		printf("\tDefaulting to uniform peak search mask\n");
 		return;
 	} 
@@ -995,7 +1000,7 @@ void cGlobal::readAttenuations(char *filename) {
 		getline(infile, line);
 		if (infile.fail()) break;
 		if (line[0] != '#') {
-			if (!fromString<double>(possibleAttenuations[counter], line, dec)) {
+			if (!fromString(possibleAttenuations[counter], line)) {
 				std::cout << "\tConversion of string to double failed" << endl;
 			}
 			counter++;
@@ -1107,7 +1112,7 @@ void cGlobal::updateLogfile(void){
 	// Update logfile
 	printf("Writing log file: %s\n", logfile);
 	fp = fopen (logfile,"a");
-	fprintf(fp, "nFrames: %i,  nHits: %i (%2.2f%%), wallTime: %ihr %imin %isec (%2.1f fps)\n", nprocessedframes, nhits, hitrate, hrs, mins, secs, fps);
+	fprintf(fp, "nFrames: %i,  nHits: %i (%2.2f%%), wallTime: %ihr %imin %isec (%2.1f fps)\n", (int)nprocessedframes, (int)nhits, hitrate, hrs, mins, secs, fps);
 	fclose (fp);
 	
 	
@@ -1174,9 +1179,9 @@ void cGlobal::writeFinalLog(void){
 	fprintf(fp, ">-------- End of job --------<\n");
 	fprintf(fp, "End time: %s\n",timestr);
 	fprintf(fp, "Elapsed time: %ihr %imin %isec\n",hrs,mins,secs);
-	fprintf(fp, "Frames processed: %i\n",nprocessedframes);
-	fprintf(fp, "nFrames in powder pattern: %i\n",npowder);
-	fprintf(fp, "Number of hits: %i\n",nhits);
+	fprintf(fp, "Frames processed: %i\n",(int)nprocessedframes);
+	fprintf(fp, "nFrames in powder pattern: %i\n",(int)npowder);
+	fprintf(fp, "Number of hits: %i\n",(int)nhits);
 	fprintf(fp, "Average hit rate: %2.2f %%\n",hitrate);
 	fprintf(fp, "Average data rate: %2.2f fps\n",fps);
 
@@ -1228,7 +1233,7 @@ void cGlobal::readIcemask(char *filename){
 	
 	// Correct geometry?
 	if(temp2d.nx != pix_nx || temp2d.ny != pix_ny) {
-		printf("\tGeometry mismatch: %ix%x != %ix%i\n",temp2d.nx, temp2d.ny, pix_nx, pix_ny);
+		printf("\tGeometry mismatch: %ix%x != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
 		printf("\tDefaulting to uniform peak search mask\n");
 		return;
 	} 
@@ -1273,7 +1278,7 @@ void cGlobal::readWatermask(char *filename){
 	
 	// Correct geometry?
 	if(temp2d.nx != pix_nx || temp2d.ny != pix_ny) {
-		printf("\tGeometry mismatch: %ix%x != %ix%i\n",temp2d.nx, temp2d.ny, pix_nx, pix_ny);
+		printf("\tGeometry mismatch: %ix%x != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
 		printf("\tDefaulting to uniform peak search mask\n");
 		return;
 	} 
@@ -1318,7 +1323,7 @@ void cGlobal::readBackgroundmask(char *filename){
 	
 	// Correct geometry?
 	if(temp2d.nx != pix_nx || temp2d.ny != pix_ny) {
-		printf("\tGeometry mismatch: %ix%x != %ix%i\n",temp2d.nx, temp2d.ny, pix_nx, pix_ny);
+		printf("\tGeometry mismatch: %ix%x != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
 		printf("\tDefaulting to uniform peak search mask\n");
 		return;
 	} 

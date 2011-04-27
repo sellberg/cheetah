@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
-#include <math.h>
 #include <stdlib.h>
 
 
@@ -39,7 +38,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	
 	long		e;
 	long		counter;
-	uint16_t	value;
+//	uint16_t	value;
 	uint16_t	median;
 	
 	// Create histogram array
@@ -107,7 +106,7 @@ void cmSubModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	long		e;
 	long		ii,jj;
 	long		counter;
-	uint16_t	value;
+//	uint16_t	value;
 	uint16_t	median;
 	
 	// Create histogram array

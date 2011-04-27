@@ -45,11 +45,24 @@ bool fromString(T & t, const std::string & s, std::ios_base & (*f)(std::ios_base
  */
 
 // Templatized function to transform a number to a C++ string
+/*
 template <class T>
 bool fromString(T& t, const std::string& s, std::ios_base& (*f)(std::ios_base&))
 {
 	std::istringstream iss(s);
+    iss.setf(std::ios_base::dec);
 	return !(iss >> f >> t).fail();
+}
+*/
+
+
+//by JF: suggestion to make this less confusing..
+template <class T>
+bool fromString(T& t, const std::string& s)
+{
+	std::istringstream iss(s);
+    iss.setf(std::ios_base::dec);
+	return !(iss >> t).fail();
 }
 
 #endif

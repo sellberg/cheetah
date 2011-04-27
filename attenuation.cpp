@@ -24,7 +24,7 @@
 #include "myana/myana.hh"
 #include "myana/main.hh"
 #include "myana/XtcRun.hh"
-#include "release/pdsdata/cspad/ConfigV1.hh"
+//#include "release/pdsdata/cspad/ConfigV1.hh"
 #include "release/pdsdata/cspad/ConfigV2.hh"
 #include "release/pdsdata/cspad/ElementHeader.hh"
 #include "release/pdsdata/cspad/ElementIterator.hh"
@@ -35,8 +35,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
-#include <math.h>
 #include <iostream>
+using std::cout;
+using std::endl;
+
 #include <fstream>
 #include <sstream>
 

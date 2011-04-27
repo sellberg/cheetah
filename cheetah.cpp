@@ -39,11 +39,13 @@
 #include "cspad-gjw/CspadCorrector.hh"
 #include "cspad-gjw/CspadGeometry.hh"
 
-#include <stdio.h>
+#include <iostream>
+using std::cout;
+using std::endl;
+
 #include <string.h>
 #include <sys/time.h>
 #include <hdf5.h>
-#include <math.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <limits>
@@ -118,12 +120,12 @@ void beginjob() {
 	/*
 	 * Get time information
 	 */
-	int fail = 0;
+//	int fail = 0;
+//	const char* time;
+//  fail = getLocalTime( time );
+    
 	int seconds, nanoSeconds;
-	const char* time;
-
 	getTime( seconds, nanoSeconds );	
-	// fail = getLocalTime( time );
 
 	
 	/*
@@ -214,8 +216,8 @@ void event() {
 	// Variables
 	frameNumber++;
 	//printf("Processing event %i\n", frameNumber);
-	FILE* fp;
-	char filename[1024];
+//	FILE* fp;
+//	char filename[1024];
 	int fail = 0;
 
 	
@@ -236,7 +238,7 @@ void event() {
 	unsigned int 	eventCode;
 	unsigned int 	timeStamp;	
 	numEvrData = getEvrDataNumber();
-	for (long i=0; i<numEvrData; i++) {
+	for (int i=0; i<numEvrData; i++) {
 		fail = getEvrData( i, eventCode, fiducial, timeStamp );
 	}
 	// EventCode==140 = Beam On
@@ -266,8 +268,9 @@ void event() {
 	 * Get time information
 	 */
 	int seconds, nanoSeconds;
-	const char* timestring;
 	getTime( seconds, nanoSeconds );
+
+    //	const char* timestring;
 	//fail = getLocalTime( timestring );
 	//printf("%s\n",timestring);
 
@@ -579,7 +582,7 @@ void endjob()
 
 	// Wait for threads to finish
 	while(global.nActiveThreads > 0) {
-		printf("Waiting for %i worker threads to terminate\n", global.nActiveThreads);
+		printf("Waiting for %i worker threads to terminate\n", (int)global.nActiveThreads);
 		usleep(100000);
 	}
 	
@@ -597,7 +600,7 @@ void endjob()
 	
 	
 	// Hitrate?
-	printf("%i files processed, %i hits (%2.2f%%)\n",global.nprocessedframes, global.nhits, 100.*( global.nhits / (float) global.nprocessedframes));
+	printf("%i files processed, %i hits (%2.2f%%)\n",(int)global.nprocessedframes, (int)global.nhits, 100.*( global.nhits / (float) global.nprocessedframes));
 
 	
 	// Cleanup

@@ -27,7 +27,7 @@
 #include "cspad-gjw/CspadGeometry.hh"
 
 #include <string.h>
-#include <math.h>
+#include <cmath>
 #include <hdf5.h>
 #include <stdlib.h>
 
@@ -173,7 +173,7 @@ void *worker(void *threadarg) {
 	 *	Are we still in 'frame digesting' mode?
 	 */
 	if(threadInfo->threadNum < global->startFrames) {
-		printf("r%04u:%i (%3.1fHz): Digesting initial frames\n", global->runNumber, threadInfo->threadNum,global->datarate);
+		printf("r%04u:%i (%3.1fHz): Digesting initial frames\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate);
 		threadInfo->image = NULL;
 		goto cleanup;
         //ATTENTION! goto should not be used at all ( see http://www.cplusplus.com/forum/general/29190/ )
@@ -235,14 +235,14 @@ void *worker(void *threadarg) {
 			writeHDF5(threadInfo, global, eventname, global->backgroundfinder.cleanedfp);
 		}
 	}
-	printf("r%04u:%i (%3.1fHz): Processed (npeaks=%i)\n", global->runNumber,threadInfo->threadNum,global->datarate, threadInfo->nPeaks);
+	printf("r%04u:%i (%3.1fHz): Processed (npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum,global->datarate, threadInfo->nPeaks);
 
 
 	/*
 	 *	Write out information on each frame to a log file
 	 */
 	pthread_mutex_lock(&global->framefp_mutex);
-	fprintf(global->framefp, "%i, %i, %s, %i\n",threadInfo->threadNum, threadInfo->seconds, threadInfo->eventname, threadInfo->nPeaks);
+	fprintf(global->framefp, "%i, %i, %s, %i\n", (int)threadInfo->threadNum, threadInfo->seconds, threadInfo->eventname, threadInfo->nPeaks);
 	pthread_mutex_unlock(&global->framefp_mutex);
 	
 	
@@ -316,7 +316,7 @@ void applyBadPixelMask(tThreadInfo *threadInfo, cGlobal *global){
  */
 void killHotpixels(tThreadInfo *threadInfo, cGlobal *global){
 	
-	long	nhot = 0;
+	int	nhot = 0;
 
 	pthread_mutex_lock(&global->hotpixel_mutex);
 	for(long i=0;i<global->pix_nn;i++){
@@ -515,7 +515,7 @@ void nameEvent(tThreadInfo *info, cGlobal *global){
 	/*
 	 *	Create filename based on date, time and fiducial for this image
 	 */
-	char outfile[1024];
+//	char outfile[1024];
 	char buffer1[80];
 	char buffer2[80];	
 	time_t eventTime = info->seconds;
@@ -550,10 +550,10 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 
 	sprintf(outfile,"%s.h5",eventname);
 	//strcpy(outfile, info->eventname);
-	printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n",global->runNumber, info->threadNum,global->datarate, outfile);
+	printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)global->runNumber, (int)info->threadNum, global->datarate, outfile);
 
 	pthread_mutex_lock(&global->framefp_mutex);
-	fprintf(hitfp, "r%04u/%s, %i\n",global->runNumber, info->eventname, info->nPeaks);
+	fprintf(hitfp, "r%04u/%s, %i\n", (int)global->runNumber, info->eventname, info->nPeaks);
 	pthread_mutex_unlock(&global->framefp_mutex);
 	
 		
@@ -567,7 +567,7 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	hsize_t 	size[2],max_size[2];
 	herr_t		hdf_error;
 	hid_t   	gid;
-	char 		fieldname[100]; 
+//	char 		fieldname[100]; 
 	
 	
 	/*
@@ -584,7 +584,7 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	 */
 	gid = H5Gcreate(hdf_fileID, "data", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 	if ( gid < 0 ) {
-		ERROR("%i: Couldn't create group\n", info->threadNum);
+		ERROR("%i: Couldn't create group\n", (int)info->threadNum);
 		H5Fclose(hdf_fileID);
 		return;
 	}
@@ -597,13 +597,13 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	dataspace_id = H5Screate_simple(2, size, max_size);
 	dataset_id = H5Dcreate(gid, "data", H5T_STD_I16LE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 	if ( dataset_id < 0 ) {
-		ERROR("%i: Couldn't create dataset\n", info->threadNum);
+		ERROR("%i: Couldn't create dataset\n", (int)info->threadNum);
 		H5Fclose(hdf_fileID);
 		return;
 	}
 	hdf_error = H5Dwrite(dataset_id, H5T_STD_I16LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, info->image);
 	if ( hdf_error < 0 ) {
-		ERROR("%i: Couldn't write data\n", info->threadNum);
+		ERROR("%i: Couldn't write data\n", (int)info->threadNum);
 		H5Dclose(dataspace_id);
 		H5Fclose(hdf_fileID);
 		return;
@@ -621,13 +621,13 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 		dataspace_id = H5Screate_simple(2, size, max_size);
 		dataset_id = H5Dcreate(gid, "rawdata", H5T_STD_I16LE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 		if ( dataset_id < 0 ) {
-			ERROR("%i: Couldn't create dataset\n", info->threadNum);
+			ERROR("%i: Couldn't create dataset\n", (int)info->threadNum);
 			H5Fclose(hdf_fileID);
 			return;
 		}
 		hdf_error = H5Dwrite(dataset_id, H5T_STD_I16LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, info->corrected_data);
 		if ( hdf_error < 0 ) {
-			ERROR("%i: Couldn't write data\n", info->threadNum);
+			ERROR("%i: Couldn't write data\n", (int)info->threadNum);
 			H5Dclose(dataspace_id);
 			H5Fclose(hdf_fileID);
 			return;
@@ -641,10 +641,10 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	H5Gclose(gid);
 	
 	
-	double		phaseCavityTime1;
-	double		phaseCavityTime2;
-	double		phaseCavityCharge1;
-	double		phaseCavityCharge2;
+//	double		phaseCavityTime1;
+//	double		phaseCavityTime2;
+//	double		phaseCavityCharge1;
+//	double		phaseCavityCharge2;
 	
 	/*
 	 *	Write LCLS event information
@@ -778,7 +778,7 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	 */
 	int n_ids;
 	hid_t ids[256];
-	n_ids = H5Fget_obj_ids(hdf_fileID, H5F_OBJ_ALL, 256, ids);
+	n_ids = (int)H5Fget_obj_ids(hdf_fileID, H5F_OBJ_ALL, 256, ids);
 	for ( int i=0; i<n_ids; i++ ) {
 		hid_t id;
 		H5I_type_t type;
@@ -867,7 +867,7 @@ void saveRunningSums(cGlobal *global) {
 		//for(long i=0; i<global->pix_nn; i++)
 		//	if (buffer3[i] < 0) buffer3[i] = 0;
 		printf("Saving darkcal to file\n");
-		writeSimpleHDF5(filename, buffer3, global->pix_nx, global->pix_ny, H5T_STD_I16LE);	
+		writeSimpleHDF5(filename, buffer3, (int)global->pix_nx, (int)global->pix_ny, H5T_STD_I16LE);	
 		free(buffer3);
 	}
 
@@ -883,7 +883,7 @@ void saveRunningSums(cGlobal *global) {
 			buffer2[i] = (float) global->powderAssembled[i];
 		}
 		pthread_mutex_unlock(&global->powdersum2_mutex);
-		writeSimpleHDF5(filename, buffer2, global->image_nx, global->image_nx, H5T_NATIVE_FLOAT);	
+		writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
 		free(buffer2);
 		
 		
@@ -899,7 +899,7 @@ void saveRunningSums(cGlobal *global) {
 		pthread_mutex_unlock(&global->powdersum1_mutex);
 		//for(long i=0; i<global->pix_nn; i++)
 		//	if (buffer1[i] < 0) buffer1[i] = 0;
-		writeSimpleHDF5(filename, buffer1, global->pix_nx, global->pix_ny, H5T_NATIVE_FLOAT);	
+		writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 		free(buffer1);
 	
 		/*
@@ -913,7 +913,7 @@ void saveRunningSums(cGlobal *global) {
 			buffer4[i] = (float) global->iceAssembled[i];
 		}
 		pthread_mutex_unlock(&global->icesumassembled_mutex);
-		writeSimpleHDF5(filename, buffer2, global->image_nx, global->image_nx, H5T_NATIVE_FLOAT);	
+		writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
 		free(buffer4);
 		
 		
@@ -929,7 +929,7 @@ void saveRunningSums(cGlobal *global) {
 		pthread_mutex_unlock(&global->icesumraw_mutex);
 		//for(long i=0; i<global->pix_nn; i++)
 		//	if (buffer1[i] < 0) buffer1[i] = 0;
-		writeSimpleHDF5(filename, buffer1, global->pix_nx, global->pix_ny, H5T_NATIVE_FLOAT);	
+		writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 		free(buffer5);
 
 		/*
@@ -943,7 +943,7 @@ void saveRunningSums(cGlobal *global) {
 			buffer6[i] = (float) global->waterAssembled[i];
 		}
 		pthread_mutex_unlock(&global->watersumassembled_mutex);
-		writeSimpleHDF5(filename, buffer2, global->image_nx, global->image_nx, H5T_NATIVE_FLOAT);	
+		writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
 		free(buffer6);
 		
 		
@@ -959,7 +959,7 @@ void saveRunningSums(cGlobal *global) {
 		pthread_mutex_unlock(&global->watersumraw_mutex);
 		//for(long i=0; i<global->pix_nn; i++)
 		//	if (buffer1[i] < 0) buffer1[i] = 0;
-		writeSimpleHDF5(filename, buffer1, global->pix_nx, global->pix_ny, H5T_NATIVE_FLOAT);	
+		writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 		free(buffer7);
 	
 	}
