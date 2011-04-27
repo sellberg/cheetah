@@ -120,6 +120,7 @@ static unsigned             asicMask;
 
 static const unsigned  ROWS = 194;
 static const unsigned  COLS = 185;
+static const unsigned  RAW_DATA_LENGTH = 8*ROWS*8*COLS;
 
 static const unsigned int cbufsize = 1024;
 

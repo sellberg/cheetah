@@ -57,7 +57,7 @@ void *worker(void *threadarg) {
 	/*
 	 *	Assemble data from all four quadrants into one large array (rawdata format)
 	 */
-	threadInfo->raw_data = (uint16_t*) calloc(8*ROWS*8*COLS,sizeof(uint16_t));
+	threadInfo->raw_data = (uint16_t*) calloc(RAW_DATA_LENGTH,sizeof(uint16_t));
 	for(int quadrant=0; quadrant<4; quadrant++) {
 		long	i,j,ii;
 		for(long k=0; k<2*ROWS*8*COLS; k++) {
@@ -67,7 +67,7 @@ void *worker(void *threadarg) {
 			threadInfo->raw_data[ii] = threadInfo->quad_data[quadrant][k];
 		}
 	}
-	threadInfo->corrected_data = (int16_t*) calloc(8*ROWS*8*COLS,sizeof(int16_t));
+	threadInfo->corrected_data = (int16_t*) calloc(RAW_DATA_LENGTH,sizeof(int16_t));
 	for(long i=0;i<global->pix_nn;i++)
 		threadInfo->corrected_data[i] = threadInfo->raw_data[i];
 	
