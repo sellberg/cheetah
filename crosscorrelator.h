@@ -53,11 +53,16 @@ public:
 	void writeXCCA();
 	void dumpResults( std::string filename );
 	
-	//---------------------------------------------calculations
+	//---------------------------------------------calculations (Jonas's way)
 	void calculatePolarCoordinates();
 	void calculateSAXS();
 	void calculateXCCA();
 	
+    //---------------------------------------------alternative approach (Jan's way)
+    array2D *calculatePolarCoordinates_Jan();           // returns a 2D pattern in polar coordinates (r vs. phi)
+    array2D *calculateXCCA_Jan( array2D *polarData );   // returns the autocorrelation function (r = const.)
+    double lookup( double xcoord, double ycoord );      // looks up the value closest to xcoord, ycoord in the data
+        
 	//---------------------------------------------setters & getters
 	int arraySize();                                    // returns private variable p_arraySize
 	void setArraySize( int arraySize_val );
