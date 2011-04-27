@@ -19,15 +19,41 @@ MYANADIR		= myana
 CSPADDIR		= cspad-gjw
 LCLSDIR 		= release
 HDF5DIR 		= /reg/neh/home/barty/hdf5
+TIFFDIR			= /reg/neh/home/feldkamp/tiff-3.9.5
 ROOTSYS			= /reg/g/pcds/package/root
 OBJFILES		= main.o XtcRun.o
+
+INCLUDEDIRS		= -Irelease \
+                  -I$(HDF5DIR)/include \
+                  -I$(TIFFDIR)/include
+                  
+LIBDIRS			= -Lrelease/build/pdsdata/lib/$(ARCH)/ \
+                  -L$(HDF5DIR)/lib \
+                  -L$(TIFFDIR)/lib
+
+LIBRARIES		= -l acqdata \
+                  -l bld \
+                  -l xtcdata \
+                  -l opal1kdata \
+                  -l camdata \
+                  -l pnccddata \
+                  -l controldata \
+                  -lipimbdata \
+                  -lprincetondata \
+                  -levrdata \
+                  -lencoderdata \
+                  -llusidata \
+                  -lcspaddata \
+                  -lhdf5 \
+                  -ltiff \
+                  -lpthread
 
 CPP				= g++ -c -g
 LD 				= g++
 CPP_LD_FLAGS	= -O4 -Wall
-CFLAGS			= -Irelease -I$(HDF5DIR)/include
-PDSLIBS			= -l acqdata -l bld -l xtcdata -l opal1kdata -l camdata -l pnccddata -l controldata -lipimbdata -lprincetondata -levrdata -lencoderdata -llusidata -lcspaddata
-LD_FLAGS		= -Lrelease/build/pdsdata/lib/$(ARCH)/ -L$(HDF5DIR)/lib  $(PDSLIBS) -lhdf5 -lpthread -Wl,-rpath=$(LCLSDIR)/build/pdsdata/lib/$(ARCH)/:$(HDF5DIR)/lib
+CFLAGS			= $(INCLUDEDIRS)
+
+LD_FLAGS		= $(LIBDIRS) $(LIBRARIES) -Wl,-rpath=$(LCLSDIR)/build/pdsdata/lib/$(ARCH)/:$(HDF5DIR)/lib
 CFLAGS_ROOT		= $(shell $(ROOTSYS)/bin/root-config --cflags)
 LDFLAGS_ROOT	= $(shell $(ROOTSYS)/bin/root-config --libs) -Wl,-rpath=$(ROOTSYS)/lib:release/build/pdsdata/lib/$(ARCH)/
 
@@ -62,7 +88,11 @@ $(CSPADDIR)/CspadCorrector.o: $(CSPADDIR)/CspadCorrector.cc $(CSPADDIR)/CspadCor
 	$(CPP) $(CFLAGS) -o $(CSPADDIR)/CspadCorrector.o $<
 
 $(CSPADDIR)/myana_cspad-gjw: $(MYANADIR)/main.o $(MYANADIR)/XtcRun.o \
-  $(CSPADDIR)/myana_cspad-gjw.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o $(CSPADDIR)/myana_cspad-gjw.o
+  $(CSPADDIR)/myana_cspad-gjw.o \
+  $(CSPADDIR)/CspadCorrector.o \
+  $(CSPADDIR)/CspadGeometry.o \
+  $(CSPADDIR)/CspadTemp.o \
+  $(CSPADDIR)/myana_cspad-gjw.o
 	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^
 
 
