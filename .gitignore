@@ -49,3 +49,5 @@ CVS
 ./release/pdsdata/app/CVS
 ./release/pdsdata/CVS
 ./release/CVS
+.DS_Store
+cheetah.xcodeproj
