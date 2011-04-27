@@ -21,5 +21,8 @@ switch ($1)
 	rsync -av --exclude 'release' --exclude 'build' --exclude '.git' --exclude '*.o' . barty@psexport.slac.stanford.edu:c/cheetah/
 	breaksw
 	
-
+	case feldkamp:
+	rsync -av --exclude 'release' --exclude 'build' --exclude '.git' --exclude '*.o' . feldkamp@psexport.slac.stanford.edu:cheetah/
+	breaksw
+	
 endsw
