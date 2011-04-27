@@ -27,19 +27,39 @@
 
 #include <pthread.h>
 #include <iostream>
+using std::cout;
+using std::endl;
+
 #include <cmath>
 
 #include "correlation.h"
+#include "crosscorrelator.h"
+
 
 //----------------------------------------------------------correlate
 // apply angular cross correlation
 //-------------------------------------------------------------------
 void correlate(tThreadInfo *threadInfo, cGlobal *global){
 
-    //pthread_mutex_lock(&global->correlation_mutex);
 
     cout << "CORRELATING!" << endl;
+    
+   	CrossCorrelator *cc = new CrossCorrelator();
+    
+    cc->initWithCArray( threadInfo->corrected_data );
+    
+//	cc->loadFromFile("f909-q0-corrected.raw");
+//	cc->loadFromFile("/Users/feldkamp/Desktop/LCLS_2011_Feb27_r0079_054306_2e71_cspad.h5");
+    
 
-    //pthread_mutex_unlock(&global->correlation_mutex);
+	cc->calculatePolarCoordinates();
+	cc->calculateSAXS();
+	cc->calculateXCCA();	
+	
+	cc->writeSAXS();
+	cc->writeXCCA();
+
+
 }
+
 

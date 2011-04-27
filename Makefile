@@ -61,7 +61,8 @@ $(CSPADDIR)/CspadGeometry.o: $(CSPADDIR)/CspadGeometry.cc $(CSPADDIR)/CspadGeome
 $(CSPADDIR)/CspadCorrector.o: $(CSPADDIR)/CspadCorrector.cc $(CSPADDIR)/CspadCorrector.hh
 	$(CPP) $(CFLAGS) -o $(CSPADDIR)/CspadCorrector.o $<
 
-$(CSPADDIR)/myana_cspad-gjw: $(MYANADIR)/main.o $(MYANADIR)/XtcRun.o $(CSPADDIR)/myana_cspad-gjw.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o $(CSPADDIR)/myana_cspad-gjw.o
+$(CSPADDIR)/myana_cspad-gjw: $(MYANADIR)/main.o $(MYANADIR)/XtcRun.o \
+  $(CSPADDIR)/myana_cspad-gjw.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o $(CSPADDIR)/myana_cspad-gjw.o
 	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^
 
 
@@ -94,7 +95,17 @@ attenuation.o: attenuation.cpp attenuation.h
 correlation.o: correlation.cpp correlation.h
 	$(CPP) $(CFLAGS) $<
 
-cheetah: cheetah.o setup.o worker.o data2d.o commonmode.o background.o hitfinder.o attenuation.o correlation.o $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
+crosscorrelator.o: crosscorrelator.cpp crosscorrelator.h
+	$(CPP) $(CFLAGS) $<
+	
+arrayclasses.o: arrayclasses.cpp arrayclasses.h
+	$(CPP) $(CFLAGS) $<
+
+cheetah: cheetah.o setup.o worker.o data2d.o \
+  commonmode.o background.o hitfinder.o attenuation.o \
+  correlation.o crosscorrelator.o arrayclasses.o\
+  $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o \
+  $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
 	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^
 
 
