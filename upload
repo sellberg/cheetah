@@ -22,7 +22,7 @@ switch ($1)
 	breaksw
 	
 	case feldkamp:
-	rsync -av --exclude 'release' --exclude 'build' --exclude '.git' --exclude '*.o' . feldkamp@psexport.slac.stanford.edu:cheetah/
+	rsync -av --exclude 'release' --exclude 'build' --exclude '.git' --exclude '*.o' --exclude 'cheetah.xcodeproj' . feldkamp@psexport.slac.stanford.edu:cheetah/
 	breaksw
 	
 endsw
