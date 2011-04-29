@@ -12,6 +12,10 @@
 #	Change the target CPU/OS combination if working on a different system, eg: OS-X)
 #
 ###############################################
+
+
+#--------------------------------------------------------------
+#define variables and directories
 TARGET 			= cheetah
 ARCH 			= x86_64-linux
 
@@ -19,25 +23,28 @@ MYANADIR		= myana
 CSPADDIR		= cspad-gjw
 LCLSDIR 		= release
 HDF5DIR 		= /reg/neh/home/barty/hdf5
-TIFFDIR			= /reg/neh/home/feldkamp/tiff-3.9.5
+TIFFDIR			= /reg/neh/home/feldkamp/tiff
+FFTWDIR         = /reg/neh/home/feldkamp/fftw
 ROOTSYS			= /reg/g/pcds/package/root
-OBJFILES		= main.o XtcRun.o
+###OBJFILES		= main.o XtcRun.o
 
 INCLUDEDIRS		= -Irelease \
                   -I$(HDF5DIR)/include \
-                  -I$(TIFFDIR)/include
+                  -I$(TIFFDIR)/include \
+                  -I$(FFTWDIR)/include
                   
 LIBDIRS			= -Lrelease/build/pdsdata/lib/$(ARCH)/ \
                   -L$(HDF5DIR)/lib \
-                  -L$(TIFFDIR)/lib
+                  -L$(TIFFDIR)/lib \
+                  -L$(FFTWDIR)/lib
 
-LIBRARIES		= -l acqdata \
-                  -l bld \
-                  -l xtcdata \
-                  -l opal1kdata \
-                  -l camdata \
-                  -l pnccddata \
-                  -l controldata \
+LIBRARIES		= -lacqdata \
+                  -lbld \
+                  -lxtcdata \
+                  -lopal1kdata \
+                  -lcamdata \
+                  -lpnccddata \
+                  -lcontroldata \
                   -lipimbdata \
                   -lprincetondata \
                   -levrdata \
@@ -46,7 +53,9 @@ LIBRARIES		= -l acqdata \
                   -lcspaddata \
                   -lhdf5 \
                   -ltiff \
-                  -lpthread
+                  -lpthread \
+                  -lfftw3 \
+                  -lm
 
 CPP				= g++ -c -g
 LD 				= g++
@@ -57,15 +66,11 @@ LD_FLAGS		= $(LIBDIRS) $(LIBRARIES) -Wl,-rpath=$(LCLSDIR)/build/pdsdata/lib/$(AR
 CFLAGS_ROOT		= $(shell $(ROOTSYS)/bin/root-config --cflags)
 LDFLAGS_ROOT	= $(shell $(ROOTSYS)/bin/root-config --libs) -Wl,-rpath=$(ROOTSYS)/lib:release/build/pdsdata/lib/$(ARCH)/
 
+
 all: $(TARGET)
 
-clean:
-	rm -f *.o *.gch $(TARGET)
 
-remake: clean all
-
-.PHONY: all clean remake
-
+#--------------------------------------------------------------
 # Standard myana libraries
 $(MYANADIR)/main.o: $(MYANADIR)/main.cc $(MYANADIR)/myana.hh $(MYANADIR)/main.hh
 	$(CPP) $(CFLAGS) -o $(MYANADIR)/main.o $<
@@ -96,47 +101,97 @@ $(CSPADDIR)/myana_cspad-gjw: $(MYANADIR)/main.o $(MYANADIR)/XtcRun.o \
 	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^
 
 
-
-# csPAD cleaner
-cheetah.o: cheetah.cpp 
+#--------------------------------------------------------------
+# cheetah objects
+cheetah.o: cheetah.cpp \
+  attenuation.h \
+  setup.h \
+  worker.h
 	$(CPP) $(CFLAGS) $<
 
-worker.o: worker.cpp worker.h 
+worker.o: worker.cpp worker.h \
+  background.h \
+  commonmode.h \
+  correlation.h \
+  hitfinder.h \
+  worker.h
 	$(CPP) $(CFLAGS) $<
 
-setup.o: setup.cpp setup.h 
+setup.o: setup.cpp setup.h \
+  attenuation.h \
+  data2d.h \
+  setup.h \
+  worker.h
 	$(CPP) $(CFLAGS) $<
 
 data2d.o: data2d.cpp data2d.h 
 	$(CPP) $(CFLAGS) $<
 
-commonmode.o: commonmode.cpp commonmode.h
+commonmode.o: commonmode.cpp commonmode.h \
+  setup.h \
+  worker.h
 	$(CPP) $(CFLAGS) $<
 
-background.o: background.cpp background.h
+background.o: background.cpp background.h \
+  setup.h \
+  worker.h
 	$(CPP) $(CFLAGS) $<
 
-hitfinder.o: hitfinder.cpp hitfinder.h
+hitfinder.o: hitfinder.cpp hitfinder.h \
+  setup.h \
+  worker.h
 	$(CPP) $(CFLAGS) $<
 
-attenuation.o: attenuation.cpp attenuation.h
+attenuation.o: attenuation.cpp attenuation.h \
+  setup.h \
+  worker.h
 	$(CPP) $(CFLAGS) $<
 
-correlation.o: correlation.cpp correlation.h
+correlation.o: correlation.cpp correlation.h \
+  arrayclasses.h \
+  crosscorrelator.h \
+  setup.h \
+  worker.h
 	$(CPP) $(CFLAGS) $<
 
-crosscorrelator.o: crosscorrelator.cpp crosscorrelator.h
+crosscorrelator.o: crosscorrelator.cpp crosscorrelator.h \
+  arrayclasses.h
 	$(CPP) $(CFLAGS) $<
 	
 arrayclasses.o: arrayclasses.cpp arrayclasses.h
 	$(CPP) $(CFLAGS) $<
 
-cheetah: cheetah.o setup.o worker.o data2d.o \
-  commonmode.o background.o hitfinder.o attenuation.o \
-  correlation.o crosscorrelator.o arrayclasses.o\
-  $(MYANADIR)/XtcRun.o $(MYANADIR)/main.o \
-  $(CSPADDIR)/CspadCorrector.o $(CSPADDIR)/CspadGeometry.o $(CSPADDIR)/CspadTemp.o
+
+
+#--------------------------------------------------------------
+#compile the different parts of the cheetah and link them together
+#the value of ‘$@’ is the target
+#the value of ‘$^’ is a list of all the prerequisites of the rule
+cheetah: cheetah.o \
+  setup.o \
+  worker.o \
+  data2d.o \
+  commonmode.o \
+  background.o \
+  hitfinder.o \
+  attenuation.o \
+  correlation.o \
+  crosscorrelator.o \
+  arrayclasses.o \
+  $(MYANADIR)/XtcRun.o \
+  $(MYANADIR)/main.o \
+  $(CSPADDIR)/CspadCorrector.o \
+  $(CSPADDIR)/CspadGeometry.o \
+  $(CSPADDIR)/CspadTemp.o
 	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^
+
+
+clean:
+	rm -f *.o *.gch $(TARGET)
+
+remake: clean all
+
+.PHONY: all clean remake
 
 
 
@@ -149,3 +204,4 @@ gdb: cspad_cryst
 
 valgrind: cspad_cryst
 	valgrind ./cspad_cryst -f ~gjwillms/cfel-cspad/e55-r0461-s00-c00.xtc -n 2
+
