@@ -22,11 +22,10 @@
 
 #include <iostream>
 using std::cout;
+using std::cerr;
 using std::endl;
 
 #include <cmath>
-
-
 
 
 
@@ -144,6 +143,18 @@ void CrossCorrelator::initFromFile( std::string filename, int type ){
 }
 
 
+void CrossCorrelator::initWithTestPattern( int type ){
+    array2D *test = new array2D();
+    test->generateTestPattern(type);
+    
+    test->getRow( 0, data);
+    
+    std::string filename = "~/Desktop/testpattern.tif";
+    test->writeToTiff( filename );
+    
+    delete test;
+}
+    
 
 // ***********************************************************************************
 // calculate polar coordinates from cartesian coordinate system
@@ -190,8 +201,6 @@ void CrossCorrelator::calculateSAXS(){
 	printf("calculating average SAXS intensity...\n");
 	
 	// calculate |q| for each pixel and bin lengths with correct resolution
-	array1D *q = new array1D( arraySize() );
-
 	for (int i=0; i<arraySize(); i++) {
 		q->set(i, round(sqrt( (qx->get(i)*qx->get(i))+(qy->get(i)*qy->get(i)) ) / deltaq()) * deltaq() );
 		// printf("q[%d]: %f\n",i,q[i]);
@@ -472,5 +481,125 @@ void CrossCorrelator::updateDependentVariables(){		//update the values that depe
 }
 
 
+
+
+// ***********************************************************************************
+// correlation
+// ***********************************************************************************
+int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
+
+    cout << "calculatePolarCoordinates_FAST" << endl;
+
+    int retval = 0;
+
+    double centerX = 0.;
+    double centerY = 0.;
+
+    double start_r = 4;
+    double stop_r = 10;
+    double step_r = 2;
+
+    double start_phi = 0 * M_PI/180;
+    double stop_phi = 360 * M_PI/180;
+    double step_phi = 1. * M_PI/180;
+    
+    if (step_r <= 0)
+        cerr << "Error in CrossCorrelator::calculatePolarCoordinates_Jan -- step_r value " 
+            << step_r << " is smaller than zero." << endl;
+    if (step_phi <= 0)
+        cerr << "Error in CrossCorrelator::calculatePolarCoordinates_Jan -- step_phi value " 
+            << step_phi << " is smaller than zero." << endl;
+
+    int number_r = (int)ceil( fabs(stop_r - start_r)/step_r );        
+    int number_phi = (int)ceil( fabs(stop_phi - start_phi)/step_phi );
+    
+    if (polar){
+        delete polar;
+        polar = NULL;
+    }
+    polar = new array2D(number_phi, number_r);
+
+    double xcoord = 0.;
+    double ycoord = 0.;
+    double value = 0.;
+    double r = 0.;
+    double p = 0.;
+    int rcounter = 0;
+    int pcounter = 0;
+    
+	for(r = start_r, rcounter=0; rcounter < number_r; r+=step_r, rcounter++){                        // r: for all rings/radii
+        cout << "ring r=" << r << ", #" << rcounter << endl;
+		for(p = start_phi, pcounter=0; pcounter < number_phi; p+=step_phi, pcounter++){				// phi: go through all angles
+
+            //find lookup coordinates
+			xcoord = r * cos(p) + centerX;
+			ycoord = r * sin(p) + centerY;
+			
+            //lookup that value in original scattering data
+            value = lookup( xcoord, ycoord );
+            
+			//assign the new values (note the functional determinant r)
+			polar->set(pcounter, rcounter, value * r);
+		}
+	}
+    return retval;
+}
+
+int CrossCorrelator::calculateXCCA_FAST( array2D *polar, array2D *corr ){
+    int retval = 0;
+
+    cout << "calculateXCCA_FAST" << endl;
+    
+    if (corr)
+        delete corr;
+    corr = new array2D( polar->dim1(), polar->dim2() );
+
+    for(int r_ct=0; r_ct < polar->dim2(); r_ct++){							// r_ct: for all rings
+
+        //perform autocorrelation
+        array1D *f = new array1D;
+        polar->getRow( r_ct, f);
+        autocorrelateFFT( f );
+        
+        cout << f->getASCIIdata() << endl;
+	}
+    
+    return retval;
+}
+
+
+double CrossCorrelator::lookup( double xcoord, double ycoord ){
+    
+    //YET TO IMPLEMENT!!!!
+
+    return 0.;
+}
+
+
+// compute 1D correlation corr(f,g) using FFT, result is written to f
+int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
+    int retval = 0;
+    
+    //Correlation Theorem:
+    //multiplying the FT of one function by the complex conjugate 
+    //of the FT of the other gives the FT of their correlation
+    f->FFT();                               // transform f -> F
+    g->FFT();                               // transform g -> G
+    f->multiplyByArrayElementwise(g);       // compute F * G_cc (complex conjugate)
+    return retval;
+}
+
+// compute 1D autocorrelation corr(f,f) using FFT, result is written to f
+int CrossCorrelator::autocorrelateFFT( array1D *f ){         
+    int retval = 0;
+    
+    //Wiener-Khinchin Theorem:
+    //the autocorrelation of a function f with itself 
+    //is found by computing the magnitude squared of its Fourier transform
+    f->FFT();                               // transform f -> F
+    f->multiplyByArrayElementwise(f);       // compute absolute square |F|^2 = F * F_cc
+    
+    return retval;   
+}
 
 
