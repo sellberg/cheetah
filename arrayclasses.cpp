@@ -37,7 +37,12 @@ using std::ofstream;
 //
 //*********************************************************************************
 //*********************************************************************************
+arraydata::arraydata(){
+    init();
+}
+
 arraydata::arraydata( unsigned int size_val ){
+    init();
 	p_size = size_val;
 	p_data = new double[size_val];
     if (p_data == 0)
@@ -48,6 +53,7 @@ arraydata::arraydata( unsigned int size_val ){
 }
 
 arraydata::arraydata( int16_t *CArray, unsigned int size_val ){
+    init();
     p_size = size_val;
     p_data = new double[size_val];
     if (p_data == 0)
@@ -59,34 +65,77 @@ arraydata::arraydata( int16_t *CArray, unsigned int size_val ){
     }
 }
 
+arraydata::arraydata( const arraydata &src ){                       //copy constructor
+    init();
+    copy( src );
+}
+
+arraydata & arraydata::operator=(const arraydata & src){
+    if ( this != &src ){
+        destroy();
+        init();
+        copy( src );
+    }
+    return *this;
+}
+
 arraydata::~arraydata(){
-	delete []p_data;	
+	destroy();	
+}
+
+//--------------------------------------------------------------------init helper functions
+void arraydata::init(){
+    p_size = 0;
+    p_data = NULL;
+}
+
+void arraydata::copy( const arraydata& src ){
+    p_size = src.size();
+    if (p_size > 0){
+        p_data = new double[ src.size() ];
+        double *src_data = src.data();
+        for (int i = 0; i < p_size; i++) {
+            p_data[i] = src_data[i];
+}
+    }else{
+        p_data = NULL;
+    }
+}
+
+void arraydata::destroy(){
+    delete []p_data;
+}
+
+double *arraydata::data() const{
+    return (double *)p_data;
 }
 
 
-
-
 //--------------------------------------------------------------------
-double *arraydata::data(){
-    return p_data;
+/*
+void arraydata::copy(const double* copy){
+    if (p_data){
+        if (copy){
+            delete copy;
+            copy = 0;
+        }
+        copy = new double[size()];
+        memcpy( copy, p_data, size()*sizeof(double) );
+    }else{
+        cerr << "Error in arraydata::data_copy! data not allocated." << endl;
+    }
 }
+*/
 
 
 //--------------------------------------------------------------------
-double *arraydata::data_copy(){
-    double *copy = new double[size_absolute()];
-    memcpy( copy, p_data, size_absolute()*sizeof(double) );
-    return copy;
-}
-
-//--------------------------------------------------------------------
-double arraydata::get_atAbsoluteIndex( unsigned int i){
-	if (i < size_absolute()) {
+double arraydata::get_atAbsoluteIndex( unsigned int i) const{
+	if (i < size()) {
 		return p_data[i];
 	} else {
 		if (verbose()){
 			std::cerr << "Error in arraydata! Index " << i 
-			<< " is larger than absolute dimension " << size_absolute() << "." << endl;
+			<< " is larger than absolute dimension " << size() << "." << endl;
 		}
 		
 		//fail 'silently', 
@@ -100,47 +149,47 @@ double arraydata::get_atAbsoluteIndex( unsigned int i){
 
 //--------------------------------------------------------------------
 void arraydata::set_atAbsoluteIndex( unsigned int i, double val){
-	if (i < size_absolute()) {
+	if (i < size()) {
 		p_data[i] = val;
 	} else {									//fail 'silently', as in: don't do anything
 		if (verbose()){
 			std::cerr << "Error in arraydata! Index " << i 
-			<< " is larger than absolute dimension " << size_absolute() << "." << endl;
+			<< " is larger than absolute dimension " << size() << "." << endl;
 		}
 	}
 }
 
 
 //--------------------------------------------------------------------
-unsigned int arraydata::size_absolute(){
+unsigned int arraydata::size() const{
 	return p_size;
 }
 
 
 //--------------------------------------------------------------------
 void arraydata::zero(){				//set all elements to zero
-	for (int i = 0; i < size_absolute(); i++) {
+	for (int i = 0; i < size(); i++) {
 		set_atAbsoluteIndex(i, 0);
 	}	
 }
 
 //--------------------------------------------------------------------
-double arraydata::getMin(){
+double arraydata::getMin() const{
 	double tempmin = INFINITY;
-	for (int i = 0; i < size_absolute(); i++) {
+	for (int i = 0; i < size(); i++) {
 		if (get_atAbsoluteIndex(i) < tempmin) {
-			set_atAbsoluteIndex(i, get_atAbsoluteIndex(i));
+			tempmin = get_atAbsoluteIndex(i);
 		}
 	}
 	return tempmin;
 }
 
 //--------------------------------------------------------------------
-double arraydata::getMax(){
+double arraydata::getMax() const{
 	double tempmax = -INFINITY;
-	for (int i = 0; i < size_absolute(); i++) {
+	for (int i = 0; i < size(); i++) {
 		if (get_atAbsoluteIndex(i) > tempmax) {
-			set_atAbsoluteIndex(i, get_atAbsoluteIndex(i));
+			tempmax = get_atAbsoluteIndex(i);
 		}
 	}
 	return tempmax;
@@ -148,10 +197,10 @@ double arraydata::getMax(){
 
 
 //------------------------------------------------------------- getASCIIdata
-string arraydata::getASCIIdata(){
+string arraydata::getASCIIdata() const{
     ostringstream osst;
     osst << "1D data:" << endl;
-	for (int i = 0; i<size_absolute(); i++) {
+	for (int i = 0; i<size(); i++) {
         osst << " " << get_atAbsoluteIndex(i);
 	}
     osst << endl;
@@ -206,7 +255,7 @@ void arraydata::readFromRawBinary( std::string filename ){
 	// printRawData(buffer,lSize);
 	
 	//write read data to array for further processing
-	for (int i=0; i<size_absolute(); i++) {
+	for (int i=0; i<size(); i++) {
 		set_atAbsoluteIndex( i, buffer[i] );
 	}
 	
@@ -218,7 +267,7 @@ void arraydata::readFromRawBinary( std::string filename ){
 
 
 //--------------------------------------------------------------------
-int arraydata::verbose(){
+int arraydata::verbose() const{
 	return p_verbose;
 }
 
@@ -246,6 +295,11 @@ void arraydata::setVerbose( int verbosity ){
 
 
 //-----------------------------------------------------constructors & destructors
+array1D::array1D() 
+		: arraydata(){
+    setDim1( 0 );
+}
+
 array1D::array1D( unsigned int size_dim1 ) 
 		: arraydata(size_dim1){
     setDim1( size_dim1 );
@@ -255,7 +309,6 @@ array1D::array1D( int16_t *CArray, unsigned int size_dim1 )
         : arraydata( CArray, size_dim1 ){
     setDim1( size_dim1 );
 }
-        
 
 array1D::~array1D(){
 }
@@ -264,7 +317,7 @@ array1D::~array1D(){
 
 
 //-----------------------------------------------------data accessors
-double array1D::get( unsigned int i ){
+double array1D::get( unsigned int i ) const{
 	if ( i < dim1() ) {
 		return get_atAbsoluteIndex(i);		
 	} else {
@@ -291,7 +344,7 @@ void array1D::set( unsigned int i, double value ){
 
 
 //-----------------------------------------------------setters & getters
-unsigned int array1D::dim1(){
+unsigned int array1D::dim1() const{
 	return p_dim1;
 }
 
@@ -323,6 +376,12 @@ string array1D::getASCIIdata(){
 //*********************************************************************************
 
 //-----------------------------------------------------constructors & destructors
+array2D::array2D()
+		: arraydata(){
+ 	setDim1( 0 );
+	setDim2( 0 );
+}
+
 array2D::array2D( unsigned int size_dim1, unsigned int size_dim2 )
 		: arraydata(size_dim1*size_dim2){
  	setDim1( size_dim1 );
@@ -331,12 +390,25 @@ array2D::array2D( unsigned int size_dim1, unsigned int size_dim2 )
 
 array2D::array2D( array1D* dataOneD, unsigned int size_dim1, unsigned int size_dim2) 
         : arraydata( size_dim1*size_dim2 ){
+    if (dataOneD->size() != size_dim1*size_dim2) {
+        cerr << "Warning in array2D::array2D. Inconsistent array size. ";
+        cerr << "size1D=" << dataOneD->size() << ", size2D=" << size_dim1*size_dim2 << endl;
+    }
  	setDim1( size_dim1 );
 	setDim2( size_dim2 );
-    if (p_data) {                       // if data exists, delete it first
-        delete[] p_data;
+
+    //copy contents of dataOneD to this array2D
+    p_size = dataOneD->size();
+    if (p_size > 0){
+        p_data = new double[ dataOneD->size() ];
+        double *src_data = dataOneD->data();
+        for (int i = 0; i < p_size; i++) {
+            p_data[i] = src_data[i];
+}
+    }else{
+        p_data = NULL;
     }
-    p_data = dataOneD->data_copy();     // get a copy of the data in 'dataOneD'
+    
 }
 
 
@@ -347,12 +419,12 @@ array2D::~array2D(){
 
 
 //-----------------------------------------------------data accessors
-double array2D::get( unsigned int i, unsigned int j ){
+double array2D::get( unsigned int i, unsigned int j ) const{
 	if ( i < dim1() && j < dim2()) {
 		return get_atAbsoluteIndex( j*dim1() + i );
 	} else {
 		if (verbose()){
-			std::cerr << "Error in array2D! Index (" << i << ", " << j 
+			std::cerr << "Error in array2D::get! Index (" << i << ", " << j 
 				<< ") is larger than dimension (" << dim1() << ", " << dim2() << ")." << endl;
 		}
 		return 0.;
@@ -364,20 +436,47 @@ void array2D::set( unsigned int i, unsigned int j, double value ){
 		set_atAbsoluteIndex( j*dim1() + i, value);
 	} else {
 		if (verbose()){
-			std::cerr << "Error in array2D! Index (" << i << ", " << j 
+			std::cerr << "Error in array2D::set! Index (" << i << ", " << j 
 				<< ") is larger than dimension (" << dim1() << ", " << dim2() << ")." << endl;
 		}
 	}
 }
 
 
+//-----------------------------------------------------getRow/getCol
+void array2D::getRow( int rownum, array1D *row ) const{
+    if (row){
+        delete row;
+        row = 0;
+    }
+    row = new array1D( this->dim1() );
+    
+    //for a fixed row, i goes through columns (x-values)
+    for (int i = 0; i < row->size(); i++){
+        row->set( i, this->get(i, rownum) );
+    }
+}
+
+void array2D::getCol( int colnum, array1D *col ) const{
+    if (col){
+        delete col;
+        col = 0;
+    }
+    col = new array1D( this->dim2() );
+    
+    //for a fixed column number, j goes through the rows (y-values)
+    for (int j = 0; j < col->size(); j++){
+        col->set( j, this->get(colnum, j) );
+    }
+}
+    
 //------------------------------------------------------------- getASCIIdata
-std::string array2D::getASCIIdata(){
+std::string array2D::getASCIIdata() const{
     ostringstream osst;
     osst << "2D data:" << endl;
-	for (int i = 0; i<dim1(); i++) {
+	for (int j = 0; j<dim2(); j++){
 		osst << " [";
-		for (int j = 0; j<dim2(); j++){
+	    for (int i = 0; i<dim1(); i++) {
 			osst << " " << get(i, j);
 		}
 		osst << "]" << endl;
@@ -396,8 +495,8 @@ std::string array2D::getASCIIdata(){
 // implementation borrowed following matrixdata::tiff16out 
 // of the tomo/matlib package (see http://xray-lens.de )
 //--------------------------------------------------------------------------
-int array2D::writeToTiff( std::string filename, int scaleFlag ){
-	if (verbose()) 
+int array2D::writeToTiff( std::string filename, int scaleFlag ) const{
+//	if (verbose()) 
 		cout << "Writing array2D to TIFF file " << filename << endl;
 
 	TIFF *out= TIFFOpen(filename.c_str() ,"w");
@@ -481,7 +580,7 @@ int array2D::writeToTiff( std::string filename, int scaleFlag ){
 
 
 //-------------------------------------------------------------- writeToHDF5
-int array2D::writeToHDF5( std::string filename ){
+int array2D::writeToHDF5( std::string filename ) const{
 		
 	std::string dataset_name = "data";
 	int NX = dim1();
@@ -570,7 +669,7 @@ int array2D::writeToHDF5( std::string filename ){
 
 
 //------------------------------------------------------------- writeToASCII
-int array2D::writeToASCII( std::string filename, bool printToConsole ){
+int array2D::writeToASCII( std::string filename, bool printToConsole ) const{
 	
 	ofstream fout( filename.c_str() );
 	fout << getASCIIdata();
@@ -592,8 +691,8 @@ void array2D::readFromHDF5( std::string rfilename ){
 //    hid_t       space;
     hid_t       dset;          /* Handles */
     herr_t      status;
-//    hsize_t     dims[1] = { size_absolute() };
-	double		*rdata = new double[size_absolute()];
+//    hsize_t     dims[1] = { size() };
+	double		*rdata = new double[size()];
 	
 	string dataset = "data";
 	
@@ -638,8 +737,10 @@ void array2D::readFromHDF5( std::string rfilename ){
     status = H5Fclose (file);
 	
 	//put data into private variable
-	if (p_data)
+	if (p_data){
         delete []p_data;
+        p_data = 0;
+    }
 	p_data = rdata;
 	
 	//set dimension!!!!!
@@ -647,7 +748,7 @@ void array2D::readFromHDF5( std::string rfilename ){
 
 
 //-----------------------------------------------------setters & getters
-unsigned int array2D::dim1(){
+unsigned int array2D::dim1() const{
 	return p_dim1;
 }
 
@@ -655,7 +756,7 @@ void array2D::setDim1( unsigned int size_dim1 ){
 	p_dim1 = size_dim1;
 }
 
-unsigned int array2D::dim2(){
+unsigned int array2D::dim2() const{
 	return p_dim2;
 }
 
@@ -683,7 +784,7 @@ void array2D::generateTestPattern( int type ){
 		case 1:											// simply increment by index
 			{
 				double val = 0;
-				for (int i = 0; i < size_absolute(); i++) {
+				for (int i = 0; i < size(); i++) {
 					if (val >= 65535) {
 						val = 0; 
 					}
@@ -710,6 +811,13 @@ void array2D::generateTestPattern( int type ){
 //*********************************************************************************
 
 //-----------------------------------------------------constructors & destructors
+array3D::array3D()
+		: arraydata(){
+ 	setDim1( 0 );
+	setDim2( 0 );
+	setDim3( 0 );
+}
+
 array3D::array3D( unsigned int size_dim1, unsigned int size_dim2, unsigned int size_dim3 )
 		: arraydata(size_dim1*size_dim2*size_dim3){
  	setDim1( size_dim1 );
@@ -722,7 +830,7 @@ array3D::~array3D(){
 
 
 //-----------------------------------------------------data accessors
-double array3D::get( unsigned int i, unsigned int j, unsigned int k ){
+double array3D::get( unsigned int i, unsigned int j, unsigned int k ) const{
 	if ( i < dim1() && j < dim2() && k < dim3() ) {
 		return get_atAbsoluteIndex( k*dim1()*dim2() + j*dim1() + i );
 	} else {
@@ -747,7 +855,7 @@ void array3D::set( unsigned int i, unsigned int j, unsigned int k, double value 
 
 
 //-----------------------------------------------------setters & getters
-unsigned int array3D::dim1(){
+unsigned int array3D::dim1() const{
 	return p_dim1;
 }
 
@@ -755,7 +863,7 @@ void array3D::setDim1( unsigned int size_dim1 ){
 	p_dim1 = size_dim1;
 }
 
-unsigned int array3D::dim2(){
+unsigned int array3D::dim2() const{
 	return p_dim2;
 }
 
@@ -763,7 +871,7 @@ void array3D::setDim2( unsigned int size_dim2 ){
 	p_dim2 = size_dim2;
 }
 
-unsigned int array3D::dim3(){
+unsigned int array3D::dim3() const{
 	return p_dim3;
 }
 
@@ -773,14 +881,14 @@ void array3D::setDim3( unsigned int size_dim3 ){
 
 
 //------------------------------------------------------------- getASCIIdata
-string array3D::getASCIIdata(){
+string array3D::getASCIIdata() const{
     ostringstream osst;
     osst << "3D data:" << endl;
-	for (int i = 0; i<dim1(); i++) {
+	for (int k = 0; k<dim3(); k++){
 		osst << " [[" << endl;
 		for (int j = 0; j<dim2(); j++){
             osst << "  [";
-            for (int k = 0; k<dim3(); k++){
+            for (int i = 0; i<dim1(); i++) {
                 osst << " " << get(i, j, k);
             }//k
             osst << "]" << endl;
