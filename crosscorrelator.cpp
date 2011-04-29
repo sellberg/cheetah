@@ -27,7 +27,7 @@ using std::endl;
 
 #include <cmath>
 
-
+#include <fftw3.h>
 
 
 
@@ -145,6 +145,18 @@ void CrossCorrelator::initFromFile( std::string filename, int type ){
 }
 
 
+void CrossCorrelator::initWithTestPattern( int type ){
+    array2D *test = new array2D();
+    test->generateTestPattern(type);
+    
+    test->getRow( 0, data);
+    
+    std::string filename = "~/Desktop/testpattern.tif";
+    test->writeToTiff( filename );
+    
+    delete test;
+}
+    
 
 // ***********************************************************************************
 // calculate polar coordinates from cartesian coordinate system
@@ -191,8 +203,6 @@ void CrossCorrelator::calculateSAXS(){
 	printf("calculating average SAXS intensity...\n");
 	
 	// calculate |q| for each pixel and bin lengths with correct resolution
-	array1D *q = new array1D( arraySize() );
-
 	for (int i=0; i<arraySize(); i++) {
 		q->set(i, round(sqrt( (qx->get(i)*qx->get(i))+(qy->get(i)*qy->get(i)) ) / deltaq()) * deltaq() );
 		// printf("q[%d]: %f\n",i,q[i]);
@@ -475,15 +485,21 @@ void CrossCorrelator::updateDependentVariables(){		//update the values that depe
 
 
 
+// ***********************************************************************************
+// correlation
+// ***********************************************************************************
+int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
 
-array2D *CrossCorrelator::calculatePolarCoordinates_Jan(){
+    cout << "calculatePolarCoordinates_FAST" << endl;
+
+    int retval = 0;
 
     double centerX = 0.;
     double centerY = 0.;
 
-    double start_r = 0;
+    double start_r = 4;
     double stop_r = 10;
-    double step_r = 0.1;
+    double step_r = 2;
 
     double start_phi = 0 * M_PI/180;
     double stop_phi = 360 * M_PI/180;
@@ -499,32 +515,50 @@ array2D *CrossCorrelator::calculatePolarCoordinates_Jan(){
     int number_r = (int)ceil( fabs(stop_r - start_r)/step_r );        
     int number_phi = (int)ceil( fabs(stop_phi - start_phi)/step_phi );
     
-    array2D *polar = new array2D(number_phi, number_r);
+    if (polar){
+        delete polar;
+        polar = NULL;
+    }
+    polar = new array2D(number_phi, number_r);
 
-	for(double r = start_r; r <= stop_r; r+=step_r){					// r: for all rings/radii
-		for(int p = start_phi; p <= stop_phi; p+=step_phi){				// phi: go through all angles
-            
+    double xcoord = 0.;
+    double ycoord = 0.;
+    double value = 0.;
+    double r = 0.;
+    double p = 0.;
+    int rcounter = 0;
+    int pcounter = 0;
+    
+	for(r = start_r, rcounter=0; rcounter < number_r; r+=step_r, rcounter++){                        // r: for all rings/radii
+        cout << "ring r=" << r << ", #" << rcounter << endl;
+		for(p = start_phi, pcounter=0; pcounter < number_phi; p+=step_phi, pcounter++){				// phi: go through all angles
+
             //find lookup coordinates
-			double xcoord = r * cos(p) + centerX;
-			double ycoord = r * sin(p) + centerY;
+			xcoord = r * cos(p) + centerX;
+			ycoord = r * sin(p) + centerY;
 			
             //lookup that value in original scattering data
-            double value = lookup( xcoord, ycoord );
-            //--> TO DO: 
+            value = lookup( xcoord, ycoord );
             
 			//assign the new values (note the functional determinant r)
-			polar->set(r, p, value * r);
+			polar->set(pcounter, rcounter, value * r);
 		}
 	}
-    return polar;
+    return retval;
 }
 
-array2D *CrossCorrelator::calculateXCCA_Jan( array2D *polar ){
+int CrossCorrelator::calculateXCCA_FAST( array2D *polar, array2D *corr ){
+
+    cout << "calculateXCCA_FAST" << endl;
+ 
+    int retval = 0;
 
     int srcNx_rings = polar->dim1();	
     int srcNy_rings = polar->dim2();
     
-    array2D *corr = new array2D( polar->dim1(), polar->dim2() );
+    if (corr)
+        delete corr;
+    corr = new array2D( polar->dim1(), polar->dim2() );
 
     for(int r_ct=0; r_ct < srcNy_rings; r_ct++){							// r_ct: for all rings
 
@@ -533,10 +567,15 @@ array2D *CrossCorrelator::calculateXCCA_Jan( array2D *polar ){
         //the autocorrelation of a function g with itself 
         //is found by computing the magnitude squared of its Fourier transform
         //corr(g,g) <-> G(f)G*(f) = |G(f)|^2
+
+        array1D *f = new array1D;
+        polar->getRow( r_ct, f);
+        autocorrelateFFT( f );
         
-        //--> to do: implement this using FFTW (should be blazing fast)
+        cout << f->getASCIIdata() << endl;
 	}
-    return corr;
+    
+    return retval;
 }
 
 
@@ -545,155 +584,23 @@ double CrossCorrelator::lookup( double xcoord, double ycoord ){
 }
 
 
+        //--> to do: implement this using FFTW (should be blazing fast)
+// compute 1D correlation corr(f,g) using FFT
+int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
+    int retval = 0;
+    
+    //array1D *corr = new array1D( f->size() );
+    
+    return retval;
+}
 
+// compute 1D autocorrelation corr(f,f) using FFT
+int CrossCorrelator::autocorrelateFFT( array1D *f ){         
+    int retval = 0;
+    
+    //array1D *autocorr = new array1D( f->size() );
+    
+    return retval;   
+}
 
-
-/*
-
-//----------------------------------------------------------------------
-// IGOR CODE
-//
-//----------------------------------------------------------------------
-function patternToPolarCoords( sourceImgName, targetImgName, numAngles )
-	string sourceImgName, targetImgName;
-	variable numAngles;
-	string primeImgName = targetImgName + "_prime";
-
-	wave src = $sourceImgName;
-	wave trgt = $targetImgName;
-	wave trgt_prime = $primeImgName;
-	
-	variable srcNx = dimsize(src, 0);			// number of rows in source image
-	variable srcNy = dimsize(src, 1);			// number of columns in source image
-	variable srcDelta = dimdelta(src, 0);
-	variable srcOffset = dimoffset(src, 0);
-	variable srcMaxX = srcDelta*srcNx + srcOffset;
-	
-	variable trgtNRs = srcNx/2;				// number of radii in new image
-	variable trgtNPhis = numAngles;			// number of phi steps in new image
-	
-	printf "source image: dims = (%g, %g)", srcNx, srcNy;
-	printf "f(x) = %g*x + %g, maxX = %g \r", srcDelta, srcOffset, srcMaxX;
-	printf "target dims = (%g, %g)\r", trgtNPhis, trgtNRs;
-	
-	make/o/n=( trgtNPhis, trgtNRs ) $targetImgName;
-	setscale x, 0, 2*pi, "rad", $targetImgName;
-	setscale y, 0, srcMaxX, "m^-1", $targetImgName;
-	
-	//DEBUG
-	duplicate/o $sourceImgName, srctest;
-	//srctest = 0;
-	
-	variable rCount, phiCount;
-	for(rCount=0; rCount<trgtNRs; rCount+=1)							// rCount: for all rings
-		variable rVal;														// rVal: physical value at this radius
-		rVal = dimdelta(trgt,1) * rCount;																
-		for(phiCount=0; phiCount<trgtNPhis; phiCount+=1)				// phiCount: go through all angles
-			variable lookupX, lookupY, phiVal;
-			phiVal = phiCount*2*pi/trgtNPhis;								// angle value
-			
-			//use integer index for lookup
-			//lookupX = rCount * cos(phiVal) + centerX;					// x
-			//lookupY = rCount * sin(phiVal) + centerY;					// y
-			//trgt[phiCount][rCount] = src[lookupX][lookupY];		//assign (x,y) --> (x,y)
-			
-			//use actual scaled values for lookup and interpolation
-			//assuming the image is already centered correctly!!!
-			lookupX = rVal * cos(phiVal);
-			lookupY = rVal * sin(phiVal);
-			
-			//assign the new values (note the functional determinant)
-			trgt[phiCount][rCount] = interp2D(src, lookupX, lookupY ) * rVal;
-			
-			//DEBUG source
-			if ( mod(rCount,10) == 0 )
-				//srctest[lookupX][lookupY] = 1;
-				variable intx, inty;
-				intx = (lookupX-dimoffset(src,0)) / dimdelta(src,0);
-				inty = (lookupY-dimoffset(src,1)) / dimdelta(src,1);
-				srctest[intx][inty] = 1e7;
-			endif
-			//DEBUG target
-			//if ( mod(rCount,10) == 0 )
-			//	trgt[phiCount][rCount] = 1e9;
-			//endif
-		endfor
-	endfor
-	
-	
-//	Display; AppendImage trgt; ModifyImage trgt ctab= {*,*,Rainbow,0};
-//	Label bottom "\\u"; Label left "\\u";
-	//string descString = "N = "+num2istr(numParticles);
-	//TextBox/C/N=text0/A=RT/X=5.00/Y=5.00 descString;
-	
-	//calculate SAXS average for each q-value (0th order contributions)
-	make/o/n=(rCount) I_SAXS;
-	setscale x, 0, srcMaxX, "m^-1", I_SAXS;
-	duplicate/o $targetImgName, $primeImgName;
-	
-	variable aa;
-	for ( aa = 0; aa < numpnts(I_SAXS); aa += 1)
-		make/n=(trgtNPhis) toAverage = trgt[p][aa];
-		variable meanval = mean( toAverage );
-		killwaves toAverage;
-		I_SAXS[aa] = meanval;
-	endfor
-	trgt_prime[][] = trgt[p][q]-I_SAXS[q]
-end
-
-
-
-
-
-//----------------------------------------------------------------------
-// IGOR CODE
-//
-//----------------------------------------------------------------------
-function correlation( sourceImgName, correlationImgName )
-	string sourceImgName, correlationImgName;
-
-	wave polar = $sourceImgName;
-	
-	variable srcNx_angles = dimsize(polar, 0);			// number of rows in source image
-	variable srcNy_rings = dimsize(polar, 1);			// number of columns in source image
-
-	printf "source image '%s': dims = (%g, %g) \r", sourceImgName, srcNx_angles, srcNy_rings;
-
-	duplicate/o polar, $correlationImgName /wave=corr;
-	setscale x, 0, 2*pi, "rad", corr;
-	corr = 0;
-	
-	
-	variable timerRef = startMSTimer;
-	
-	variable rCount, deltaCount, phiCount;
-	for(rCount=0; rCount < srcNy_rings; rCount+=1)							// r: for all rings
-		make/o/n=(srcNx_angles) line;
-		line = polar[p][rCount]; 												// extract one line (constant r)
-		duplicate/o line, corrline;							
-
-		correlate/c line, corrline;										//Igor's correlation
-		//correlateOwnImplementation(line, corrline);					//own version
-				
-		corr[][rCount] = corrline[p];										// assign to image
-		killwaves corrline;
-		
-		if ( mod(rCount, 50) )
-			printf ".";
-		else
-			printf "\r  #%g: .", rCount;
-		endif
-	endfor
-	printf "\r";
-	
-	variable microseconds = stopMSTimer(timerRef);
-	printf "time elapsed: %f seconds\r", microseconds/1000/1000;
-	
-	string corrLogName = correlationImgName + "_log";
-	duplicate/o corr, $corrLogName / wave=corr_log;
-	corr_log = log(corr);
-	
-end
-
-*/
 

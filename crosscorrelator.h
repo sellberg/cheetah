@@ -48,6 +48,7 @@ public:
 	
 	//---------------------------------------------input/output
 	void initFromFile( std::string filename, int type=0 );
+    void initWithTestPattern( int type=0 );                     //generate some test
 	void printRawData(uint16_t *buffer,long lSize);
 	void writeSAXS();
 	void writeXCCA();
@@ -59,9 +60,21 @@ public:
 	void calculateXCCA();
 	
     //---------------------------------------------alternative approach (Jan's way)
-    array2D *calculatePolarCoordinates_Jan();           // returns a 2D pattern in polar coordinates (r vs. phi)
-    array2D *calculateXCCA_Jan( array2D *polarData );   // returns the autocorrelation function (r = const.)
-    double lookup( double xcoord, double ycoord );      // looks up the value closest to xcoord, ycoord in the data
+    // these functions have the byname FAST to distinguish them from the ones above 
+    // for lack of better name and in hope that it may be fast. We'll see...
+    
+    // 'calculatePolarCoordinates' returns a 2D pattern in polar coordinates (r vs. phi)
+    int calculatePolarCoordinates_FAST(array2D* polar); 
+    
+    // 'calculateXCCA' returns the autocorrelation function (r = const.)          
+    int calculateXCCA_FAST( array2D *polarData, array2D *corr );
+    
+    // looks up the value closest to xcoord, ycoord in the data
+    double lookup( double xcoord, double ycoord );
+    
+    //compute 1D correlations using FFT, the result is returned in f, respectively
+    int correlateFFT( array1D *f, array1D *g );    // result of corr(f,g) -> f
+    int autocorrelateFFT( array1D *f );            // result of corr(f,f) -> f
         
 	//---------------------------------------------setters & getters
 	int arraySize();                                    // returns private variable p_arraySize
