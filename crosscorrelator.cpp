@@ -27,8 +27,6 @@ using std::endl;
 
 #include <cmath>
 
-#include <fftw3.h>
-
 
 
 
@@ -548,26 +546,17 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
 }
 
 int CrossCorrelator::calculateXCCA_FAST( array2D *polar, array2D *corr ){
-
-    cout << "calculateXCCA_FAST" << endl;
- 
     int retval = 0;
 
-    int srcNx_rings = polar->dim1();	
-    int srcNy_rings = polar->dim2();
+    cout << "calculateXCCA_FAST" << endl;
     
     if (corr)
         delete corr;
     corr = new array2D( polar->dim1(), polar->dim2() );
 
-    for(int r_ct=0; r_ct < srcNy_rings; r_ct++){							// r_ct: for all rings
+    for(int r_ct=0; r_ct < polar->dim2(); r_ct++){							// r_ct: for all rings
 
         //perform autocorrelation
-        //Wiener-Khinchin Theorem:
-        //the autocorrelation of a function g with itself 
-        //is found by computing the magnitude squared of its Fourier transform
-        //corr(g,g) <-> G(f)G*(f) = |G(f)|^2
-
         array1D *f = new array1D;
         polar->getRow( r_ct, f);
         autocorrelateFFT( f );
@@ -580,25 +569,35 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *polar, array2D *corr ){
 
 
 double CrossCorrelator::lookup( double xcoord, double ycoord ){
+    
+    //YET TO IMPLEMENT!!!!
+
     return 0.;
 }
 
 
-        //--> to do: implement this using FFTW (should be blazing fast)
-// compute 1D correlation corr(f,g) using FFT
+// compute 1D correlation corr(f,g) using FFT, result is written to f
 int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
     int retval = 0;
     
-    //array1D *corr = new array1D( f->size() );
-    
+    //Correlation Theorem:
+    //multiplying the FT of one function by the complex conjugate 
+    //of the FT of the other gives the FT of their correlation
+    f->FFT();                               // transform f -> F
+    g->FFT();                               // transform g -> G
+    f->multiplyByArrayElementwise(g);       // compute F * G_cc (complex conjugate)
     return retval;
 }
 
-// compute 1D autocorrelation corr(f,f) using FFT
+// compute 1D autocorrelation corr(f,f) using FFT, result is written to f
 int CrossCorrelator::autocorrelateFFT( array1D *f ){         
     int retval = 0;
     
-    //array1D *autocorr = new array1D( f->size() );
+    //Wiener-Khinchin Theorem:
+    //the autocorrelation of a function f with itself 
+    //is found by computing the magnitude squared of its Fourier transform
+    f->FFT();                               // transform f -> F
+    f->multiplyByArrayElementwise(f);       // compute absolute square |F|^2 = F * F_cc
     
     return retval;   
 }

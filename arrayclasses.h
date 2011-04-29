@@ -38,6 +38,9 @@ public:
     double *data() const;                                         //return pointer to internal raw data array
 //    void data_copy(double *copy);                               //return a new array pointer with a copy of the data
     
+    void zero();												//set all elements to zero
+	void ones();												//set all elements to 1
+    
 	// 'atAbsoluteIndex' functions:
 	// the following functions change or return properties
 	// assuming a one-dimensional array (consistent with the internal data structure), 
@@ -52,9 +55,10 @@ public:
     virtual std::string getASCIIdata() const;                         //can/should be overridden by subclasses
 	void readFromRawBinary( std::string filename );
 	void writeToRawBinary( std::string filename );
-
-	void zero();												//set all elements to zero
-	void ones();												//set all elements to 1
+    
+    //perform some basic math on array
+    int multiplyByFactor( double factor );
+    int multiplyByArrayElementwise( arraydata *secondFactor );
 
 	int verbose() const;
 	void setVerbose( int verbosity );
@@ -80,6 +84,8 @@ public:
 	
 	double get( unsigned int i ) const;
 	void set( unsigned int i, double value );
+    
+    int FFT();                                            //compute the forward discrete Fourier transform of the 1D data
     
     std::string getASCIIdata();
 };

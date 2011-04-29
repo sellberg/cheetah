@@ -24,10 +24,12 @@ using std::ostringstream;
 #include <fstream>
 using std::ofstream;
 
+#include <cmath>
+
+//include headers
 #include <hdf5.h>
 #include <tiffio.h>
-
-#include <cmath>
+#include <fftw3.h>
 
 
 //*********************************************************************************
@@ -265,6 +267,29 @@ void arraydata::readFromRawBinary( std::string filename ){
 	free(buffer);
 }
 
+//--------------------------------------------------------------------array math
+int arraydata::multiplyByFactor( double factor ){
+    for (int i = 0; i<this->size(); i++) {
+        set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)*factor);
+    }
+    return 0;
+}
+
+
+int arraydata::multiplyByArrayElementwise( arraydata *secondFactor ){
+    if (this->size() != secondFactor->size()){
+        cerr << "Error in arraydata::multiplyArrayElementwise! Array sizes don't match. ";
+        cerr << "(" << this->size() << " != " << secondFactor->size() << "). Operation not performed."<< endl;
+        return 1;
+    }
+    
+    for (int i = 0; i<this->size(); i++) {
+        set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)*secondFactor->get_atAbsoluteIndex(i));
+    }
+    return 0;
+}
+
+
 
 //--------------------------------------------------------------------
 int arraydata::verbose() const{
@@ -359,7 +384,44 @@ string array1D::getASCIIdata(){
 }
 
 
+//------------------------------------------------------------- Fourier transform
+int array1D::FFT(){
+    int retval = 0;
 
+    //FFTW comments from official documentation:
+    // input data in[i] are purely real numbers,
+    // DFT output satisfies the “Hermitian” redundancy: 
+    // out[i] is the conjugate of out[n-i]
+    // the input is n real numbers, while the output is n/2+1 complex numbers
+    
+    //set up fftw plan input
+    int n;
+    double *in;
+    fftw_complex *out;
+    unsigned flags = FFTW_FORWARD;          //usually FFTW_MEASURE or FFTW_ESTIMATE
+    
+ //   fftw_plan plan = fftw_plan_dft_r2c_1d(n, in, out, flags);
+
+    //execute fft
+ //   fftw_execute( plan );
+    
+    
+    /*   ******from FFTW tutorial*******
+         fftw_complex *in, *out;
+         fftw_plan p;
+         ...
+         in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+         out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+         p = fftw_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+         ...
+         fftw_execute(p); // repeat as needed
+         ...
+         fftw_destroy_plan(p);
+         fftw_free(in); fftw_free(out);
+    */
+    
+    return retval;
+}
 
 
 
