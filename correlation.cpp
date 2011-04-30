@@ -28,6 +28,7 @@
 #include <pthread.h>
 #include <iostream>
 using std::cout;
+using std::cerr;
 using std::endl;
 
 #include <cmath>
@@ -40,21 +41,41 @@ using std::endl;
 // apply angular cross correlation
 //-------------------------------------------------------------------
 void correlate(tThreadInfo *threadInfo, cGlobal *global){
-
-    cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
+    
+    int alg = 1;        //select the correlation algorithm... 
+                        //should be governed by a setting in the ini file at some point
+                        
+    cout << "CORRELATING... using alg " << alg << " in thread #" << threadInfo->threadNum << "." << endl;
 
     int arraylength = RAW_DATA_LENGTH;    
    	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, arraylength );
     
+    switch (alg) {
+        case 0:{
+                cout << "XCCA regular" << endl;
+                cc->calculatePolarCoordinates();
+                cc->calculateSAXS();
+                cc->calculateXCCA();	
+                
+                cc->writeSAXS();
+                cc->writeXCCA();
+            }
+            break;
+        case 1:{
+                cout << "XCCA FAST" << endl;
+                array2D *polar = new array2D;
+                array2D *corr = new array2D;
+                cc->calculatePolarCoordinates_FAST( polar );
+                cc->calculateXCCA_FAST( polar, corr );
+                delete polar;
+                delete corr;
+            }
+            break;
+        default:
+            cerr << "Error in correlate()! Correlation algorithm " << alg << " not known." << endl;
+    }
 
-	cc->calculatePolarCoordinates();
-	cc->calculateSAXS();
-	cc->calculateXCCA();	
-	
-	cc->writeSAXS();
-	cc->writeXCCA();
-
-
+    delete cc;
 }
 
 
