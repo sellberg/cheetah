@@ -142,23 +142,39 @@ void CrossCorrelator::initFromFile( std::string filename, int type ){
 	}
 }
 
-
+//----------------------------------------------------------------------------initWithTestPattern
 void CrossCorrelator::initWithTestPattern( int type ){
-    array2D *test = new array2D();
+
+    //create a nice test pattern
+    int sizex = 100;
+    int sizey = 100;
+    array2D *test = new array2D(sizex, sizey);
     test->generateTestPattern(type);
+
+    //convert it to 1D object and feed it to 'data'
+    delete data;
+    data = new array1D( test );
     
-    test->getRow( 0, data);
+    //set the right center
+    setCenterX( (double)sizex/2 );
+    setCenterY( (double)sizey/2 );
     
-    std::string filename = "~/Desktop/testpattern.tif";
+    //write tiff image to check what the pattern looks like
+    std::string filename = "/Users/feldkamp/Desktop/testpattern.tif";
     test->writeToTiff( filename );
     
     delete test;
 }
     
 
+
+
 // ***********************************************************************************
+// CROSS-CORRELATION ALGORITHM 0
+// ***********************************************************************************
+
+//----------------------------------------------------------------------------calculatePolarCoordinates
 // calculate polar coordinates from cartesian coordinate system
-// ***********************************************************************************
 void CrossCorrelator::calculatePolarCoordinates()
 {	
 	// calculate phi for each pixel and bin angles with correct resolution
@@ -191,13 +207,13 @@ void CrossCorrelator::calculatePolarCoordinates()
 }	
 
 
-// ***********************************************************************************
-// calculate SAXS
-// ***********************************************************************************
+//----------------------------------------------------------------------------calculateSAXS
 void CrossCorrelator::calculateSAXS(){
 	
 	
-	// using SAXS average for all shots to calculate cross-correlation or just the SAXS from the specific shots will give different results. The first choice is probably preferable. Here, the second one is performed.
+	// using SAXS average for all shots to calculate cross-correlation 
+    //or just the SAXS from the specific shots will give different results. 
+    //The first choice is probably preferable. Here, the second one is performed.
 	printf("calculating average SAXS intensity...\n");
 	
 	// calculate |q| for each pixel and bin lengths with correct resolution
@@ -228,9 +244,7 @@ void CrossCorrelator::calculateSAXS(){
 
 
 
-// ***********************************************************************************
-// calculate cross-correlation
-// ***********************************************************************************
+//----------------------------------------------------------------------------calculateXCCA
 void CrossCorrelator::calculateXCCA(){
 
 	cout << "deltaPhi: " << deltaphi() << endl;
@@ -249,7 +263,9 @@ void CrossCorrelator::calculateXCCA(){
 		int qIndex = int(q->get(i)/deltaq()+0.001); // the index in qave[] that corresponds to q[i]
 		int phiIndex = int(phi->get(i)/deltaphi()+0.001); // the index in phiave[] that corresponds to phi[i]
 		// printf("qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
-		if (qIndex < samplingLength() && phiIndex < samplingAngle()) { // make sure qIndex is not larger than the samplingLength (corners where q > 1 are excluded)
+		if (qIndex < samplingLength() && phiIndex < samplingAngle()) { // make sure qIndex is not larger 
+                                                                        //than the samplingLength 
+                                                                        //(corners where q > 1 are excluded)
 			pixelCount->set(qIndex, phiIndex, pixelCount->get(qIndex,phiIndex)+1);
 			if (pixelBool->get(qIndex, phiIndex) != 1) {
 				pixelBool->set(qIndex, phiIndex, 1);
@@ -291,7 +307,8 @@ void CrossCorrelator::calculateXCCA(){
 		int qIndex = int(q->get(i)/deltaq()+0.001); // the index in qave[] that corresponds to q[i]
 		int phiIndex = int(phi->get(i)/deltaphi()+0.001); // the index in phiave[] that corresponds to phi[i]
 		// printf("qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
-		if (qIndex < samplingLength() && phiIndex < samplingAngle()) { // make sure qIndex is not larger than the samplingLength (corners where q > 1 are excluded)
+		if (qIndex < samplingLength() && phiIndex < samplingAngle()) { // make sure qIndex is not larger than the samplingLength 
+                                                                        //(corners where q > 1 are excluded)
 			speckle->set(qIndex, phiIndex, speckle->get(qIndex, phiIndex) + data->get(i) );
 		} // else printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
 	}
@@ -347,9 +364,7 @@ void CrossCorrelator::calculateXCCA(){
 
 
 
-// ***********************************************************************************
-// write SAXS output
-// ***********************************************************************************
+//----------------------------------------------------------------------------writeSAXS
 void CrossCorrelator::writeSAXS(){
 	// write cross-correlation and average SAXS intensity to binary
 	printf("writing data to file...\n");
@@ -381,9 +396,7 @@ void CrossCorrelator::writeSAXS(){
 
 
 
-// ***********************************************************************************
-// dump results
-// ***********************************************************************************
+//----------------------------------------------------------------------------dumpResults
 void CrossCorrelator::dumpResults( std::string filename ){
 	cout << "Writing results to TIFF file '" << filename << "'." << endl;
     
@@ -399,9 +412,7 @@ void CrossCorrelator::dumpResults( std::string filename ){
 
 
 
-// ***********************************************************************************
-// write XCCA output
-// ***********************************************************************************
+//----------------------------------------------------------------------------writeXCCA
 void CrossCorrelator::writeXCCA(){
 	//not implemented yet. 
 	//right now, all output is handled by writeSAXS()
@@ -410,9 +421,8 @@ void CrossCorrelator::writeXCCA(){
 
 
 
-// ***********************************************************************************
+//----------------------------------------------------------------------------printRawData
 // print raw data after having read from file
-// ***********************************************************************************
 void CrossCorrelator::printRawData(uint16_t *buffer,long lSize) {
 	for (int i=0; i<lSize; i++) {
 		printf("%u ",buffer[i]);
@@ -425,7 +435,7 @@ void CrossCorrelator::printRawData(uint16_t *buffer,long lSize) {
 // ***********************************************************************************
 // setters and getters for private variables
 // ***********************************************************************************
-int CrossCorrelator::arraySize(){
+int CrossCorrelator::arraySize() const{
 	return p_arraySize;
 }
 
@@ -433,7 +443,7 @@ void CrossCorrelator::setArraySize( int arraySize_val ){
 	p_arraySize = arraySize_val;
 }
 
-int CrossCorrelator::matrixSize(){
+int CrossCorrelator::matrixSize() const{
 	return (int)floor(sqrt( (double)arraySize() ));            //assuming a square image
 }
 
@@ -442,7 +452,7 @@ void CrossCorrelator::setMatrixSize( int matrixSize_val ){
 	updateDependentVariables();
 }
 
-double CrossCorrelator::qmax(){
+double CrossCorrelator::qmax() const{
 	return p_qmax;
 }
 
@@ -451,23 +461,41 @@ void CrossCorrelator::setQmax( double qmax_val ){
 	updateDependentVariables();
 }
 
-double CrossCorrelator::deltaq(){						//getter only, dependent variable
+
+double CrossCorrelator::centerX() const{
+    return p_centerX;
+}
+
+void CrossCorrelator::setCenterX( double cen_x ){
+    p_centerX = cen_x;
+}
+
+double CrossCorrelator::centerY() const{
+    return p_centerY;
+}
+
+void CrossCorrelator::setCenterY( double cen_y ){
+    p_centerY = cen_y;
+}
+
+
+double CrossCorrelator::deltaq() const{						//getter only, dependent variable
 	return p_deltaq;
 }
 
-double CrossCorrelator::deltaphi(){						//getter only, dependent variable
+double CrossCorrelator::deltaphi() const{						//getter only, dependent variable
 	return p_deltaphi;
 }
 
-int CrossCorrelator::samplingLength(){					//getter only, dependent variable
+int CrossCorrelator::samplingLength() const{					//getter only, dependent variable
 	return p_samplingLength;
 }
 
-int CrossCorrelator::samplingAngle(){					//getter only, dependent variable
+int CrossCorrelator::samplingAngle() const{					//getter only, dependent variable
 	return p_samplingAngle;
 }
 
-int CrossCorrelator::samplingLag(){					//getter only, dependent variable
+int CrossCorrelator::samplingLag() const{					//getter only, dependent variable
 	return p_samplingLag;
 }
 
@@ -484,40 +512,50 @@ void CrossCorrelator::updateDependentVariables(){		//update the values that depe
 
 
 // ***********************************************************************************
-// correlation
+// CROSS-CORRELATION ALGORITHM 1 (_FAST)
 // ***********************************************************************************
+
+//----------------------------------------------------------------------------transform to polar coordinates
 int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
 
     cout << "calculatePolarCoordinates_FAST" << endl;
 
     int retval = 0;
-
-    double centerX = 0.;
-    double centerY = 0.;
-
-    double start_r = 4;
-    double stop_r = 10;
-    double step_r = 2;
-
-    double start_phi = 0 * M_PI/180;
-    double stop_phi = 360 * M_PI/180;
-    double step_phi = 1. * M_PI/180;
     
-    if (step_r <= 0)
+    
+    //write output of the intermediate files?
+    int output_data_flag = 0;               
+    int output_polar_flag = 1;
+
+    //some of the following variables should be set specifically for each dataset
+    //this is currently still in testing mode
+    //needs to be changed, soon -----> put into ini file (or so)
+    double start_r = 10;
+    double stop_r = 45;
+    int number_r = 35;
+    double step_r = (stop_r - start_r)/number_r;
+
+    double start_phi = 0;
+    double stop_phi = 360;
+    int number_phi =  90;
+    double step_phi = (stop_phi - start_phi)/number_phi;
+    
+    if (step_r < 0)
         cerr << "Error in CrossCorrelator::calculatePolarCoordinates_Jan -- step_r value " 
             << step_r << " is smaller than zero." << endl;
-    if (step_phi <= 0)
+    if (step_phi < 0)
         cerr << "Error in CrossCorrelator::calculatePolarCoordinates_Jan -- step_phi value " 
             << step_phi << " is smaller than zero." << endl;
-
-    int number_r = (int)ceil( fabs(stop_r - start_r)/step_r );        
-    int number_phi = (int)ceil( fabs(stop_phi - start_phi)/step_phi );
     
     if (polar){
         delete polar;
         polar = NULL;
     }
     polar = new array2D(number_phi, number_r);
+
+    //DEBUG!!!!!!!!!!!!
+    check1D = new array1D(*data);
+    array2D *polarSampling = new array2D(2*(stop_r+1), 2*(stop_r+1));
 
     double xcoord = 0.;
     double ycoord = 0.;
@@ -532,19 +570,60 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
 		for(p = start_phi, pcounter=0; pcounter < number_phi; p+=step_phi, pcounter++){				// phi: go through all angles
 
             //find lookup coordinates
-			xcoord = r * cos(p) + centerX;
-			ycoord = r * sin(p) + centerY;
+			xcoord = r * cos(p*M_PI/180);
+			ycoord = r * sin(p*M_PI/180);
+            polarSampling->set(xcoord+stop_r, ycoord+stop_r, 65535);
 			
             //lookup that value in original scattering data
-            value = lookup( xcoord, ycoord );
+            value = lookup( xcoord + centerX(), ycoord + centerY() );                 //COMMENT THIS BACK IN FOR REAL CASE
             
 			//assign the new values (note the functional determinant r)
 			polar->set(pcounter, rcounter, value * r);
 		}
 	}
+
+    if (output_data_flag) {
+//        data->writeToTiff("/Users/feldkamp/Desktop/polar.tif");
+        cout << "data: " << data->getASCIIdata() << endl;
+    }
+    
+    if (output_polar_flag) {
+        polar->writeToTiff("/Users/feldkamp/Desktop/polar.tif");
+//        cout << "polar: " << polar->getASCIIdata() << endl;
+    }
+    
+    array2D *check2D = new array2D( check1D, 100, 100 );
+    check2D->writeToTiff("/Users/feldkamp/Desktop/check2D.tif");
+    polarSampling->writeToTiff("/Users/feldkamp/Desktop/polarSampling.tif");
+    delete check2D;
+    delete check1D;
+    delete polarSampling;
+    
     return retval;
 }
 
+
+//---------------------------------------------------------------------------- lookup
+double CrossCorrelator::lookup( double xcoord, double ycoord ) const{
+    //YET TO IMPLEMENT ACCORDING TO CSPAD GEOMETRY
+    
+    
+    //test case: feed everything back into 2D and be done with it
+    int xdim = 100;
+    xcoord = round(xcoord);
+    ycoord = round(ycoord);
+    int index = (int) xcoord + (xdim*ycoord);
+    
+    double val = data->get( index );
+    
+    //DEBUG!!!!!!!!!!
+    check1D->set(index, 65535);         //keep track of where the value was read
+
+    return val;
+}
+
+
+//----------------------------------------------------------------------------calculate XCCA
 int CrossCorrelator::calculateXCCA_FAST( array2D *polar, array2D *corr ){
     int retval = 0;
 
@@ -561,21 +640,18 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *polar, array2D *corr ){
         polar->getRow( r_ct, f);
         autocorrelateFFT( f );
         
-        cout << f->getASCIIdata() << endl;
+        cout << "AUTOCORRELATION -- " << f->getASCIIdata() << endl;
 	}
+    
+    corr->writeToTiff("/Users/feldkamp/Desktop/corr_scaled.tif", 1);
     
     return retval;
 }
 
 
-double CrossCorrelator::lookup( double xcoord, double ycoord ){
-    
-    //YET TO IMPLEMENT!!!!
-
-    return 0.;
-}
 
 
+//----------------------------------------------------------------------------correlate
 // compute 1D correlation corr(f,g) using FFT, result is written to f
 int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
     int retval = 0;
@@ -583,22 +659,75 @@ int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
     //Correlation Theorem:
     //multiplying the FT of one function by the complex conjugate 
     //of the FT of the other gives the FT of their correlation
-    f->FFT();                               // transform f -> F
-    g->FFT();                               // transform g -> G
-    f->multiplyByArrayElementwise(g);       // compute F * G_cc (complex conjugate)
+    
+    
+    FourierTransformer *ft = new FourierTransformer;
+        
+    // transform f -> F
+    array1D *f_real = new array1D( *f );
+    array1D *f_imag = new array1D;
+    int f_fail = ft->transform( f_real, f_imag );
+    delete ft;
+    
+    if (f_fail)
+        cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform (f) failed." << endl;
+    
+    // transform g -> G
+    array1D *g_real = new array1D( *g );
+    array1D *g_imag = new array1D;
+    int g_fail = ft->transform( g_real, g_imag );
+    if (g_fail)
+        cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform (g) failed." << endl;
+        
+    delete ft;
+            
+    
+    // compute F * G_cc (complex conjugate)
+    //WARNING::::::::NOT SURE THE MATH IS ALL CORRECT AT THIS POINT! (by JF, 2011-04-29)
+    for (int i=0; i<f_real->size(); i++) {
+        double val = f_real->get(i)*g_real->get(i) + f_imag->get(i)*(-g_imag->get(i));
+        f->set(i, val);
+    }
+
+    delete f_real;
+    delete f_imag;    
+    delete g_real;
+    delete g_imag;
+    
+    
     return retval;
 }
 
+
+//----------------------------------------------------------------------------autocorrelate
 // compute 1D autocorrelation corr(f,f) using FFT, result is written to f
 int CrossCorrelator::autocorrelateFFT( array1D *f ){         
     int retval = 0;
     
-    //Wiener-Khinchin Theorem:
-    //the autocorrelation of a function f with itself 
-    //is found by computing the magnitude squared of its Fourier transform
-    f->FFT();                               // transform f -> F
-    f->multiplyByArrayElementwise(f);       // compute absolute square |F|^2 = F * F_cc
+    //-------------------------------------------------------------------------
+    //   Wiener-Khinchin Theorem:
+    //   the autocorrelation of a function f with itself 
+    //   is found by computing the magnitude squared of its Fourier transform
+    //-------------------------------------------------------------------------
     
+    //transform f -> F
+    array1D *real = new array1D( *f );
+    array1D *imag = new array1D;
+    FourierTransformer *ft = new FourierTransformer;
+    int fail = ft->transform( real, imag );
+    delete ft;
+    
+    if (fail)
+        cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform failed." << endl;
+    
+    //compute absolute square |F|^2
+    for (int i=0; i<real->size(); i++) {
+        double m2 = real->get(i)*real->get(i) + imag->get(i)*imag->get(i);
+        f->set(i, m2);
+    }
+    
+    delete real;
+    delete imag;
     return retval;   
 }
 

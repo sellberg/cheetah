@@ -13,6 +13,11 @@
 
 #include <string>
 
+//tell the compiler that these classes are going to be defined
+class array1D;
+class array2D;
+class array3D;
+class FourierTransformer;
 
 //*********************************************************************************
 class arraydata {
@@ -74,9 +79,11 @@ private:
 	int p_dim1;
 	
 public:
-    array1D();
-	array1D( unsigned int size_dim1 );                            //default constructor
-    array1D( int16_t *CArray, unsigned int size_val );
+    array1D();                                                  //default constructor
+	array1D( unsigned int size_dim1 );                          
+    array1D( int16_t *CArray, unsigned int size_val );          //init with C-style array
+//    array1D( const arraydata &src );                            //copy constructor
+    array1D( array2D* dataTwoD );                               //init with an array2D object
 	~array1D();
 	
 	unsigned int dim1() const;
@@ -85,7 +92,7 @@ public:
 	double get( unsigned int i ) const;
 	void set( unsigned int i, double value );
     
-    int FFT();                                            //compute the forward discrete Fourier transform of the 1D data
+                                   
     
     std::string getASCIIdata();
 };
@@ -155,6 +162,27 @@ public:
 	void set( unsigned int i, unsigned int j, unsigned int k, double value );
     
     std::string getASCIIdata() const;
+};
+
+
+
+//*********************************************************************************
+//helpers. they do Fourier transform
+class FourierTransformer{
+
+public:
+    //int FFT( double* real, double* imag, int &output_size );
+    int transform( array1D *real, array1D *imag );
+    
+/*    
+        //FFT: compute the discrete forward Fourier transform (F) of the 1D data (f)
+    //the array1D's object data is overwritten by the result of the transform
+    // mode == 0: real part, real(F)
+    // mode == 1: imaginary part, imag(F)
+    // mode == 2: magnitude squared, |F|^2
+    int FFT( int mode = 0 );    
+    
+*/
 };
 
 

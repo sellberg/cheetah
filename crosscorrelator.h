@@ -36,9 +36,11 @@ private:
 	array1D *iave;
 	array1D *phiave;
 	array1D *crossCorrelation;	
-	
-	
 	void updateDependentVariables();
+    
+    double p_centerX;
+    double p_centerY;
+    array1D *check1D;
 	
 public:
 	//---------------------------------------------constructors & destructor
@@ -70,30 +72,35 @@ public:
     int calculateXCCA_FAST( array2D *polarData, array2D *corr );
     
     // looks up the value closest to xcoord, ycoord in the data
-    double lookup( double xcoord, double ycoord );
+    double lookup( double xcoord, double ycoord ) const;
     
     //compute 1D correlations using FFT, the result is returned in f, respectively
     int correlateFFT( array1D *f, array1D *g );    // result of corr(f,g) -> f
     int autocorrelateFFT( array1D *f );            // result of corr(f,f) -> f
         
 	//---------------------------------------------setters & getters
-	int arraySize();                                    // returns private variable p_arraySize
+	int arraySize() const;                              // returns private variable p_arraySize
 	void setArraySize( int arraySize_val );
-	int matrixSize();                                   // returns sqrt(p_arraySize)
+	int matrixSize() const;                             // returns sqrt(p_arraySize)
 	void setMatrixSize( int matrixSize_val );
                                                         // matrixSize is just a little helper for now
                                                         // to come up with a q-calibration
                                                         // need to change this soon...
 	
-	double qmax();
+	double qmax() const;
 	void setQmax( double qmax_val );
+    
+    double centerX() const;
+    void setCenterX( double cen_x );
+    double centerY() const;
+    void setCenterY( double cen_y );
 	
 	//---------------------------------------------getters for dependent variables
-	double deltaq();
-	double deltaphi();
-	int samplingLength();
-	int samplingAngle();
-	int samplingLag();
+	double deltaq() const;
+	double deltaphi() const;
+	int samplingLength() const;
+	int samplingAngle() const;
+	int samplingLag() const;
 	
 };
 
