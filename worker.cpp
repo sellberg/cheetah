@@ -184,7 +184,7 @@ void *worker(void *threadarg) {
 	/*
 	 *	Apply attenuation correction
 	 */
-	if(global->useAttenuationCorrection) {
+	if (global->useAttenuationCorrection > 0) {
 		applyAttenuationCorrection(threadInfo, global);
 	}
 	

@@ -202,8 +202,8 @@ void beginrun()
  */
 void begincalib()
 {
-	fetchConfig();
 	printf("begincalib\n");
+	fetchConfig();
 }
 
 
@@ -269,11 +269,11 @@ void event() {
 	 */
 	int seconds, nanoSeconds;
 	getTime( seconds, nanoSeconds );
-
+	
     //	const char* timestring;
 	//fail = getLocalTime( timestring );
 	//printf("%s\n",timestring);
-
+	
 	/*
 	 *	Get fiducials
 	 */
@@ -373,20 +373,20 @@ void event() {
 	}
 
 	
-
+	
 	/*
 	 *	Attenuation information is only saved for every 1/123 event
 	 */
-	if ((nevents-global.attenuationOffset) % 123 == 0) {
+	if ((nevents-global.attenuationOffset) % 123 == 0 && global.useAttenuationCorrection >= 0) {
 		
 		/*
 		 *	Get total thickness for Si filters in XRT
 		 */
 		unsigned totalThickness;
 		fail = getSiThickness(totalThickness, global.nFilters, global.filterThicknesses);
-		// std::cout << "Total thickness: " << totalThickness << endl;
+		// cout << "Total thickness: " << totalThickness << endl;
 		if (fail) {
-			std::cout << "Failed to retrieve attenuation for EVENT #" << nevents+1 << " [failcode " << fail << "]" << endl;
+			cout << "Failed to retrieve attenuation for EVENT #" << nevents+1 << " [failcode " << fail << "]" << endl;
 			if (fail == 30) global.attenuationOffset++;
 		} else {
 		
@@ -395,7 +395,7 @@ void event() {
 			 */
 			double attenuation;
 			attenuation = getAttenuation(totalThickness, global.nThicknesses, global.possibleThicknesses, global.possibleAttenuations);
-			// std::cout << "Calculated attenuation is: " << attenuation << endl;
+			// cout << "Calculated attenuation is: " << attenuation << endl;
 		
 			/*
 			 *	Add attenuation to dynamic array
@@ -450,7 +450,9 @@ void event() {
 	
 	threadInfo->detectorPosition = global.detectorZ;
 	
-	threadInfo->attenuation = global.attenuations[global.nAttenuations-1];	// 1/transmission taken from last succesful readout of the Si filters
+	if (global.useAttenuationCorrection >= 0) {
+		threadInfo->attenuation = global.attenuations[global.nAttenuations-1];	// 1/transmission taken from last succesful readout of the Si filters
+	}
 	
 	threadInfo->pGlobal = &global;
 	
@@ -590,12 +592,14 @@ void endjob()
 	// Save powder patterns
 	saveRunningSums(&global);
 	global.writeFinalLog();
-
+	
 	
 	// Attenuation?
-	printf("%i attenuations calculated:\n", global.nAttenuations);
-	for (int i=0; i<global.nAttenuations; i++) {
-		std::cout << "\t" << global.attenuations[i] << " [first recorded for EVENT #" << global.changedAttenuationEvents[i] << "] corresponding to " << global.totalThicknesses[i] << " um Si" << endl;
+	if (global.useAttenuationCorrection >= 0) {
+		printf("%i attenuations calculated:\n", global.nAttenuations);
+		for (int i=0; i<global.nAttenuations; i++) {
+			cout << "\t" << global.attenuations[i] << " [first recorded for EVENT #" << global.changedAttenuationEvents[i] << "] corresponding to " << global.totalThicknesses[i] << " um Si" << endl;
+		}
 	}
 	
 	

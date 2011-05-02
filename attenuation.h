@@ -37,8 +37,10 @@ int getSiThickness(unsigned & totalThickness, unsigned nFilters, unsigned filter
 double getAttenuation(unsigned totalThickness, unsigned nThicknesses, unsigned possibleThicknesses[], double possibleAttenuations[]);
 int factorial(unsigned n);
 std::string intToString(int n);
+//template <class T>
+//bool fromString(T & t, const std::string & s, std::ios_base & (*f)(std::ios_base &));
 template <class T>
-bool fromString(T & t, const std::string & s, std::ios_base & (*f)(std::ios_base &));
+bool fromString(T & t, const std::string & s);
 
 /*
  *	Implementations of templatized functions used for calculating attenuation
@@ -46,14 +48,13 @@ bool fromString(T & t, const std::string & s, std::ios_base & (*f)(std::ios_base
 
 // Templatized function to transform a number to a C++ string
 /*
-template <class T>
-bool fromString(T& t, const std::string& s, std::ios_base& (*f)(std::ios_base&))
-{
+ template <class T>
+ bool fromString(T& t, const std::string& s, std::ios_base& (*f)(std::ios_base&))
+ {
 	std::istringstream iss(s);
-    iss.setf(std::ios_base::dec);
 	return !(iss >> f >> t).fail();
-}
-*/
+ }
+ */
 
 
 //by JF: suggestion to make this less confusing..

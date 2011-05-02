@@ -40,7 +40,7 @@
 #include <iostream>
 using std::cout;
 using std::endl;
-using std::ios_base;
+using std::string;
 
 #include <fstream>
 
@@ -669,7 +669,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 
 	// Pixel size (measurements in geometry file are in m)
 	module_rows = ROWS;
-	module_cols = COLS;	
+	module_cols = COLS;
 	pix_dx = pixelSize;
 
 	
@@ -981,27 +981,27 @@ void cGlobal::readAttenuations(char *filename) {
 	std::ifstream infile;
 	infile.open(filename);
 	if (infile.fail()) {
-		std::cout << "\tUnable to open " << filename << endl;
+		cout << "\tUnable to open " << filename << endl;
 		infile.clear();
 		printf("\tReading default list of attenuations\n");
 		infile.open("attenuations.dat");
 		if (infile.fail()) {
-			std::cout << "\tUnable to open default file" << endl;
+			cout << "\tUnable to open default file" << endl;
 			infile.clear();
-			printf("\tDisabling atteunation correction\n");
-			useAttenuationCorrection = 0;
+			printf("\tDisabling atteunation calculation completely\n");
+			useAttenuationCorrection = -1;
 			return;
 		}
 	}
 
-	std::string line;
+	string line;
 	int counter = 0;
 	while (true) {
 		getline(infile, line);
 		if (infile.fail()) break;
 		if (line[0] != '#') {
 			if (!fromString(possibleAttenuations[counter], line)) {
-				std::cout << "\tConversion of string to double failed" << endl;
+				cout << "\tConversion of string to double failed" << endl;
 			}
 			counter++;
 		}

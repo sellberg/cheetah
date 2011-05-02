@@ -36,8 +36,10 @@
 #include <string.h>
 #include <pthread.h>
 #include <iostream>
+#include <string>
 using std::cout;
 using std::endl;
+using std::string;
 
 #include <fstream>
 #include <sstream>
@@ -58,7 +60,7 @@ int getSiThickness(unsigned & totalThickness, unsigned nFilters, unsigned filter
 	int totalFail = 0;
 	float filterPositions[nFilters];
 	int filterNumber;
-	std::string pvName;
+	string pvName;
 	totalThickness = 0;
 	for (int i=0; i<nFilters; i++) {
 		filterNumber = 2+i;
@@ -67,15 +69,15 @@ int getSiThickness(unsigned & totalThickness, unsigned nFilters, unsigned filter
 		fail = getPvFloat(pvName.c_str(), filterPositions[i]);
 		totalFail += fail;
 		if (fail == 0) {
-			// std::cout << "filterPosition: " << filterPositions[i] << endl;
+			// cout << "filterPosition: " << filterPositions[i] << endl;
 			if (filterPositions[i] > 20 && filterPositions[i] < 30) totalThickness += filterThicknesses[i];
 			else if (filterPositions[i] < -2.5 || filterPositions[i] > 2.5) {
-				std::cout << "Silicon Filter " << filterNumber << " with thickness " << filterThicknesses[i] << " is out of position: " << filterPositions[i] << endl;
+				cout << "Silicon Filter " << filterNumber << " with thickness " << filterThicknesses[i] << " is out of position: " << filterPositions[i] << endl;
 				totalFail++;
 			}
 		} else {
-			std::cout << "Could not retrieve Silicon Filter " << (filterNumber-1) << " with thickness " << filterThicknesses[i] << " um" << endl;
-			// std::cout << "filterPosition: " << filterPositions[i] << endl;
+			cout << "Could not retrieve Silicon Filter " << (filterNumber-1) << " with thickness " << filterThicknesses[i] << " um" << endl;
+			// cout << "filterPosition: " << filterPositions[i] << endl;
 		}
 	}
 	return totalFail;
@@ -88,7 +90,7 @@ double getAttenuation(unsigned totalThickness, unsigned nThicknesses, unsigned p
 	for (int i=0; i<nThicknesses; i++) {
 		if (possibleThicknesses[i] == totalThickness) return 1/possibleAttenuations[i];
 	}
-	std::cout << "The total thickness of " << totalThickness << " could not be found in the attenuation list" << endl;
+	cout << "The total thickness of " << totalThickness << " could not be found in the attenuation list" << endl;
 	return 0;
 }
 
@@ -102,9 +104,9 @@ int factorial(unsigned n)
 
 
 // Function to transform an integer to a C++ string recursively
-std::string intToString(int n)
+string intToString(int n)
 {
-	std::string number = "";
+	string number = "";
 	if (n < 0) {	// Check if the integer is negative
 		number += '-';
 		number += intToString(-n);

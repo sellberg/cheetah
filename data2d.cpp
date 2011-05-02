@@ -83,6 +83,7 @@ void cData2d::readHDF5(char* filename, char* fieldname){
 		return;
 	}
 	
+	
 	// Open the dataset 
 	hid_t dataset_id;
 	hid_t dataspace_id;
@@ -98,7 +99,7 @@ void cData2d::readHDF5(char* filename, char* fieldname){
 		exit(0);
 	}
 	
-
+	
 	// Get dimensions of data set (nx, ny, nn)
 	hsize_t dims[ndims];
 	H5Sget_simple_extent_dims(dataspace_id,dims,NULL);
