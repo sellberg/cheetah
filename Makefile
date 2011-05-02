@@ -62,7 +62,7 @@ LD 				= g++
 CPP_LD_FLAGS	= -O4 -Wall
 CFLAGS			= $(INCLUDEDIRS)
 
-LD_FLAGS		= $(LIBDIRS) $(LIBRARIES) -Wl,-rpath=$(LCLSDIR)/build/pdsdata/lib/$(ARCH)/:$(HDF5DIR)/lib
+LD_FLAGS		= -Wl,-rpath=$(LCLSDIR)/build/pdsdata/lib/$(ARCH)/:$(HDF5DIR)/lib
 CFLAGS_ROOT		= $(shell $(ROOTSYS)/bin/root-config --cflags)
 LDFLAGS_ROOT	= $(shell $(ROOTSYS)/bin/root-config --libs) -Wl,-rpath=$(ROOTSYS)/lib:release/build/pdsdata/lib/$(ARCH)/
 
@@ -98,7 +98,9 @@ $(CSPADDIR)/myana_cspad-gjw: $(MYANADIR)/main.o $(MYANADIR)/XtcRun.o \
   $(CSPADDIR)/CspadGeometry.o \
   $(CSPADDIR)/CspadTemp.o \
   $(CSPADDIR)/myana_cspad-gjw.o
-	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^
+	@echo ""
+	@echo "---Linking myana_cspad-gjw---"
+	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^ $(LIBDIRS) $(LIBRARIES)
 
 
 #--------------------------------------------------------------
@@ -183,7 +185,11 @@ cheetah: cheetah.o \
   $(CSPADDIR)/CspadCorrector.o \
   $(CSPADDIR)/CspadGeometry.o \
   $(CSPADDIR)/CspadTemp.o
-	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^
+	@echo ""
+	@echo "---Linking the Cheetah---"
+    #the order is important: first the objects, then the libraries they need
+    #If A uses B, then A must be listed before B in the link command.
+	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^ $(LIBDIRS) $(LIBRARIES)
 
 
 clean:
