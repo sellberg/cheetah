@@ -83,3 +83,9 @@ Thomas White, CFEL
 
 Garth Williams, SLAC
 - Routines for extracting raw cspad image data from the myana data structure
+
+Jonas Sellberg, SLAC
+- Routines for the absorption correction of the data
+
+Jan Feldkamp, SLAC
+- Routines for calculating the angular cross-correlation of a diffraction pattern
