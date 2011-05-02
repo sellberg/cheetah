@@ -555,7 +555,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
 
     //DEBUG!!!!!!!!!!!!
     check1D = new array1D(*data);
-    array2D *polarSampling = new array2D(2*(stop_r+1), 2*(stop_r+1));
+    array2D *polarSampling = new array2D( (unsigned int)(2*stop_r+1), (unsigned int)(2*stop_r+1) );
 
     double xcoord = 0.;
     double ycoord = 0.;
@@ -572,7 +572,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
             //find lookup coordinates
 			xcoord = r * cos(p*M_PI/180);
 			ycoord = r * sin(p*M_PI/180);
-            polarSampling->set(xcoord+stop_r, ycoord+stop_r, 65535);
+            polarSampling->set((unsigned int)(xcoord+stop_r), (unsigned int)(ycoord+stop_r), 65535);
 			
             //lookup that value in original scattering data
             value = lookup( xcoord + centerX(), ycoord + centerY() );                 //COMMENT THIS BACK IN FOR REAL CASE
@@ -612,7 +612,7 @@ double CrossCorrelator::lookup( double xcoord, double ycoord ) const{
     int xdim = 100;
     xcoord = round(xcoord);
     ycoord = round(ycoord);
-    int index = (int) xcoord + (xdim*ycoord);
+    int index = (int) (xcoord + xdim*ycoord);
     
     double val = data->get( index );
     
