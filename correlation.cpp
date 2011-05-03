@@ -33,6 +33,8 @@ using std::endl;
 
 #include <cmath>
 
+#include "setup.h"
+#include "worker.h"
 #include "correlation.h"
 #include "crosscorrelator.h"
 
@@ -40,25 +42,26 @@ using std::endl;
 //----------------------------------------------------------correlate
 // apply angular cross correlation
 //-------------------------------------------------------------------
-void correlate(tThreadInfo *threadInfo, cGlobal *global){
+void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     
-    int alg = 1;        //select the correlation algorithm... 
+    int alg = 0;        //select the correlation algorithm... 
                         //should be governed by a setting in the ini file at some point
                         
     cout << "CORRELATING... using alg " << alg << " in thread #" << threadInfo->threadNum << "." << endl;
 
-    int arraylength = RAW_DATA_LENGTH;    
-   	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, arraylength );
+    //int arraylength = RAW_DATA_LENGTH;
+	
+	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y );
     
     switch (alg) {
         case 0:{
                 cout << "XCCA regular" << endl;
                 cc->calculatePolarCoordinates();
                 cc->calculateSAXS();
-                cc->calculateXCCA();	
+                //cc->calculateXCCA();	
                 
                 cc->writeSAXS();
-                cc->writeXCCA();
+                //cc->writeXCCA();
             }
             break;
         case 1:{
