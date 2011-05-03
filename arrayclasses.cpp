@@ -67,6 +67,19 @@ arraydata::arraydata( int16_t *CArray, unsigned int size_val ){
     }
 }
 
+arraydata::arraydata( float *CArray, unsigned int size_val ) {
+    init();
+    p_size = size_val;
+    p_data = new double[size_val];
+    if (p_data == 0)
+        cerr << "Error in arraydata constructor: could not allocate memory." << endl;
+    
+    //fill array with data, convert float to double before
+    for (int i = 0; i < size_val; i++) {
+        p_data[i] = (double)CArray[i];
+    }
+}
+
 arraydata::arraydata( const arraydata &src ){                       //copy constructor
     init();
     copy( src );
@@ -223,7 +236,7 @@ void arraydata::readFromRawBinary( std::string filename ){
 	
 	// fiducials for test shots: f909 (black), 13a19 (powder)
 	filePointerRead = fopen( filename.c_str(),"r+");
-	if (filePointerRead==NULL) 
+	if (filePointerRead == NULL) 
 	{
 		fputs ("Error in arraydata::readFromRawBinary. File error\n",stderr); 
 		exit (1);
@@ -239,7 +252,7 @@ void arraydata::readFromRawBinary( std::string filename ){
 	buffer = (uint16_t*) malloc(sizeof(uint16_t)*lSize);
 	if (buffer == NULL) 
 	{
-		fputs ("Error in arraydata::readFromRawBinary. Memory error",stderr); 
+		fputs ("Error in arraydata::readFromRawBinary. Memory error\n",stderr); 
 		exit (2);
 	}
 	
@@ -247,7 +260,7 @@ void arraydata::readFromRawBinary( std::string filename ){
 	result = fread(buffer,sizeof(uint16_t),lSize,filePointerRead);
 	if (result != lSize) 
 	{
-		fputs ("Error in arraydata::readFromRawBinary. Reading error",stderr); 
+		fputs ("Error in arraydata::readFromRawBinary. Reading error\n",stderr); 
 		exit (3);
 	}
 	
@@ -333,6 +346,11 @@ array1D::array1D( unsigned int size_dim1 )
 
 array1D::array1D( int16_t *CArray, unsigned int size_dim1 )
         : arraydata( CArray, size_dim1 ){
+    setDim1( size_dim1 );
+}
+
+array1D::array1D( float *CArray, unsigned int size_dim1 )
+		: arraydata( CArray, size_dim1 ) {
     setDim1( size_dim1 );
 }
 

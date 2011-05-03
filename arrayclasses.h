@@ -31,7 +31,8 @@ protected:
 public:
 	arraydata();                                                //default constructor
 	arraydata( unsigned int sizeval );                     
-    arraydata( int16_t *dataCArray, unsigned int sizeval );     //initialize with C-array of a given length
+    arraydata( int16_t *CArray, unsigned int size_val );     //initialize with C-array of ints of a given length
+	arraydata( float *CArray, unsigned int size_val );			//initialize with C-array of floats of a given length
     arraydata( const arraydata &src );                          //copy constructor
     arraydata & operator=(const arraydata & src);               //assignment operator
 	~arraydata();
@@ -81,7 +82,8 @@ private:
 public:
     array1D();                                                  //default constructor
 	array1D( unsigned int size_dim1 );                          
-    array1D( int16_t *CArray, unsigned int size_val );          //init with C-style array
+    array1D( int16_t *CArray, unsigned int size_val );          //init with C-style array of ints
+	array1D( float *CArray, unsigned int size_val );			//init with C-style array of floats
 //    array1D( const arraydata &src );                            //copy constructor
     array1D( array2D* dataTwoD );                               //init with an array2D object
 	~array1D();

@@ -76,8 +76,36 @@ CrossCorrelator::CrossCorrelator( int16_t *dataCArray, int arraylength ){
 	q = new array1D(arraySize());
 	phi = new array1D(arraySize());
 	
-	qave = new array1D(arraySize());
-	iave = new array1D(arraySize());
+	qave = new array1D(samplingLength());
+	iave = new array1D(samplingLength());
+	phiave = new array1D(samplingAngle());    
+    
+}
+
+CrossCorrelator::CrossCorrelator(int16_t *dataCArray, float *qxCArray, float *qyCArray) {
+	
+    //set basic properties, just like the default case
+    setArraySize(RAW_DATA_LENGTH);
+	//jas: calculate qmax of CArray
+    setQmax(qmaxCArray(qxCArray, qyCArray, arraySize()));
+	
+    //special feature: copy data from array over to internal data structure
+    data = new array1D(dataCArray, arraySize());
+    
+    //allocate all other internal objects
+    qx = new array1D(qxCArray, arraySize());
+	qy = new array1D(qyCArray, arraySize());
+	
+	//jas: calculate center of CArray and shift qx, qy accordingly
+	setCenterX(centerXCArray(qxCArray));
+	setCenterY(centerYCArray(qyCArray));
+	shiftCenter();
+	
+	q = new array1D(arraySize());
+	phi = new array1D(arraySize());
+	
+	qave = new array1D(samplingLength());
+	iave = new array1D(samplingLength());
 	phiave = new array1D(samplingAngle());    
     
 }
@@ -177,7 +205,7 @@ void CrossCorrelator::initWithTestPattern( int type ){
 // calculate polar coordinates from cartesian coordinate system
 void CrossCorrelator::calculatePolarCoordinates()
 {	
-	// calculate phi for each pixel and bin angles with correct resolution
+	// calculate phi for each pixel and bin angles with correct deltaphi
 	for (int i=0; i<arraySize(); i++) {
 		
 		double phii = phi->get(i);
@@ -186,34 +214,33 @@ void CrossCorrelator::calculatePolarCoordinates()
 		
 		// setup UHP
 		if (qxi == 0) { // make sure that the column with qx = 0 has angle 0 (q = 0 is assumed to have phi = 0)
-			phi->set(i, 0);
+			phii = 0;
 		} else {
-			phi->set(i, atan(qxi/qyi) ); // pixel 5050-5099 have -0 and 5101-5150 have 0 in angle (5100 has NaN), WHY??? ANSWER: That column has qx = 0, so the angle should be 0 or PI. If qy = 0 and qx != 0, atan gives the correct result, but only for the UHP! Need to add PI for all LHP!
+			phii = atan(qxi/qyi); // If qy = 0 and qx != 0, atan gives the correct result, but only for the UHP! Need to add PI for all LHP!
 		}
 
 		// correct LHP by adding PI
 		if (qyi < 0) {
-			phi->set(i, phii + M_PI);
+			phii += M_PI;
 		}
 		
-		if (phii<0) { // make sure the angle is between 0 and 2PI
-			phi->set(i, phii+2*M_PI);
-			//phi[i] += 2*M_PI;
+		if (phii < 0) { // make sure the angle is between 0 and 2PI
+			phii += 2*M_PI;
 		}
 		
 		phi->set( i, round(phii/deltaphi()) * deltaphi() );
-		// printf("phi[%d]: %f\n",i,phi[i]);
+	
 	}
 }	
 
 
 //----------------------------------------------------------------------------calculateSAXS
-void CrossCorrelator::calculateSAXS(){
-	
+void CrossCorrelator::calculateSAXS()
+{
 	
 	// using SAXS average for all shots to calculate cross-correlation 
-    //or just the SAXS from the specific shots will give different results. 
-    //The first choice is probably preferable. Here, the second one is performed.
+    // or just the SAXS from the specific shots will give different results. 
+    // The second choice is probably preferable and is performed here.
 	printf("calculating average SAXS intensity...\n");
 	
 	// calculate |q| for each pixel and bin lengths with correct resolution
@@ -226,11 +253,10 @@ void CrossCorrelator::calculateSAXS(){
 	printf("# of steps: %d\n",samplingLength());
 	printf("average SAXS intensity:\n");
 	
-	int counter = 0;
-	for (unsigned int i=0; i<samplingLength(); i++) {
+	for (int i=0; i<samplingLength(); i++) {
 		qave->set(i, i*deltaq());
-		double itot = 0;
-		counter = 0; // reset counter
+		double itot = 0; // reset summed intensity
+		int counter = 0; // reset counter
 		for (int j=0; j<arraySize(); j++) {
 			if ( q->get(j) == qave->get(i) ) {
 				itot += data->get(j);
@@ -365,31 +391,37 @@ void CrossCorrelator::calculateXCCA(){
 
 
 //----------------------------------------------------------------------------writeSAXS
-void CrossCorrelator::writeSAXS(){
+void CrossCorrelator::writeSAXS()
+{
 	// write cross-correlation and average SAXS intensity to binary
 	printf("writing data to file...\n");
 	FILE *filePointerWrite;
-	
-	filePointerWrite = fopen("f909-q0-xcca.bin","w+");
-	
-	/*
 	double samplingLengthD = (double) samplingLength(); // save everything as doubles
 	double samplingLagD = (double) samplingLag();
 	double samplingAngleD = (double) samplingAngle();
-
+	double *buffer;
+	buffer = (double*) calloc(RAW_DATA_LENGTH, sizeof(double));
+	
+	filePointerWrite = fopen("r0003-xcca.bin","w+");
+	
+	for (int i=0; i<samplingLength(); i++) {
+		buffer[i] = iave->get(i);
+	}
 	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
+	fwrite(&buffer[0],sizeof(double),samplingLength(),filePointerWrite);
+	for (int i=0; i<samplingLength(); i++) {
+		buffer[i] = qave->get(i);
+	}
 	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-	fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
-	fwrite(&crossCorrelation->get(0,0,0),sizeof(double),samplingLength()*samplingLength()*samplingLag(),filePointerWrite); // saving data as arrays of LAG in the following order [0][0][LAG], [0][1][LAG], ... , [0][LENGTH][LAG], [1][0][LAG], [1][1][LAG], and so on
-	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-	fwrite(&iave->get(0),sizeof(double),samplingLength(),filePointerWrite);
-	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-	fwrite(&qave->get(0),sizeof(double),samplingLength(),filePointerWrite);
+	fwrite(&buffer[0],sizeof(double),samplingLength(),filePointerWrite);
+	for (int i=0; i<samplingAngle(); i++) {
+		buffer[i] = phiave->get(i);
+	}
 	fwrite(&samplingAngleD,sizeof(double),1,filePointerWrite);
-	fwrite(&phiave->get(0),sizeof(double),samplingAngle,filePointerWrite);
-	*/
+	fwrite(&buffer[0],sizeof(double),samplingAngle(),filePointerWrite);
 	
 	fclose(filePointerWrite);
+	free(buffer);
 	
 	cout << "writeSAXS done" << endl;
 }
@@ -414,8 +446,29 @@ void CrossCorrelator::dumpResults( std::string filename ){
 
 //----------------------------------------------------------------------------writeXCCA
 void CrossCorrelator::writeXCCA(){
-	//not implemented yet. 
-	//right now, all output is handled by writeSAXS()
+	printf("writing data to file...\n");
+//	FILE *filePointerWrite;
+//	
+//	filePointerWrite = fopen("f909-q0-xcca.bin","w+");
+//	
+//	double samplingLengthD = (double) samplingLength(); // save everything as doubles
+//	double samplingLagD = (double) samplingLag();
+//	double samplingAngleD = (double) samplingAngle();
+//	
+//	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
+//	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+//	fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
+//	fwrite(&crossCorrelation->get(0,0,0),sizeof(double),samplingLength()*samplingLength()*samplingLag(),filePointerWrite); // saving data as arrays of LAG in the following order [0][0][LAG], [0][1][LAG], ... , [0][LENGTH][LAG], [1][0][LAG], [1][1][LAG], and so on
+//	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+//	fwrite(&iave->get(0),sizeof(double),samplingLength(),filePointerWrite);
+//	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+//	fwrite(&qave->get(0),sizeof(double),samplingLength(),filePointerWrite);
+//	fwrite(&samplingAngleD,sizeof(double),1,filePointerWrite);
+//	fwrite(&phiave->get(0),sizeof(double),samplingAngle,filePointerWrite);
+//	
+//	fclose(filePointerWrite);
+	
+	cout << "writeXCCA done" << endl;
 }
 
 
@@ -461,6 +514,15 @@ void CrossCorrelator::setQmax( double qmax_val ){
 	updateDependentVariables();
 }
 
+double CrossCorrelator::qmaxCArray( float *qxCArray, float *qyCArray, int arraylength ) {
+	double qmax = 0;
+	for (int i=0; i<arraylength; i++) {
+		double qtemp = (double) sqrt(qxCArray[i]*qxCArray[i] + qyCArray[i]*qyCArray[i]);
+		if (qtemp > qmax) qmax = qtemp;
+	}
+	return qmax;
+}
+
 
 double CrossCorrelator::centerX() const{
     return p_centerX;
@@ -468,6 +530,17 @@ double CrossCorrelator::centerX() const{
 
 void CrossCorrelator::setCenterX( double cen_x ){
     p_centerX = cen_x;
+}
+
+double CrossCorrelator::centerXCArray( float *qxCArray ) {
+    double center = 0;
+	int quads = 4;
+	// Loop over quads and pick out closest pixel to center
+	for (int i=0; i<quads; i++) {
+		center += (double) qxCArray[8*ROWS*(2*COLS-1)+i*2*ROWS];
+	}
+	cout << "new Center in X: " << center/quads << endl;
+	return center/quads;
 }
 
 double CrossCorrelator::centerY() const{
@@ -478,6 +551,23 @@ void CrossCorrelator::setCenterY( double cen_y ){
     p_centerY = cen_y;
 }
 
+double CrossCorrelator::centerYCArray( float *qyCArray ) {
+    double center = 0;
+	int quads = 4;
+	// Loop over quads and pick out closest pixel to center
+	for (int i=0; i<quads; i++) {
+		center += (double) qyCArray[8*ROWS*(2*COLS-1)+i*2*ROWS];
+	}
+	cout << "new Center in Y: " << center/quads << endl;
+	return center/quads;
+}
+
+void CrossCorrelator::shiftCenter() {
+	for (int i=0; i<arraySize(); i++) {
+		qx->set(i, qx->get(i)-centerX());
+		qy->set(i, qy->get(i)-centerY());
+	}
+}
 
 double CrossCorrelator::deltaq() const{						//getter only, dependent variable
 	return p_deltaq;
@@ -500,12 +590,21 @@ int CrossCorrelator::samplingLag() const{					//getter only, dependent variable
 }
 
 void CrossCorrelator::updateDependentVariables(){		//update the values that depend on qmax and matrixSize
-	p_deltaq = 2*qmax()/(matrixSize()-1);
-    
-	p_samplingLength = int(1/p_deltaq+1+0.001);
+	// FINE BINNING
+//	p_deltaq = 2*qmax()/(matrixSize()-1);
+//	p_samplingLength = int(qmax()/p_deltaq+1+0.001);
+//	p_deltaphi = 2*atan(1/(2*(p_samplingLength-1.0)));
+//	p_samplingAngle = (int) floor(2*M_PI/p_deltaphi);
+//	p_samplingLag = (int) ceil(p_samplingAngle/2.0)+2;
+	
+	// COARSE BINNING
+	p_deltaq = 20*qmax()/(matrixSize()-1);
+	p_samplingLength = int(qmax()/p_deltaq+1+0.001);
 	p_deltaphi = 2*atan(1/(2*(p_samplingLength-1.0)));
 	p_samplingAngle = (int) floor(2*M_PI/p_deltaphi);
 	p_samplingLag = (int) ceil(p_samplingAngle/2.0)+2;
+	
+	cout << "p_deltaq: " << p_deltaq << ", p_samplingLength: " << p_samplingLength << ", p_deltaphi: " << p_deltaphi << ", p_samplingAngle: " << p_samplingAngle << ", p_samplingLag: " << p_samplingLag << endl;
 }
 
 

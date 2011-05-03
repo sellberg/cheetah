@@ -42,10 +42,16 @@ private:
     double p_centerY;
     array1D *check1D;
 	
+	//jas: Constants copied from worker.h
+	static const unsigned  ROWS = 194;
+	static const unsigned  COLS = 185;
+	static const unsigned  RAW_DATA_LENGTH = 8*ROWS*8*COLS;
+	
 public:
 	//---------------------------------------------constructors & destructor
-    CrossCorrelator( int arraylength=100 );                     //init with 1D data size
-    CrossCorrelator( int16_t *dataCArray, int arraylength );    //init with actual data
+    CrossCorrelator( int arraylength );                     //init with 1D data size
+	CrossCorrelator( int16_t *dataCArray, int arraylength );    //init with actual data
+    CrossCorrelator( int16_t *dataCArray, float *qxCArray, float *qyCArray );    //init with actual data + q calibration
 	~CrossCorrelator();
 	
 	//---------------------------------------------input/output
@@ -89,11 +95,17 @@ public:
 	
 	double qmax() const;
 	void setQmax( double qmax_val );
+	// jas: qmaxCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
+	double qmaxCArray( float *qxCArray, float *qyCArray, int arraylength ); // calculates qmax from CArrays of X/Y positions
     
+	// jas: centerXCArray() and centerYCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
     double centerX() const;
     void setCenterX( double cen_x );
+	double centerXCArray( float *qxCArray ); // calculates center in X from CArray of X positions
     double centerY() const;
     void setCenterY( double cen_y );
+	double centerYCArray( float *qyCArray ); // calculates center in Y from CArray of Y positions
+	void shiftCenter(); // jas: shifts center of qx, qy to the value determined by p_centerX and p_centerY
 	
 	//---------------------------------------------getters for dependent variables
 	double deltaq() const;
