@@ -392,7 +392,10 @@ void CrossCorrelator::calculateXCCA(){
 
 //----------------------------------------------------------------------------writeSAXS
 void CrossCorrelator::writeSAXS()
-{
+{	
+	// jas: writeSAXS is currently just used to check that the algorithm works
+	// this was done for r0003 and it has NOT been generalized yet!
+	
 	// write cross-correlation and average SAXS intensity to binary
 	printf("writing data to file...\n");
 	FILE *filePointerWrite;
@@ -402,7 +405,7 @@ void CrossCorrelator::writeSAXS()
 	double *buffer;
 	buffer = (double*) calloc(RAW_DATA_LENGTH, sizeof(double));
 	
-	filePointerWrite = fopen("r0003-xcca.bin","w+");
+	filePointerWrite = fopen("r0003-xcca.bin","w+"); // jas: TEST FILE, need to change this to a general string name later
 	
 	for (int i=0; i<samplingLength(); i++) {
 		buffer[i] = iave->get(i);
