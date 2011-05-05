@@ -628,18 +628,18 @@ int CrossCorrelator::samplingLag() const{					//getter only, dependent variable
 
 void CrossCorrelator::updateDependentVariables(){		//update the values that depend on qmax and matrixSize
 	// FINE BINNING
-	p_deltaq = 2*qmax()/(matrixSize()-1);
-	p_samplingLength = int(qmax()/p_deltaq+1+0.001);
-	p_deltaphi = 4*atan(1/(2*(p_samplingLength-1.0)));
-	p_samplingAngle = (int) floor(2*M_PI/p_deltaphi);
-	p_samplingLag = (int) ceil(p_samplingAngle/2.0)+2;
-	
-	// COARSE BINNING
-//	p_deltaq = 20*qmax()/(matrixSize()-1);
+//	p_deltaq = 2*qmax()/(matrixSize()-1);
 //	p_samplingLength = int(qmax()/p_deltaq+1+0.001);
 //	p_deltaphi = 2*atan(1/(2*(p_samplingLength-1.0)));
 //	p_samplingAngle = (int) floor(2*M_PI/p_deltaphi);
 //	p_samplingLag = (int) ceil(p_samplingAngle/2.0)+2;
+	
+	// COARSE BINNING
+	p_deltaq = 20*qmax()/(matrixSize()-1);
+	p_samplingLength = int(qmax()/p_deltaq+1+0.001);
+	p_deltaphi = 2*atan(1/(2*(p_samplingLength-1.0)));
+	p_samplingAngle = (int) floor(2*M_PI/p_deltaphi);
+	p_samplingLag = (int) ceil(p_samplingAngle/2.0)+2;
 	
 	cout << "p_deltaq: " << p_deltaq << ", p_samplingLength: " << p_samplingLength << ", p_deltaphi: " << p_deltaphi << ", p_samplingAngle: " << p_samplingAngle << ", p_samplingLag: " << p_samplingLag << endl;
 }
