@@ -35,7 +35,7 @@ private:
 	array1D *qave;
 	array1D *iave;
 	array1D *phiave;
-	array1D *crossCorrelation;	
+	array3D *crossCorrelation;	
 	void updateDependentVariables();
     
     double p_centerX;
