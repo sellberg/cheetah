@@ -27,6 +27,9 @@ using std::endl;
 
 #include <cmath>
 
+#include <string>
+using std::string;
+
 
 
 
@@ -492,6 +495,7 @@ void CrossCorrelator::printRawData(uint16_t *buffer,long lSize) {
 // setters and getters for private variables
 // ***********************************************************************************
 int CrossCorrelator::arraySize() const{
+    
 	return p_arraySize;
 }
 
@@ -619,10 +623,10 @@ void CrossCorrelator::updateDependentVariables(){		//update the values that depe
 
 //----------------------------------------------------------------------------transform to polar coordinates
 int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
-
     cout << "calculatePolarCoordinates_FAST" << endl;
 
     int retval = 0;
+    string outdir = "/Users/feldkamp/Desktop/";
     
     
     //write output of the intermediate files?
@@ -690,13 +694,13 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
     }
     
     if (output_polar_flag) {
-        polar->writeToTiff("/Users/feldkamp/Desktop/polar.tif");
+        polar->writeToTiff(outdir+"polar.tif");
 //        cout << "polar: " << polar->getASCIIdata() << endl;
     }
     
     array2D *check2D = new array2D( check1D, 100, 100 );
-    check2D->writeToTiff("/Users/feldkamp/Desktop/check2D.tif");
-    polarSampling->writeToTiff("/Users/feldkamp/Desktop/polarSampling.tif");
+    check2D->writeToTiff(outdir+"check2D.tif");
+    polarSampling->writeToTiff(outdir+"polarSampling.tif");
     delete check2D;
     delete check1D;
     delete polarSampling;
@@ -727,9 +731,10 @@ double CrossCorrelator::lookup( double xcoord, double ycoord ) const{
 
 //----------------------------------------------------------------------------calculate XCCA
 int CrossCorrelator::calculateXCCA_FAST( array2D *polar, array2D *corr ){
-    int retval = 0;
-
     cout << "calculateXCCA_FAST" << endl;
+    
+    int retval = 0;
+    string outdir = "/Users/feldkamp/Desktop/";
     
     if (corr)
         delete corr;
@@ -747,16 +752,9 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *polar, array2D *corr ){
         autocorrelateFFT( f );
         //correlateFFT( f, f );          // should yield the same result as AUTOcorrelate( f )
 
-
-        //DEBUGGGG!!!
-        if (r_ct != 5){
-            cout << "DEBUG:" << endl;
-            cout << "AUTOCORRELATION -- " << f->getASCIIdata() << endl;
-            f->writeToASCII("/Users/feldkamp/Desktop/corr_5.txt");
-        }
 	}
     
-    corr->writeToTiff("/Users/feldkamp/Desktop/corr.tif");
+    corr->writeToTiff(outdir+"corr.tif");
     
     return retval;
 }
