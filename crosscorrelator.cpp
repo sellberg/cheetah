@@ -109,8 +109,9 @@ CrossCorrelator::CrossCorrelator(int16_t *dataCArray, float *qxCArray, float *qy
 	
 	qave = new array1D(samplingLength());
 	iave = new array1D(samplingLength());
-	phiave = new array1D(samplingAngle());    
-    
+	phiave = new array1D(samplingAngle());
+	crossCorrelation = new array3D( samplingLength(), samplingLength(), samplingLag() );
+	
 }
 
 CrossCorrelator::~CrossCorrelator(){
@@ -254,7 +255,7 @@ void CrossCorrelator::calculateSAXS()
 	
 	// angular average for each |q|
 	printf("# of steps: %d\n",samplingLength());
-	printf("average SAXS intensity:\n");
+	// printf("average SAXS intensity:\n");
 	
 	for (int i=0; i<samplingLength(); i++) {
 		qave->set(i, i*deltaq());
@@ -267,7 +268,7 @@ void CrossCorrelator::calculateSAXS()
 			}
 		}
 		iave->set( i, itot/counter );
-		cout << "Q: " << qave->get(i) << ",   \t# pixels: " << counter << ",\tI: " << iave->get(i) << endl;
+		// cout << "Q: " << qave->get(i) << ",   \t# pixels: " << counter << ",\tI: " << iave->get(i) << endl;
 	}
 }
 
@@ -289,8 +290,8 @@ void CrossCorrelator::calculateXCCA(){
 	array2D *pixelBool = new array2D( samplingLength(), samplingAngle() );
 	
 	for (int i=0; i<arraySize(); i++) {
-		int qIndex = int(q->get(i)/deltaq()+0.001); // the index in qave[] that corresponds to q[i]
-		int phiIndex = int(phi->get(i)/deltaphi()+0.001); // the index in phiave[] that corresponds to phi[i]
+		int qIndex = (int) round(q->get(i)/deltaq()); // the index in qave[] that corresponds to q[i]
+		int phiIndex = (int) round(phi->get(i)/deltaphi()); // the index in phiave[] that corresponds to phi[i]
 		// printf("qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
 		if (qIndex < samplingLength() && phiIndex < samplingAngle()) { // make sure qIndex is not larger 
                                                                         //than the samplingLength 
@@ -333,8 +334,8 @@ void CrossCorrelator::calculateXCCA(){
 	
 	// *** LOOPS COPIED FROM pixelCount/pixelBool ***
 	for (int i=0; i<arraySize(); i++) {
-		int qIndex = int(q->get(i)/deltaq()+0.001); // the index in qave[] that corresponds to q[i]
-		int phiIndex = int(phi->get(i)/deltaphi()+0.001); // the index in phiave[] that corresponds to phi[i]
+		int qIndex = (int) round(q->get(i)/deltaq()); // the index in qave[] that corresponds to q[i]
+		int phiIndex = (int) round(phi->get(i)/deltaphi()); // the index in phiave[] that corresponds to phi[i]
 		// printf("qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
 		if (qIndex < samplingLength() && phiIndex < samplingAngle()) { // make sure qIndex is not larger than the samplingLength 
                                                                         //(corners where q > 1 are excluded)
@@ -357,8 +358,7 @@ void CrossCorrelator::calculateXCCA(){
 	
 	// create cross-correlation array
 	printf("starting main loop to calculate cross-correlation...\n");
-	array3D *crossCorrelation = new array3D( samplingLength(), samplingLength(), samplingLag() );
-	
+		
 	// calculate cross-correlation
 	for (int i=0; i<samplingLength(); i++) { // q1 index
 		for (int j=0; j<samplingLength(); j++) { // q2 index 
@@ -384,9 +384,10 @@ void CrossCorrelator::calculateXCCA(){
 	delete pixelBool;
 	delete pixelCount;
 	
+	delete normalization;
+	
 	delete speckle;
 	delete speckleNorm;
-	delete crossCorrelation;
 	
 	printf("done calculating cross-correlation...\n");
 }
@@ -406,25 +407,53 @@ void CrossCorrelator::writeSAXS()
 	double samplingLagD = (double) samplingLag();
 	double samplingAngleD = (double) samplingAngle();
 	double *buffer;
-	buffer = (double*) calloc(RAW_DATA_LENGTH, sizeof(double));
+	buffer = (double*) calloc(samplingLength()*samplingLength()*samplingLag(), sizeof(double));
 	
 	filePointerWrite = fopen("r0003-xcca.bin","w+"); // jas: TEST FILE, need to change this to a general string name later
 	
+	// angular averages
 	for (int i=0; i<samplingLength(); i++) {
 		buffer[i] = iave->get(i);
 	}
 	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
 	fwrite(&buffer[0],sizeof(double),samplingLength(),filePointerWrite);
+	
+	// q binning
 	for (int i=0; i<samplingLength(); i++) {
 		buffer[i] = qave->get(i);
 	}
 	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
 	fwrite(&buffer[0],sizeof(double),samplingLength(),filePointerWrite);
+	
+	// angle binning
 	for (int i=0; i<samplingAngle(); i++) {
 		buffer[i] = phiave->get(i);
 	}
 	fwrite(&samplingAngleD,sizeof(double),1,filePointerWrite);
 	fwrite(&buffer[0],sizeof(double),samplingAngle(),filePointerWrite);
+	
+	// cross-correlation - full version
+	for (int i=0; i<samplingLength(); i++) {
+		for (int j=0; j<samplingLength(); j++) {
+			for (int k=0; k<samplingLag(); k++) {
+				buffer[i*samplingLength()*samplingLag()+j*samplingLag()+k] = crossCorrelation->get(i,j,k);
+			}
+		}
+	}
+	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+	fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
+	fwrite(&buffer[0],sizeof(double),samplingLength()*samplingLength()*samplingLag(),filePointerWrite);
+	
+	// cross-correlation - autocorrelation only (q1=q2)
+//	for (int i=0; i<samplingLength(); i++) {
+//		for (int k=0; k<samplingLag(); k++) {
+//			buffer[i*samplingLag()+k] = crossCorrelation->get(i,i,k);
+//		}
+//	}
+//	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+//	fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
+//	fwrite(&buffer[0],sizeof(double),samplingLength()*samplingLag(),filePointerWrite);
 	
 	fclose(filePointerWrite);
 	free(buffer);
@@ -453,6 +482,11 @@ void CrossCorrelator::dumpResults( std::string filename ){
 //----------------------------------------------------------------------------writeXCCA
 void CrossCorrelator::writeXCCA(){
 	printf("writing data to file...\n");
+	
+	// All saving is currently handled by writeSAXS()
+	
+	//jas: saving &array1D->get(0) does NOT work with fwrite, need to loop through array1D and save into Carray before saving to file...
+	
 //	FILE *filePointerWrite;
 //	
 //	filePointerWrite = fopen("f909-q0-xcca.bin","w+");

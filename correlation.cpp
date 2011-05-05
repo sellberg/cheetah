@@ -58,7 +58,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
                 cout << "XCCA regular" << endl;
                 cc->calculatePolarCoordinates();
                 cc->calculateSAXS();
-                //cc->calculateXCCA();	
+                cc->calculateXCCA();	
                 
                 cc->writeSAXS();
                 //cc->writeXCCA();
