@@ -25,11 +25,13 @@ using std::ostringstream;
 using std::ofstream;
 
 #include <cmath>
+#include <complex>              // needed to let fftw use regular doubles
 
 //include headers
 #include <hdf5.h>
 #include <tiffio.h>
 #include <fftw3.h>
+
 
 
 //*********************************************************************************
@@ -104,18 +106,24 @@ void arraydata::init(){
     p_data = NULL;
 }
 
-void arraydata::copy( const arraydata& src ){
-    p_size = src.size();
+void arraydata::copy( const double* src_data, int arraysize ){
+    p_size = arraysize;
     if (p_size > 0){
-        p_data = new double[ src.size() ];
-        double *src_data = src.data();
+        p_data = new double[ arraysize ];
         for (int i = 0; i < p_size; i++) {
             p_data[i] = src_data[i];
-}
+        }
     }else{
         p_data = NULL;
     }
 }
+
+
+void arraydata::copy( const arraydata& src ){
+    this->copy( src.data(), src.size());
+}
+
+
 
 void arraydata::destroy(){
     delete []p_data;
@@ -125,22 +133,6 @@ double *arraydata::data() const{
     return (double *)p_data;
 }
 
-
-//--------------------------------------------------------------------
-/*
-void arraydata::copy(const double* copy){
-    if (p_data){
-        if (copy){
-            delete copy;
-            copy = 0;
-        }
-        copy = new double[size()];
-        memcpy( copy, p_data, size()*sizeof(double) );
-    }else{
-        cerr << "Error in arraydata::data_copy! data not allocated." << endl;
-    }
-}
-*/
 
 
 //--------------------------------------------------------------------
@@ -212,17 +204,23 @@ double arraydata::getMax() const{
 
 
 //------------------------------------------------------------- getASCIIdata
-string arraydata::getASCIIdata() const{
+string arraydata::getASCIIdataAsRow() const{
     ostringstream osst;
-    osst << "1D data, dim=" << size() << endl;
 	for (int i = 0; i<size(); i++) {
-        osst << " " << get_atAbsoluteIndex(i);
+        osst << get_atAbsoluteIndex(i) << " ";
 	}
     osst << endl;
     return osst.str();
 }
 
-
+//------------------------------------------------------------- getASCIIdata
+string arraydata::getASCIIdataAsColumn() const{
+    ostringstream osst;
+	for (int i = 0; i<size(); i++) {
+        osst << get_atAbsoluteIndex(i) << endl;
+	}
+    return osst.str();
+}
 
 //--------------------------------------------------------------------arraydata::readFromRawBinary
 void arraydata::readFromRawBinary( std::string filename ){
@@ -379,6 +377,12 @@ array1D::~array1D(){
 }
 
 
+//-----------------------------------------------------copy
+void array1D::copy( const array1D& src ){
+    setDim1( src.size() );
+    this->arraydata::copy( src.data(), src.size());
+}
+
 
 
 //-----------------------------------------------------data accessors
@@ -419,12 +423,25 @@ void array1D::setDim1( unsigned int size_dim1 ){
 
 
 //------------------------------------------------------------- getASCIIdata
-string array1D::getASCIIdata(){
-    return arraydata::getASCIIdata();
+string array1D::getASCIIdata() const{
+    ostringstream osst;
+    osst << "1D data, dim1=" << dim1() << ", size=" << size() << endl;
+	osst << " [";
+    for (int i = 0; i<dim1(); i++) {
+        osst << " " << get(i);
+    }
+    osst << "]" << endl;
+    return osst.str();
 }
 
 
-
+//------------------------------------------------------------- writeToASCII
+int array1D::writeToASCII( std::string filename ) const{
+	ofstream fout( filename.c_str() );
+	fout << arraydata::getASCIIdataAsColumn();
+	fout.close();
+	return 0;
+}
 
 
 
@@ -477,7 +494,12 @@ array2D::~array2D(){
 }
 
 
-
+//-----------------------------------------------------copy
+void array2D::copy( const array2D& src ){
+    setDim1( src.dim1() );
+    setDim2( src.dim2() );
+    this->arraydata::copy( src.data(), src.size());
+}
 
 //-----------------------------------------------------data accessors
 double array2D::get( unsigned int i, unsigned int j ) const{
@@ -738,15 +760,12 @@ int array2D::writeToHDF5( std::string filename ) const{
 
 
 //------------------------------------------------------------- writeToASCII
-int array2D::writeToASCII( std::string filename, bool printToConsole ) const{
+int array2D::writeToASCII( std::string filename ) const{
 	
 	ofstream fout( filename.c_str() );
-	fout << getASCIIdata();
+	fout << arraydata::getASCIIdataAsColumn();
 	fout.close();
-	
-	//option to print to std out as well
-	if ( printToConsole ) 
-        cout << getASCIIdata();
+
 	return 0;
 }
 
@@ -848,7 +867,7 @@ void array2D::generateTestPattern( int type ){
 		case 0:											
 			{   
                 cout << "2D sinusoidal ";
-				double amplitude = 50000;
+				double amplitude = 20000;
 				double periodX = dim1()/1;
 				double periodY = dim2()/2;
 				for (int i = 0; i < dim1(); i++) {
@@ -873,7 +892,7 @@ void array2D::generateTestPattern( int type ){
 		case 2:											
         	{
                 cout << "2D centro-symmetric sine ";
-				double amplitude = 50000;
+				double amplitude = 20000;
 				double period = dim1()/5;
                 double centerX = dim1()/2;
                 double centerY = dim2()/2;
@@ -883,14 +902,14 @@ void array2D::generateTestPattern( int type ){
                         double x = i - centerX;
                         double y = j - centerY;
                         double r = sqrt( x*x + y*y );
-						set(i, j, amplitude/2*( sin(2*M_PI*r/period) ) );
+						set(i, j, amplitude/2*( sin(2*M_PI*r/period)+1 ) );
 					}
 				}
 			}
 		case 3:											
         	{
                 cout << "2D centro-symmetric sine with circular modulation ";
-				double amplitude = 50000;
+				double amplitude = 20000;
 				double period = dim1()/5;
                 double periodMod = dim1()/10;
                 double centerX = dim1()/2;
@@ -902,14 +921,14 @@ void array2D::generateTestPattern( int type ){
                         double y = j - centerY;
                         double r = sqrt( x*x + y*y );
                         double phi = atan(y/x);
-						set(i, j, amplitude/2*( sin(2*M_PI*r/period) + 1/10*tan(2*M_PI*phi/periodMod) ) );
+						set(i, j, amplitude/2*( sin(2*M_PI*r/period)+1 + 1/10*(tan(2*M_PI*phi/periodMod)+1) ) );
 					}
 				}
 			}
 		case 4:											
         	{
                 cout << "2D centro-symmetric sine with straight modulation ";
-				double amplitude = 50000;
+				double amplitude = 20000;
 				double period = dim1()/5;
                 double periodMod = dim1()/10;
                 double centerX = dim1()/2;
@@ -920,7 +939,7 @@ void array2D::generateTestPattern( int type ){
                         double x = i - centerX;
                         double y = j - centerY;
                         double r = sqrt( x*x + y*y );
-						set(i, j, amplitude/2*( sin(2*M_PI*r/period) + cos(2*M_PI*i/periodMod) ) );
+						set(i, j, amplitude/2*( sin(2*M_PI*r/period)+1 + cos(2*M_PI*i/periodMod)+1 ) );
 					}
 				}
 			}
@@ -960,6 +979,16 @@ array3D::array3D( unsigned int size_dim1, unsigned int size_dim2, unsigned int s
 }
 
 array3D::~array3D(){
+}
+
+
+
+//-----------------------------------------------------copy
+void array3D::copy( const array3D& src ){
+    setDim1( src.dim1() );
+    setDim2( src.dim2() );
+    setDim3( src.dim3() );
+    this->arraydata::copy( src.data(), src.size());
 }
 
 
@@ -1034,6 +1063,18 @@ string array3D::getASCIIdata() const{
 
 
 
+//------------------------------------------------------------- writeToASCII
+int array3D::writeToASCII( std::string filename ) const{
+	
+	ofstream fout( filename.c_str() );
+	fout << arraydata::getASCIIdataAsColumn();
+	fout.close();
+    
+    return 0;
+}
+
+
+
 
 
 
@@ -1042,12 +1083,20 @@ string array3D::getASCIIdata() const{
 //lower level FFT routine performs real-to-complex transform
 //input: array1D's data, output: both real and imag parts are returned
 
-int FourierTransformer::transform( array1D *real, array1D *imag ){
-    int retval = 0;
-    int debugmode = 1;
+FourierTransformer::FourierTransformer(){
+    verbose = 0;
+}
 
-    if (debugmode) {
-        cout << "BEFORE TRANSFORM: " << real->getASCIIdata() << endl;
+
+int FourierTransformer::transform( array1D *real, array1D *imag, int direction ){
+    int retval = 0;
+
+    if (verbose) {
+        cout << "BEFORE TRANSFORM REAL: " << real->getASCIIdata() << endl;
+        cout << "BEFORE TRANSFORM IMAG: " << imag->getASCIIdata() << endl;
+        real->writeToASCII("/Users/feldkamp/Desktop/before_trafo_real.txt");
+        imag->writeToASCII("/Users/feldkamp/Desktop/before_trafo_imag.txt");
+        
     }
 
     //FFTW comments from official documentation:
@@ -1076,45 +1125,62 @@ int FourierTransformer::transform( array1D *real, array1D *imag ){
     */
     
     //set up fftw plan input
-    int n = real->size();
-    double *in;
+    int n = real->size();                   //powers of 2 are especially fast!
+    //double *in;
+    fftw_complex *in;
     fftw_complex *out;
-//    int sign = FFTW_FORWARD;
-    unsigned flags = FFTW_ESTIMATE;             //usually FFTW_MEASURE or FFTW_ESTIMATE
+    int sign = 0;
+    unsigned int flags = FFTW_ESTIMATE;             //usually FFTW_MEASURE or FFTW_ESTIMATE
                                                 // FFTW_MEASURE will be faster, but plans need to be saved for this
                                                 // --> implement for final version
     
+    if (direction>=0){
+        sign = FFTW_FORWARD;
+    }else{
+        sign = FFTW_BACKWARD;
+    }
+    
     //allocate fftw-optimized memory for in and out vectors
-    in = real->data();
+    in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n);
     out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n);
     
     //create plan
-    fftw_plan plan = fftw_plan_dft_r2c_1d(n, in, out, flags); 
-    //fftw_plan plan = fftw_plan_dft_1d(int n, fftw_complex *in, fftw_complex *out, int sign, unsigned int flags);
+    //fftw_plan plan = fftw_plan_dft_r2c_1d(n, in, out, flags); 
+    fftw_plan plan = fftw_plan_dft_1d(n, in, out, sign, flags);
     //fftw_plan plan = fftw_plan_dft_r2c(int rank, const int *n, double *in, fftw_complex *out, unsigned int flags);
+
+    //fill data into input vector
+    for (int i=0; i<n; i++) {
+        in[i][0] = real->get(i);
+        in[i][1] = 0;        
+    }
 
     //execute fft
     fftw_execute( plan );
     
     //feed 'out' vector back into the argument arrays that were passed
-    int output_size = (int)n/2+1;
+    //note that r2c_1d output is fast, but has changed output size (int)n/2+1;
+    int n_out = n;
     delete real;
-    real = new array1D(output_size);
+    real = new array1D(n_out);
     delete imag;
-    imag = new array1D(output_size);
+    imag = new array1D(n_out);
     
-    for (int i=0; i<output_size; i++) {               
+    for (int i=0; i<n_out; i++) {               
         real->set(i, out[i][0]);                  //real part
         imag->set(i, out[i][1]);                  //imag part
     }
     
     //clean up
     fftw_destroy_plan(plan);
+    fftw_free(in);
     fftw_free(out);
     
-    if (debugmode) {
+    if (verbose) {
         cout << "AFTER TRANSFORM REAL: " << real->getASCIIdata() << endl;
         cout << "AFTER TRANSFORM IMAG: " << imag->getASCIIdata() << endl;
+        real->writeToASCII("/Users/feldkamp/Desktop/after_trafo_real.txt");
+        imag->writeToASCII("/Users/feldkamp/Desktop/after_trafo_imag.txt");
     }
     
     return retval;
@@ -1124,49 +1190,3 @@ int FourierTransformer::transform( array1D *real, array1D *imag ){
 
 
 
-
-
-/*
-//------------------------------------------------------------- Fourier transform
-// higher level function, data is overwritten with the result of the FFT
-// mode selects the kind of output
-int array1D::FFT( int mode ){
-    int fail = 0;
-    
-    array1D *real = new array1D(
-    array1D *imag = NULL;
-    
-    FourierTransformer *ft = new FourierTransformer;
-    ft->transform( real, imag );                //call lower level function
-    delete ft;
-    
-    if ( !real || !imag ){
-        cerr << "Error in FFT(). No data came back from FFT." << endl;
-        return 2;
-    }
-    if (outsize == 0) {
-        cerr << "Error in FFT(). Output size is 0." << endl;
-        return 1;
-    }
-    
-
-    delete []p_data;
-    p_data = new double[outsize];
-    for (int i=0; i < outsize; i++){
-        if (mode == 0) {                         //real
-            p_data[i] = real[i];
-        } else if (mode == 1) {                     //imaginary
-            p_data[i] = imag[i];
-        } else if (mode == 2) {                     //mag. squared
-            p_data[i] = real[i]*real[i] + imag[i]*imag[i];                
-        } else {
-            fail++;
-        }
-    }//for
-    
-    if (fail) {
-        cerr << "Error in FFT(). No valid mode selected." << endl;
-    }
-    return fail;
-}
-*/

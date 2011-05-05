@@ -771,15 +771,26 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *polar, array2D *corr ){
 
     for(int r_ct=0; r_ct < polar->dim2(); r_ct++){							// r_ct: for all rings
 
+
         //perform autocorrelation
         array1D *f = new array1D;
         polar->getRow( r_ct, f);
-        autocorrelateFFT( f );
         
-        cout << "AUTOCORRELATION -- " << f->getASCIIdata() << endl;
+        cout << "f -- " << f->getASCIIdata() << endl;
+        
+        autocorrelateFFT( f );
+        //correlateFFT( f, f );          // should yield the same result as AUTOcorrelate( f )
+
+
+        //DEBUGGGG!!!
+        if (r_ct != 5){
+            cout << "DEBUG:" << endl;
+            cout << "AUTOCORRELATION -- " << f->getASCIIdata() << endl;
+            f->writeToASCII("/Users/feldkamp/Desktop/corr_5.txt");
+        }
 	}
     
-    corr->writeToTiff("/Users/feldkamp/Desktop/corr_scaled.tif", 1);
+    corr->writeToTiff("/Users/feldkamp/Desktop/corr.tif");
     
     return retval;
 }
@@ -792,9 +803,13 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *polar, array2D *corr ){
 int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
     int retval = 0;
     
-    //Correlation Theorem:
-    //multiplying the FT of one function by the complex conjugate 
-    //of the FT of the other gives the FT of their correlation
+    //-------------------------------------------------------------------------
+    //   Correlation Theorem:
+    //   multiplying the FT of one function by the complex conjugate 
+    //   of the FT of the other gives the FT of their correlation
+    //
+    //   http://mathworld.wolfram.com/Cross-CorrelationTheorem.html
+    //-------------------------------------------------------------------------
     
     
     FourierTransformer *ft = new FourierTransformer;
@@ -805,30 +820,55 @@ int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
     int f_fail = ft->transform( f_real, f_imag );
     delete ft;
     
-    if (f_fail)
-        cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform (f) failed." << endl;
-    
+    if (f_fail){
+        cerr << "Error in CrossCorrelator::correlateFFT. Transform (f->F) failed." << endl;
+        retval++;
+    }
+        
     // transform g -> G
     array1D *g_real = new array1D( *g );
     array1D *g_imag = new array1D;
     int g_fail = ft->transform( g_real, g_imag );
-    if (g_fail)
-        cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform (g) failed." << endl;
-        
-    delete ft;
-            
-    
-    // compute F * G_cc (complex conjugate)
-    //WARNING::::::::NOT SURE THE MATH IS ALL CORRECT AT THIS POINT! (by JF, 2011-04-29)
-    for (int i=0; i<f_real->size(); i++) {
-        double val = f_real->get(i)*g_real->get(i) + f_imag->get(i)*(-g_imag->get(i));
-        f->set(i, val);
+    if (g_fail){
+        cerr << "Error in CrossCorrelator::correlateFFT. Transform (g->G) failed." << endl;
+        retval++;
     }
 
+    // compute F * G_cc (complex conjugate)
+    // if F = a+ib, G = c+id, then FG_cc = ac + bd + ibc - iad
+    array1D *FG_real = new array1D( g_real->size() );
+    array1D *FG_imag = new array1D( g_real->size() );
+    for (int i=0; i<f_real->size(); i++) {
+        FG_real->set( i,   f_real->get(i)*g_real->get(i) + f_imag->get(i)*g_imag->get(i)   );   // ac + bd
+        FG_imag->set( i,   f_imag->get(i)*g_real->get(i) - f_real->get(i)*g_imag->get(i)   );   // i(bc - ad)
+    }
+    
+    // transform the result back to find the correlation
+    // transform FG -> corr(f,g)
+    int FG_fail = ft->transform( FG_real, FG_imag, -1 );
+    if (FG_fail){
+        cerr << "Error in CrossCorrelator::correlateFFT. Transform (FG->corr) failed." << endl;
+        retval++;
+    }
+    
+    
+    
+    // return result in original argument arrays
+    f->copy( *FG_real );
+    g->copy( *FG_imag );
+    
+    //normalize
+    f->multiplyByFactor( 1/((double)f->size()) );
+    g->multiplyByFactor( 1/((double)f->size()) );
+    
+    delete ft;
+    
     delete f_real;
     delete f_imag;    
     delete g_real;
     delete g_imag;
+    delete FG_real;
+    delete FG_imag;
     
     
     return retval;
@@ -842,28 +882,39 @@ int CrossCorrelator::autocorrelateFFT( array1D *f ){
     
     //-------------------------------------------------------------------------
     //   Wiener-Khinchin Theorem:
-    //   the autocorrelation of a function f with itself 
-    //   is found by computing the magnitude squared of its Fourier transform
+    //   the autocorrelation of f is simply given by the Fourier transform 
+    //   of the absolute square of F
+    //   http://mathworld.wolfram.com/Wiener-KhinchinTheorem.html
     //-------------------------------------------------------------------------
     
-    //transform f -> F
-    array1D *real = new array1D( *f );
-    array1D *imag = new array1D;
+    //transform forward
+    array1D *f_imag = new array1D;
     FourierTransformer *ft = new FourierTransformer;
-    int fail = ft->transform( real, imag );
-    delete ft;
-    
-    if (fail)
-        cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform failed." << endl;
-    
-    //compute absolute square |F|^2
-    for (int i=0; i<real->size(); i++) {
-        double m2 = real->get(i)*real->get(i) + imag->get(i)*imag->get(i);
-        f->set(i, m2);
+    int fail = ft->transform( f, f_imag, 1 );    
+    if (fail){
+        cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform (forward) failed." << endl;
+        retval++;
     }
     
-    delete real;
-    delete imag;
+    //calculate the magnitude squared
+    // if F = a+ib, then |F|^2 = a^2 + b^2
+    for (int i=0; i < f->size(); i++) {
+        f->set( i,   f->get(i)*f->get(i) + f_imag->get(i)*f_imag->get(i)   );
+    }    
+    f_imag->zero();                 //set to zero for back transform
+
+    //transform back
+    // after inverse transform, result is stored in original argument array f
+    int fail_inv = ft->transform( f, f_imag, -1 );    
+    if (fail_inv){
+        cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform (backward) failed." << endl;
+        retval++;
+    }
+    
+    f->multiplyByFactor( 1/((double)f->size()) ); 
+    
+    delete ft;   
+    delete f_imag;
     return retval;   
 }
 

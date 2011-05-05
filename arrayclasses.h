@@ -39,7 +39,9 @@ public:
 
     //helper functions
     void init();
+    void copy( const double* src_data, int arraysize );
     void copy( const arraydata& src );
+    void copy( const array1D& src );
     void destroy();
     double *data() const;                                         //return pointer to internal raw data array
 //    void data_copy(double *copy);                               //return a new array pointer with a copy of the data
@@ -58,7 +60,9 @@ public:
 	double getMin() const;
 	double getMax() const;
 	
-    virtual std::string getASCIIdata() const;                         //can/should be overridden by subclasses
+    std::string getASCIIdataAsRow() const;                         //can/should be overridden by subclasses
+    std::string getASCIIdataAsColumn() const;
+    
 	void readFromRawBinary( std::string filename );
 	void writeToRawBinary( std::string filename );
     
@@ -87,6 +91,8 @@ public:
 //    array1D( const arraydata &src );                            //copy constructor
     array1D( array2D* dataTwoD );                               //init with an array2D object
 	~array1D();
+    
+    void copy( const array1D& src );
 	
 	unsigned int dim1() const;
 	void setDim1( unsigned int size_dim1 );
@@ -96,7 +102,8 @@ public:
     
                                    
     
-    std::string getASCIIdata();
+    std::string getASCIIdata() const;
+    int writeToASCII( std::string filename ) const;
 };
 
 
@@ -114,7 +121,9 @@ public:
 	array2D( unsigned int size_dim1, unsigned int size_dim2 );              //default constructor
     array2D( array1D* dataOneD, unsigned int size_dim1, unsigned int size_dim2);   // use 1D data to initialize
 	~array2D();
-    
+
+    void copy( const array2D& src );
+        
 	unsigned int dim1() const;
 	void setDim1( unsigned int size_dim1 );
 	unsigned int dim2() const;
@@ -125,14 +134,14 @@ public:
     
     void getRow( int rownum, array1D *row ) const;                        //returns one-dimensional row
     void getCol( int colnum, array1D *col ) const;
-	
-    std::string getASCIIdata() const;
         
 	void readFromHDF5( std::string filename );
 	
 	int writeToTiff( std::string filename, int scaleFlag = 0 ) const;     //needs libtiff
 	int writeToHDF5( std::string filename ) const;
-	int writeToASCII( std::string filename, bool printToConsole = false ) const;
+    
+    std::string getASCIIdata() const;
+	int writeToASCII( std::string filename ) const;
 	
 	void generateTestPattern( int type );				//for debugging
 };
@@ -151,6 +160,8 @@ public:
     array3D();
 	array3D( unsigned int size_dim1, unsigned int size_dim2, unsigned int size_dim3 );  //default constructor
 	~array3D();
+    
+    void copy( const array3D& src );
 	
 	unsigned int dim1() const;
 	void setDim1( unsigned int size_dim1 );
@@ -162,9 +173,13 @@ public:
 
 	double get( unsigned int i, unsigned int j, unsigned int k ) const;
 	void set( unsigned int i, unsigned int j, unsigned int k, double value );
-    
+
     std::string getASCIIdata() const;
+    int writeToASCII( std::string filename ) const;
 };
+
+
+
 
 
 
@@ -172,19 +187,16 @@ public:
 //helpers. they do Fourier transform
 class FourierTransformer{
 
+private:
+    int verbose;
+
 public:
-    //int FFT( double* real, double* imag, int &output_size );
-    int transform( array1D *real, array1D *imag );
-    
-/*    
-        //FFT: compute the discrete forward Fourier transform (F) of the 1D data (f)
-    //the array1D's object data is overwritten by the result of the transform
-    // mode == 0: real part, real(F)
-    // mode == 1: imaginary part, imag(F)
-    // mode == 2: magnitude squared, |F|^2
-    int FFT( int mode = 0 );    
-    
-*/
+    FourierTransformer();
+
+    //wrapper for the FFTW discrete Fourier Transform
+    //the two arrays 'real' and 'imag' are overwritten by
+    //resulting arrays for the real and imaginary parts
+    int transform( array1D *real, array1D *imag, int direction=1 );
 };
 
 
