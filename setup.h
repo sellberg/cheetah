@@ -110,7 +110,7 @@ public:
 
 	
 	// Powder pattern generation
-	int			powdersum;			 // Not implemented (I guess it should say whether to calculate the powder or not)
+	int			powdersum;			 // set to calculate powder pattern
 	int			powderthresh;			 // pixels with an ADC value above this threshold will be added to the powder
 	int			saveInterval;			 // powder pattern is repeatedly saved according to this interval
     
@@ -118,8 +118,7 @@ public:
     int         useCorrelation;     // set to nonzero to turn on angular cross correlation module
 	
 	// Saving options
-	//int			savehits;			 // set to save hits
-	int			saveRaw;			 // set to save each hit in raw format, in addition to assembled format. Powders are automatically saved as both
+	int			saveRaw;			 // set to save each hit in raw format, in addition to assembled format. Powders are only saved in raw if saveRaw and powdersum are enabled
 	int			hdf5dump;			 // set to write every frame to h5 format 
 	
 	// Verbosity

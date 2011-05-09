@@ -370,7 +370,7 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
     
 	if (hit->standard){
 		// Sum raw format data
-		if (global->saveRaw) {
+		if (global->powdersum && global->saveRaw) {
 			pthread_mutex_lock(&global->powdersum1_mutex);
 			global->npowder += 1;
 			for(long i=0; i<global->pix_nn; i++)
@@ -390,7 +390,7 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 
 	if (hit->ice){
 		// Sum raw format data 	: ice
-		if (global->saveRaw) {
+		if (global->powdersum && global->saveRaw) {
 			pthread_mutex_lock(&global->icesumraw_mutex);
 			global->npowder += 1;
 			for(long i=0; i<global->pix_nn; i++)
@@ -410,7 +410,7 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 
 	if (hit->water){
 		// Sum raw format data  : water
-		if (global->saveRaw) {
+		if (global->powdersum && global->saveRaw) {
 			pthread_mutex_lock(&global->watersumassembled_mutex);
 			global->npowder += 1;
 			for(long i=0; i<global->pix_nn; i++)
@@ -903,7 +903,7 @@ void saveRunningSums(cGlobal *global) {
 				
 			}
 			
-			if (global->saveRaw) {
+			if (global->powdersum && global->saveRaw) {
 				
 				/*
 				 *	Save powder pattern in raw layout
@@ -945,7 +945,7 @@ void saveRunningSums(cGlobal *global) {
 				
 			}
 			
-			if (global->saveRaw) {
+			if (global->powdersum && global->saveRaw) {
 				
 				/*
 				 *	Save powder pattern in raw layout : ice
@@ -986,7 +986,7 @@ void saveRunningSums(cGlobal *global) {
 				
 			}
 
-			if (global->saveRaw) {
+			if (global->powdersum && global->saveRaw) {
 				
 				/*
 				 *	Save powder pattern in raw layout : water
