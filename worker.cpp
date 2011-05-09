@@ -370,53 +370,62 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
     
 	if (hit->standard){
 		// Sum raw format data
-		pthread_mutex_lock(&global->powdersum1_mutex);
-		global->npowder += 1;
-		for(long i=0; i<global->pix_nn; i++)
-			global->powderRaw[i] += threadInfo->corrected_data[i];
-		pthread_mutex_unlock(&global->powdersum1_mutex);
-
-	
-		// Sum assembled data
-		pthread_mutex_lock(&global->powdersum2_mutex);
-		for(long i=0; i<global->image_nn; i++)
-			if(threadInfo->image[i] > global->powderthresh)
-				global->powderAssembled[i] += threadInfo->image[i];
-		pthread_mutex_unlock(&global->powdersum2_mutex);
+		if (global->saveRaw) {
+			pthread_mutex_lock(&global->powdersum1_mutex);
+			global->npowder += 1;
+			for(long i=0; i<global->pix_nn; i++)
+				global->powderRaw[i] += threadInfo->corrected_data[i];
+			pthread_mutex_unlock(&global->powdersum1_mutex);
+		}
+		
+		// Sum assembled data		
+		if (global->powdersum) {
+			pthread_mutex_lock(&global->powdersum2_mutex);
+			for(long i=0; i<global->image_nn; i++)
+				if(threadInfo->image[i] > global->powderthresh)
+					global->powderAssembled[i] += threadInfo->image[i];
+			pthread_mutex_unlock(&global->powdersum2_mutex);
+		}
 	}
 
 	if (hit->ice){
 		// Sum raw format data 	: ice
-		pthread_mutex_lock(&global->icesumraw_mutex);
-		global->npowder += 1;
-		for(long i=0; i<global->pix_nn; i++)
-			global->iceRaw[i] += threadInfo->corrected_data[i];
-		pthread_mutex_unlock(&global->icesumraw_mutex);
-
+		if (global->saveRaw) {
+			pthread_mutex_lock(&global->icesumraw_mutex);
+			global->npowder += 1;
+			for(long i=0; i<global->pix_nn; i++)
+				global->iceRaw[i] += threadInfo->corrected_data[i];
+			pthread_mutex_unlock(&global->icesumraw_mutex);			
+		}
 	
 		// Sum assembled data	: ice
-		pthread_mutex_lock(&global->icesumassembled_mutex);
-		for(long i=0; i<global->image_nn; i++)
-			if(threadInfo->image[i] > global->powderthresh)
-				global->iceAssembled[i] += threadInfo->image[i];
-		pthread_mutex_unlock(&global->icesumassembled_mutex);
+		if (global->powdersum) {
+			pthread_mutex_lock(&global->icesumassembled_mutex);
+			for(long i=0; i<global->image_nn; i++)
+				if(threadInfo->image[i] > global->powderthresh)
+					global->iceAssembled[i] += threadInfo->image[i];
+			pthread_mutex_unlock(&global->icesumassembled_mutex);			
+		}
 	}
 
 	if (hit->water){
 		// Sum raw format data  : water
-		pthread_mutex_lock(&global->watersumassembled_mutex);
-		global->npowder += 1;
-		for(long i=0; i<global->pix_nn; i++)
-			global->waterRaw[i] += threadInfo->corrected_data[i];
-		pthread_mutex_unlock(&global->watersumassembled_mutex);
-
+		if (global->saveRaw) {
+			pthread_mutex_lock(&global->watersumassembled_mutex);
+			global->npowder += 1;
+			for(long i=0; i<global->pix_nn; i++)
+				global->waterRaw[i] += threadInfo->corrected_data[i];
+			pthread_mutex_unlock(&global->watersumassembled_mutex);			
+		}
 	
 		// Sum assembled data	: water
-		pthread_mutex_lock(&global->watersumraw_mutex);
-		for(long i=0; i<global->image_nn; i++)
-			if(threadInfo->image[i] > global->powderthresh)
-				global->waterAssembled[i] += threadInfo->image[i];
-		pthread_mutex_unlock(&global->watersumraw_mutex);
+		if (global->powdersum) {
+			pthread_mutex_lock(&global->watersumraw_mutex);
+			for(long i=0; i<global->image_nn; i++)
+				if(threadInfo->image[i] > global->powderthresh)
+					global->waterAssembled[i] += threadInfo->image[i];
+			pthread_mutex_unlock(&global->watersumraw_mutex);			
+		}
 	}
 }
 
@@ -875,96 +884,129 @@ void saveRunningSums(cGlobal *global) {
 	}
 
 	else {
-		/*
-		 *	Save assembled powder pattern
-		 */
-		printf("Saving assembled sum data to file\n");
-		sprintf(filename,"r%04u-AssembledSum.h5",global->runNumber);
-		float *buffer2 = (float*) calloc(global->image_nn, sizeof(float));
-		pthread_mutex_lock(&global->powdersum2_mutex);
-		for(long i=0; i<global->image_nn; i++){
-			buffer2[i] = (float) global->powderAssembled[i];
+		if(global->hitfinder.use) {
+			if (global->powdersum) {
+				
+				/*
+				 *	Save assembled powder pattern
+				 */
+				printf("Saving assembled sum data to file\n");
+				sprintf(filename,"r%04u-AssembledSum.h5",global->runNumber);
+				float *buffer2 = (float*) calloc(global->image_nn, sizeof(float));
+				pthread_mutex_lock(&global->powdersum2_mutex);
+				for(long i=0; i<global->image_nn; i++){
+					buffer2[i] = (float) global->powderAssembled[i];
+				}
+				pthread_mutex_unlock(&global->powdersum2_mutex);
+				writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
+				free(buffer2);
+				
+			}
+			
+			if (global->saveRaw) {
+				
+				/*
+				 *	Save powder pattern in raw layout
+				 */
+				printf("Saving raw sum data to file\n");
+				sprintf(filename,"r%04u-RawSum.h5",global->runNumber);
+				float *buffer1 = (float*) calloc(global->pix_nn, sizeof(float));
+				pthread_mutex_lock(&global->powdersum1_mutex);
+				for(long i=0; i<global->pix_nn; i++)
+					buffer1[i] = (float) global->powderRaw[i];
+				pthread_mutex_unlock(&global->powdersum1_mutex);
+				//for(long i=0; i<global->pix_nn; i++)
+				//	if (buffer1[i] < 0) buffer1[i] = 0;
+				writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
+				free(buffer1);
+				
+			}
 		}
-		pthread_mutex_unlock(&global->powdersum2_mutex);
-		writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
-		free(buffer2);
+			
+			
 		
 		
-		/*
-		 *	Save powder pattern in raw layout
-		 */
-		printf("Saving raw sum data to file\n");
-		sprintf(filename,"r%04u-RawSum.h5",global->runNumber);
-		float *buffer1 = (float*) calloc(global->pix_nn, sizeof(float));
-		pthread_mutex_lock(&global->powdersum1_mutex);
-		for(long i=0; i<global->pix_nn; i++)
-			buffer1[i] = (float) global->powderRaw[i];
-		pthread_mutex_unlock(&global->powdersum1_mutex);
-		//for(long i=0; i<global->pix_nn; i++)
-		//	if (buffer1[i] < 0) buffer1[i] = 0;
-		writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
-		free(buffer1);
-	
-		/*
-		 *	Save assembled powder pattern : ice
-		 */
-		printf("Saving assembled sum data to file\n");
-		sprintf(filename,"r%04u-AssembledSum_ice.h5",global->runNumber);
-		float *buffer4 = (float*) calloc(global->image_nn, sizeof(float));
-		pthread_mutex_lock(&global->icesumassembled_mutex);
-		for(long i=0; i<global->image_nn; i++){
-			buffer4[i] = (float) global->iceAssembled[i];
-		}
-		pthread_mutex_unlock(&global->icesumassembled_mutex);
-		writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
-		free(buffer4);
-		
-		
-		/*
-		 *	Save powder pattern in raw layout : ice
-		 */
-		printf("Saving raw sum data to file\n");
-		sprintf(filename,"r%04u-RawSum_ice.h5",global->runNumber);
-		float *buffer5 = (float*) calloc(global->pix_nn, sizeof(float));
-		pthread_mutex_lock(&global->icesumraw_mutex);
-		for(long i=0; i<global->pix_nn; i++)
-			buffer5[i] = (float) global->iceRaw[i];
-		pthread_mutex_unlock(&global->icesumraw_mutex);
-		//for(long i=0; i<global->pix_nn; i++)
-		//	if (buffer1[i] < 0) buffer1[i] = 0;
-		writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
-		free(buffer5);
+		if(global->icefinder.use) {
+			if (global->powdersum) {
+				
+				/*
+				 *	Save assembled powder pattern : ice
+				 */
+				printf("Saving assembled sum data to file\n");
+				sprintf(filename,"r%04u-AssembledSum_ice.h5",global->runNumber);
+				float *buffer4 = (float*) calloc(global->image_nn, sizeof(float));
+				pthread_mutex_lock(&global->icesumassembled_mutex);
+				for(long i=0; i<global->image_nn; i++){
+					buffer4[i] = (float) global->iceAssembled[i];
+				}
+				pthread_mutex_unlock(&global->icesumassembled_mutex);
+				writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
+				free(buffer4);
+				
+			}
+			
+			if (global->saveRaw) {
+				
+				/*
+				 *	Save powder pattern in raw layout : ice
+				 */
+				printf("Saving raw sum data to file\n");
+				sprintf(filename,"r%04u-RawSum_ice.h5",global->runNumber);
+				float *buffer5 = (float*) calloc(global->pix_nn, sizeof(float));
+				pthread_mutex_lock(&global->icesumraw_mutex);
+				for(long i=0; i<global->pix_nn; i++)
+					buffer5[i] = (float) global->iceRaw[i];
+				pthread_mutex_unlock(&global->icesumraw_mutex);
+				//for(long i=0; i<global->pix_nn; i++)
+				//	if (buffer1[i] < 0) buffer1[i] = 0;
+				writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
+				free(buffer5);
+				
+			}
+		}		
 
-		/*
-		 *	Save assembled powder pattern : water
-		 */
-		printf("Saving assembled sum data to file\n");
-		sprintf(filename,"r%04u-AssembledSum_water.h5",global->runNumber);
-		float *buffer6 = (float*) calloc(global->image_nn, sizeof(float));
-		pthread_mutex_lock(&global->watersumassembled_mutex);
-		for(long i=0; i<global->image_nn; i++){
-			buffer6[i] = (float) global->waterAssembled[i];
+		
+		
+		if(global->waterfinder.use) {
+			if (global->powdersum) {
+				
+				/*
+				 *	Save assembled powder pattern : water
+				 */
+				printf("Saving assembled sum data to file\n");
+				sprintf(filename,"r%04u-AssembledSum_water.h5",global->runNumber);
+				float *buffer6 = (float*) calloc(global->image_nn, sizeof(float));
+				pthread_mutex_lock(&global->watersumassembled_mutex);
+				for(long i=0; i<global->image_nn; i++){
+					buffer6[i] = (float) global->waterAssembled[i];
+				}
+				pthread_mutex_unlock(&global->watersumassembled_mutex);
+				writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
+				free(buffer6);				
+				
+			}
+
+			if (global->saveRaw) {
+				
+				/*
+				 *	Save powder pattern in raw layout : water
+				 */
+				printf("Saving raw sum data to file\n");
+				sprintf(filename,"r%04u-RawSum_water.h5",global->runNumber);
+				float *buffer7 = (float*) calloc(global->pix_nn, sizeof(float));
+				pthread_mutex_lock(&global->watersumraw_mutex);
+				for(long i=0; i<global->pix_nn; i++)
+					buffer7[i] = (float) global->waterRaw[i];
+				pthread_mutex_unlock(&global->watersumraw_mutex);
+				//for(long i=0; i<global->pix_nn; i++)
+				//	if (buffer1[i] < 0) buffer1[i] = 0;
+				writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
+				free(buffer7);				
+				
+			}
 		}
-		pthread_mutex_unlock(&global->watersumassembled_mutex);
-		writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
-		free(buffer6);
 		
 		
-		/*
-		 *	Save powder pattern in raw layout : water
-		 */
-		printf("Saving raw sum data to file\n");
-		sprintf(filename,"r%04u-RawSum_water.h5",global->runNumber);
-		float *buffer7 = (float*) calloc(global->pix_nn, sizeof(float));
-		pthread_mutex_lock(&global->watersumraw_mutex);
-		for(long i=0; i<global->pix_nn; i++)
-			buffer7[i] = (float) global->waterRaw[i];
-		pthread_mutex_unlock(&global->watersumraw_mutex);
-		//for(long i=0; i<global->pix_nn; i++)
-		//	if (buffer1[i] < 0) buffer1[i] = 0;
-		writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
-		free(buffer7);
-	
 	}
 
 	
