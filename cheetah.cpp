@@ -461,8 +461,8 @@ void event() {
 		memset(threadInfo->quad_data[quadrant], 0, ROWS*COLS*16*sizeof(uint16_t));
 	}
 	
-
-
+	
+	
 	/*
 	 *	Copy raw cspad image data into worker thread structure for processing
 	 */
@@ -507,9 +507,6 @@ void event() {
 			}
 		}
 	}
-
-
-	
 	
 	
 	
