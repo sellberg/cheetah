@@ -205,12 +205,15 @@ void *worker(void *threadarg) {
 	/*
      *  Perform cross-correlation analysis
      */
-    if (global->useCorrelation){
-        pthread_mutex_lock(&global->powdersum1_mutex);
-        correlate(threadInfo, global);
-        pthread_mutex_unlock(&global->powdersum1_mutex);
+	if (global->useCorrelation && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
+								   || (hit.water && global->waterfinder.savehits) 
+								   || (hit.ice && global->icefinder.savehits) 
+								   || (!hit.background && global->backgroundfinder.savehits) )) {
+		pthread_mutex_lock(&global->powdersum1_mutex);
+		correlate(threadInfo, global);
+		pthread_mutex_unlock(&global->powdersum1_mutex);
 	}
-    
+	
 	
 	/*
 	 *	If this is a hit, write out to our favourite HDF5 format

@@ -430,27 +430,27 @@ void CrossCorrelator::writeSAXS()
 	fwrite(&buffer[0],sizeof(double),samplingAngle(),filePointerWrite);
 	
 	// cross-correlation - full version
-	for (int i=0; i<samplingLength(); i++) {
-		for (int j=0; j<samplingLength(); j++) {
-			for (int k=0; k<samplingLag(); k++) {
-				buffer[i*samplingLength()*samplingLag()+j*samplingLag()+k] = crossCorrelation->get(i,j,k);
-			}
-		}
-	}
-	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-	fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
-	fwrite(&buffer[0],sizeof(double),samplingLength()*samplingLength()*samplingLag(),filePointerWrite);
-	
-	// cross-correlation - autocorrelation only (q1=q2)
 //	for (int i=0; i<samplingLength(); i++) {
-//		for (int k=0; k<samplingLag(); k++) {
-//			buffer[i*samplingLag()+k] = crossCorrelation->get(i,i,k);
+//		for (int j=0; j<samplingLength(); j++) {
+//			for (int k=0; k<samplingLag(); k++) {
+//				buffer[i*samplingLength()*samplingLag()+j*samplingLag()+k] = crossCorrelation->get(i,j,k);
+//			}
 //		}
 //	}
 //	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+//	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
 //	fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
-//	fwrite(&buffer[0],sizeof(double),samplingLength()*samplingLag(),filePointerWrite);
+//	fwrite(&buffer[0],sizeof(double),samplingLength()*samplingLength()*samplingLag(),filePointerWrite);
+	
+	// cross-correlation - autocorrelation only (q1=q2)
+	for (int i=0; i<samplingLength(); i++) {
+		for (int k=0; k<samplingLag(); k++) {
+			buffer[i*samplingLag()+k] = crossCorrelation->get(i,i,k);
+		}
+	}
+	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+	fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
+	fwrite(&buffer[0],sizeof(double),samplingLength()*samplingLag(),filePointerWrite);
 	
 	fclose(filePointerWrite);
 	free(buffer);
@@ -638,6 +638,7 @@ void CrossCorrelator::updateDependentVariables(){		//update the values that depe
 	p_deltaq = 20*qmax()/(matrixSize()-1);
 	p_samplingLength = int(qmax()/p_deltaq+1+0.001);
 	p_deltaphi = 2*atan(1/(2*(p_samplingLength-1.0)));
+	p_deltaphi = round(M_PI/deltaphi)*p_deltaphi; // make M_PI/delptaphi an integer
 	p_samplingAngle = (int) floor(2*M_PI/p_deltaphi);
 	p_samplingLag = (int) ceil(p_samplingAngle/2.0)+2;
 	

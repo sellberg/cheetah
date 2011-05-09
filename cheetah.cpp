@@ -451,7 +451,7 @@ void event() {
 	threadInfo->detectorPosition = global.detectorZ;
 	
 	if (global.useAttenuationCorrection >= 0) {
-		threadInfo->attenuation = global.attenuations[global.nAttenuations-1];	// 1/transmission taken from last succesful readout of the Si filters
+		threadInfo->attenuation = global.attenuations[global.nAttenuations-1];	// 1/transmission taken from last successful readout of the Si filters
 	}
 	
 	threadInfo->pGlobal = &global;
