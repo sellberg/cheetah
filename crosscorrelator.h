@@ -39,9 +39,11 @@ private:
 	void updateDependentVariables();
     
     array2D *table;         //lookup table
-    
+
+/*    
     double p_centerX;
     double p_centerY;
+*/
     array1D *check1D;
 	
     /*
@@ -53,13 +55,14 @@ private:
 	
 public:
 	//---------------------------------------------constructors & destructor
-    CrossCorrelator( int arraylength=1 );                     //init with 1D data size
-	CrossCorrelator( int16_t *dataCArray, int arraylength );    //init with actual data
-    CrossCorrelator( int16_t *dataCArray, float *qxCArray, float *qyCArray, int arraylength );    //init with actual data + q calibration
+    CrossCorrelator( int arraylength=1 );                                                           //init with 1D data size
+	CrossCorrelator( int16_t *dataCArray, int arraylength );                                        //init with actual data
+    CrossCorrelator( int16_t *dataCArray, float *qxCArray, float *qyCArray, int arraylength );      //init with actual data + centered(!) q calibration
 	~CrossCorrelator();
 	
 	//---------------------------------------------input/output
     void initPrivateVariables();
+    void initDefaultQ();
 	void initFromFile( std::string filename, int type=0 );
     void initWithTestPattern( int type=0 );                     //generate some test
 	void printRawData(uint16_t *buffer,long lSize);
@@ -104,11 +107,12 @@ public:
 	// jas: qmaxCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
 	double qmaxCArray( float *qxCArray, float *qyCArray, int arraylength ); // calculates qmax from CArrays of X/Y positions
     
-	// jas: centerXCArray() and centerYCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
+/*
     double centerX() const;
     void setCenterX( double cen_x );
     double centerY() const;
     void setCenterY( double cen_y );
+*/
 	
 	//---------------------------------------------getters for dependent variables
 	double deltaq() const;

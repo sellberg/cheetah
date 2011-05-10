@@ -28,10 +28,12 @@
 /*
  *	Function prototypes
  */
+void correlate(tThreadInfo*, cGlobal*);
+
+// jas: centerXCArray() and centerYCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
 double centerXCArray( float *qxCArray ); // calculates center in X from CArray of X positions
 double centerYCArray( float *qyCArray ); // calculates center in Y from CArray of Y positions
 
-void correlate(tThreadInfo*, cGlobal*);
 
 
 

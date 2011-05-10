@@ -40,7 +40,7 @@ using std::string;
 CrossCorrelator::CrossCorrelator(int arraylength){
     
     initPrivateVariables();
-
+    
     //set basic properties
     setArraySize( arraylength );
     setQmax(1.);
@@ -55,6 +55,8 @@ CrossCorrelator::CrossCorrelator(int arraylength){
 	// create arrays to keep track of pixel locations in x and y directions
 	qx = new array1D(arraySize());
 	qy = new array1D(arraySize());
+    initDefaultQ();
+        
     table = new array2D(arraySize(), arraySize());
 	
 	// create arrays to store polar coordinates for the angular cross-correlation
@@ -80,6 +82,8 @@ CrossCorrelator::CrossCorrelator( int16_t *dataCArray, int arraylength ){
     //allocate all other internal objects
     qx = new array1D(arraySize());
 	qy = new array1D(arraySize());
+    initDefaultQ();
+
     table = new array2D(arraySize(), arraySize());
     
 	q = new array1D(arraySize());
@@ -135,6 +139,14 @@ CrossCorrelator::~CrossCorrelator(){
 }
 
 
+// ***********************************************************************************
+// initialize the class internals and set some defaults
+// ***********************************************************************************
+
+//----------------------------------------------------------------------------initPrivateVariables
+//make sure all private variables are initialized
+//so that they don't contain or point to random memory
+//----------------------------------------------------------------------------
 void CrossCorrelator::initPrivateVariables(){
 	p_arraySize = 1;
 	p_qmax = 0;
@@ -154,17 +166,70 @@ void CrossCorrelator::initPrivateVariables(){
 	phiave = NULL;
 	crossCorrelation = NULL;	    
     table = NULL;
-        
+ 
+/*       
     p_centerX = 0;
     p_centerY = 0;
+*/
     check1D = NULL;
 }
 
-// ***********************************************************************************
+
+//----------------------------------------------------------------------------initDefaultQ
+//if a q-calibration was not given to this class from the outside
+//create a default one here
+//----------------------------------------------------------------------------
+void CrossCorrelator::initDefaultQ(){
+    //make sure that qx and qy have been allocated previously, otherwise, do so now
+    if (!qx){
+        qx = new array1D(arraySize());
+    }
+    if (!qy){
+        qy = new array1D(arraySize());
+    }
+    
+    double delta = 1e-9;       // about right if q is measured in inverse meters
+    double start = (arraySize()*delta)/2.;
+    
+    for (int i=0; i<arraySize(); i++){
+        qx->set(i, start+delta*i);
+        qy->set(i, start+delta*i);
+    }
+}
+
+
+
+//----------------------------------------------------------------------------initWithTestPattern
+void CrossCorrelator::initWithTestPattern( int type ){
+
+    //create a nice test pattern
+    int sizex = 100;
+    int sizey = 100;
+    array2D *test = new array2D(sizex, sizey);
+    test->generateTestPattern(type);
+
+    //convert it to 1D object and feed it to 'data'
+    delete data;
+    data = new array1D( test );
+
+/*
+    //set the right center
+    setCenterX( (double)sizex/2 );
+    setCenterY( (double)sizey/2 );
+*/
+    
+    //write tiff image to check what the pattern looks like
+    std::string filename = "/Users/feldkamp/Desktop/testpattern.tif";
+    test->writeToTiff( filename );
+    
+    delete test;
+}
+    
+
+//----------------------------------------------------------------------------initFromFile
 // load data from file
 //		type 0: HDF5 file (output from Anton's hit finder code
 //		type 1: raw 16-bit binary file
-// ***********************************************************************************
 void CrossCorrelator::initFromFile( std::string filename, int type ){
 	
 	//read from file
@@ -202,32 +267,6 @@ void CrossCorrelator::initFromFile( std::string filename, int type ){
 		}
 	}
 }
-
-//----------------------------------------------------------------------------initWithTestPattern
-void CrossCorrelator::initWithTestPattern( int type ){
-
-    //create a nice test pattern
-    int sizex = 100;
-    int sizey = 100;
-    array2D *test = new array2D(sizex, sizey);
-    test->generateTestPattern(type);
-
-    //convert it to 1D object and feed it to 'data'
-    delete data;
-    data = new array1D( test );
-    
-    //set the right center
-    setCenterX( (double)sizex/2 );
-    setCenterY( (double)sizey/2 );
-    
-    //write tiff image to check what the pattern looks like
-    std::string filename = "/Users/feldkamp/Desktop/testpattern.tif";
-    test->writeToTiff( filename );
-    
-    delete test;
-}
-    
-
 
 
 // ***********************************************************************************
@@ -594,6 +633,7 @@ double CrossCorrelator::qmaxCArray( float *qxCArray, float *qyCArray, int arrayl
 }
 
 
+/*
 double CrossCorrelator::centerX() const{
     return p_centerX;
 }
@@ -611,7 +651,7 @@ double CrossCorrelator::centerY() const{
 void CrossCorrelator::setCenterY( double cen_y ){
     p_centerY = cen_y;
 }
-
+*/
 
 double CrossCorrelator::deltaq() const{						//getter only, dependent variable
 	return p_deltaq;
@@ -718,7 +758,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
             polarSampling->set((unsigned int)(xcoord+stop_r), (unsigned int)(ycoord+stop_r), 65535);
 			
             //lookup that value in original scattering data
-            value = lookup( xcoord + centerX(), ycoord + centerY() );                 //COMMENT THIS BACK IN FOR REAL CASE
+            value = lookup( xcoord, ycoord );
             
 			//assign the new values (note the functional determinant r)
 			polar->set(pcounter, rcounter, value * r);
