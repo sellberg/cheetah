@@ -38,6 +38,9 @@ using std::string;
 // constructors & destructor
 // ***********************************************************************************
 CrossCorrelator::CrossCorrelator(int arraylength){
+    
+    initPrivateVariables();
+
     //set basic properties
     setArraySize( arraylength );
     setQmax(1.);
@@ -52,6 +55,7 @@ CrossCorrelator::CrossCorrelator(int arraylength){
 	// create arrays to keep track of pixel locations in x and y directions
 	qx = new array1D(arraySize());
 	qy = new array1D(arraySize());
+    table = new array2D(arraySize(), arraySize());
 	
 	// create arrays to store polar coordinates for the angular cross-correlation
 	q = new array1D(arraySize());
@@ -60,10 +64,11 @@ CrossCorrelator::CrossCorrelator(int arraylength){
 	qave = new array1D(arraySize());
 	iave = new array1D(arraySize());
 	phiave = new array1D(samplingAngle());
-
 }
 
 CrossCorrelator::CrossCorrelator( int16_t *dataCArray, int arraylength ){
+    
+    initPrivateVariables();
 
     //set basic properties, just like the default case
     setArraySize( arraylength );
@@ -75,20 +80,23 @@ CrossCorrelator::CrossCorrelator( int16_t *dataCArray, int arraylength ){
     //allocate all other internal objects
     qx = new array1D(arraySize());
 	qy = new array1D(arraySize());
+    table = new array2D(arraySize(), arraySize());
     
 	q = new array1D(arraySize());
 	phi = new array1D(arraySize());
 	
 	qave = new array1D(samplingLength());
 	iave = new array1D(samplingLength());
-	phiave = new array1D(samplingAngle());    
+	phiave = new array1D(samplingAngle());
     
 }
 
-CrossCorrelator::CrossCorrelator(int16_t *dataCArray, float *qxCArray, float *qyCArray) {
+CrossCorrelator::CrossCorrelator(int16_t *dataCArray, float *qxCArray, float *qyCArray, int arraylength) {
 	
+    initPrivateVariables();
+    
     //set basic properties, just like the default case
-    setArraySize(RAW_DATA_LENGTH);
+    setArraySize(arraylength);
 	//jas: calculate qmax of CArray
     setQmax(qmaxCArray(qxCArray, qyCArray, arraySize()));
 	
@@ -98,11 +106,7 @@ CrossCorrelator::CrossCorrelator(int16_t *dataCArray, float *qxCArray, float *qy
     //allocate all other internal objects
     qx = new array1D(qxCArray, arraySize());
 	qy = new array1D(qyCArray, arraySize());
-	
-	//jas: calculate center of CArray and shift qx, qy accordingly
-	setCenterX(centerXCArray(qxCArray));
-	setCenterY(centerYCArray(qyCArray));
-	shiftCenter();
+    table = new array2D(arraySize(), arraySize());
 	
 	q = new array1D(arraySize());
 	phi = new array1D(arraySize());
@@ -120,6 +124,7 @@ CrossCorrelator::~CrossCorrelator(){
 	
 	delete qx;
 	delete qy;
+    delete table;
 	
 	delete q;
 	delete phi;
@@ -130,6 +135,30 @@ CrossCorrelator::~CrossCorrelator(){
 }
 
 
+void CrossCorrelator::initPrivateVariables(){
+	p_arraySize = 1;
+	p_qmax = 0;
+	p_deltaq = 0;
+	p_deltaphi = 0;
+	p_samplingLength = 0;
+	p_samplingAngle = 0;
+	p_samplingLag = 0;
+
+	data = NULL;
+	qx = NULL;
+	qy = NULL;	
+	q = NULL;
+	phi = NULL;	
+	qave = NULL;
+	iave = NULL;
+	phiave = NULL;
+	crossCorrelation = NULL;	    
+    table = NULL;
+        
+    p_centerX = 0;
+    p_centerY = 0;
+    check1D = NULL;
+}
 
 // ***********************************************************************************
 // load data from file
@@ -573,16 +602,7 @@ void CrossCorrelator::setCenterX( double cen_x ){
     p_centerX = cen_x;
 }
 
-double CrossCorrelator::centerXCArray( float *qxCArray ) {
-    double center = 0;
-	int quads = 4;
-	// Loop over quads and pick out closest pixel to center
-	for (int i=0; i<quads; i++) {
-		center += (double) qxCArray[8*ROWS*(2*COLS-1)+i*2*ROWS];
-	}
-	cout << "new Center in X: " << center/quads << endl;
-	return center/quads;
-}
+
 
 double CrossCorrelator::centerY() const{
     return p_centerY;
@@ -592,23 +612,6 @@ void CrossCorrelator::setCenterY( double cen_y ){
     p_centerY = cen_y;
 }
 
-double CrossCorrelator::centerYCArray( float *qyCArray ) {
-    double center = 0;
-	int quads = 4;
-	// Loop over quads and pick out closest pixel to center
-	for (int i=0; i<quads; i++) {
-		center += (double) qyCArray[8*ROWS*(2*COLS-1)+i*2*ROWS];
-	}
-	cout << "new Center in Y: " << center/quads << endl;
-	return center/quads;
-}
-
-void CrossCorrelator::shiftCenter() {
-	for (int i=0; i<arraySize(); i++) {
-		qx->set(i, qx->get(i)-centerX());
-		qy->set(i, qy->get(i)-centerY());
-	}
-}
 
 double CrossCorrelator::deltaq() const{						//getter only, dependent variable
 	return p_deltaq;
@@ -645,7 +648,7 @@ void CrossCorrelator::updateDependentVariables(){		//update the values that depe
 	p_samplingAngle = (int) floor(2*M_PI/p_deltaphi);
 	p_samplingLag = (int) ceil(p_samplingAngle/2.0)+2;
 	
-	cout << "p_deltaq: " << p_deltaq << ", p_samplingLength: " << p_samplingLength << ", p_deltaphi: " << p_deltaphi << ", p_samplingAngle: " << p_samplingAngle << ", p_samplingLag: " << p_samplingLag << endl;
+	cout << "updateDependentVariables done. p_deltaq: " << p_deltaq << ", p_samplingLength: " << p_samplingLength << ", p_deltaphi: " << p_deltaphi << ", p_samplingAngle: " << p_samplingAngle << ", p_samplingLag: " << p_samplingLag << endl;
 }
 
 
@@ -745,21 +748,106 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
 
 //---------------------------------------------------------------------------- lookup
 double CrossCorrelator::lookup( double xcoord, double ycoord ) const{
-    //YET TO IMPLEMENT ACCORDING TO CSPAD GEOMETRY
+    double val = 0.;
     
+    //create lookup index from original coordinates
+    int ix = (int) floor(xcoord);
+    int iy = (int) floor(ycoord);
+        
+    if ( (ix<0) || (ix > table->dim1()) ){
+        cerr << "Error in lookup! xcoord=" << xcoord << "is too large or too small.";
+        cerr << "(ix=" << ix << ", table dimx=" << table->dim1() << endl;
+    } else if ( (iy<0) || (iy > table->dim2()) ){
+        cerr << "Error in lookup! ycoord=" << ycoord << "is too large or too small.";
+        cerr << "(iy=" << iy << ", table dimy=" << table->dim2() << endl;
+    } else {
+        int index = (int) floor(table->get(ix, iy));
+        val = data->get( index );
+    }
     
+/*    
     //test case: feed everything back into 2D and be done with it
     int xdim = 100;
     xcoord = round(xcoord);
     ycoord = round(ycoord);
     int index = (int) (xcoord + xdim*ycoord);
     
-    double val = data->get( index );
+    val = data->get( index );
     
     //DEBUG!!!!!!!!!!
     check1D->set(index, 65535);         //keep track of where the value was read
-
+*/
     return val;
+}
+
+
+//---------------------------------------------------------------------------- lookup
+// rearrange data into a fast lookup table to get values fast using 
+// val=lookup(x,y)
+// dimensions of the argument 'table' determines the accuracy of the lookup
+//----------------------------------------------------------------------------
+int CrossCorrelator::createLookupTable(){
+    int retval = 0;
+    
+    cout << "createLookupTable() begin." << endl;
+        
+    int Nx = table->dim1();
+    int Ny = table->dim2();
+
+    double qx_min = qx->getMin();
+    double qx_max = qx->getMax();
+    double qx_range = fabs(qx_max - qx_min);
+    double qx_stepsize = qx_range/Nx;
+    cout << "qx: min=" << qx_min << ", max=" << qx_max << ", range=" << qx_range << ", step size=" << qx_stepsize << endl;
+    
+    double qy_min = qy->getMin();
+    double qy_max = qy->getMax();
+    double qy_range = fabs(qy_max - qy_min);    
+    double qy_stepsize = qy_range/Ny;    
+    cout << "qy: min=" << qy_min << ", max=" << qy_max << ", range=" << qy_range << ", step size=" << qy_stepsize << endl;
+        
+//    delete table;
+//    table = new array2D( Nx, Ny );
+    table->zero();
+    
+    for (int j = 0; j<Ny; j++) {
+        for (int i = 0; i<Nx; i++) {
+            //get values for
+        }
+    }
+    
+    if ( (qx->size()!=qy->size()) || (qx->size()!=data->size()) ) {
+        cerr << "Error in createLookupTable! Array sizes don't match: " 
+            << "qx=" << qx->size() << ", qy=" << qy->size() << ", data=" << data->size() << endl;
+        retval++;
+    } else {
+        int ix = 0;
+        int iy = 0;
+        for (int i = 0; i < qx->size(); i++){           //go through all the data
+            //get values for qx and qy
+            //determine, at what index (ix, iy) to put them in the lookup table
+            ix = (int) floor( qx->get(i) / qx_stepsize );
+            iy = (int) floor( qy->get(i) / qy_stepsize );
+            
+            //and fill table at the found coordinates with the data index
+            //overwriting whatever value it had before
+            table->set( ix, iy, i );
+            
+            /////////////////////////////////////////////////////////////////////////////////////////
+            //ATTENTION: THIS METHOD WILL LEAD TO A LOSS OF DATA,
+            //ESPECIALLY FOR SMALL TABLE SIZES,
+            //BUT IT WILL BUY A LOT OF SPEED IN THE LOOKUP PROCESS
+            //--> this should be improved to a more precise version, 
+            //    maybe even one that allows the lookup(x,y) to interpolate
+            //    for that to work, we need to find the four closest points in the data or so
+            /////////////////////////////////////////////////////////////////////////////////////////
+            
+        }//for
+    }//if
+    
+    cout << "createLookupTable() done." << endl;
+    
+    return retval;
 }
 
 

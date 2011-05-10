@@ -39,6 +39,8 @@ using std::endl;
 #include "crosscorrelator.h"
 
 
+
+
 //----------------------------------------------------------correlate
 // apply angular cross correlation
 //-------------------------------------------------------------------
@@ -48,10 +50,18 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
                         //should be governed by a setting in the ini file at some point
                         
     cout << "CORRELATING... using alg " << alg << " in thread #" << threadInfo->threadNum << "." << endl;
-
-    //int arraylength = RAW_DATA_LENGTH;
-	
-	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y );
+    
+    //jas: calculate center of CArray and shift qx, qy accordingly
+	double centerX = centerXCArray(global->pix_x);
+    double centerY = centerYCArray(global->pix_y);
+    for (int i=0; i<RAW_DATA_LENGTH; i++) {                 //previously function shiftCenter() in crosscorrelator
+        global->pix_x[i] = global->pix_x[i] - centerX;
+        global->pix_y[i] = global->pix_y[i] - centerY;
+    }
+    
+    //create cross correlator object that takes care of the computations
+	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH );
+    
     
     switch (alg) {
         case 0:{
@@ -82,3 +92,49 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 }
 
 
+
+
+//----------------------------------------------------------centerXCArray
+//find center of scattering image in x-direction
+//----------------------------------------------------------
+double centerXCArray( float *qxCArray ) {
+    double center = 0;
+	int quads = 4;
+	// Loop over quads and pick out closest pixel to center
+	for (int i=0; i<quads; i++) {
+		center += (double) qxCArray[8*ROWS*(2*COLS-1)+i*2*ROWS];
+	}
+	cout << "new Center in X: " << center/quads << endl;
+	return center/quads;
+}
+
+
+//----------------------------------------------------------centerXCArray
+//find center of scattering image in x-direction
+//----------------------------------------------------------
+double centerYCArray( float *qyCArray ) {
+    double center = 0;
+	int quads = 4;
+	// Loop over quads and pick out closest pixel to center
+	for (int i=0; i<quads; i++) {
+		center += (double) qyCArray[8*ROWS*(2*COLS-1)+i*2*ROWS];
+	}
+	cout << "new Center in Y: " << center/quads << endl;
+	return center/quads;
+}
+
+
+
+///////////////OLD STUFF////////////////
+
+/*
+//----------------------------------------------------------shiftCenter
+//
+//----------------------------------------------------------
+void shiftCenter() {
+	for (int i=0; i<arraySize(); i++) {
+		qx->set(i, qx->get(i)-centerX());
+		qy->set(i, qy->get(i)-centerY());
+	}
+}
+*/

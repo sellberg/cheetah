@@ -38,23 +38,28 @@ private:
 	array3D *crossCorrelation;	
 	void updateDependentVariables();
     
+    array2D *table;         //lookup table
+    
     double p_centerX;
     double p_centerY;
     array1D *check1D;
 	
+    /*
 	//jas: Constants copied from worker.h
 	static const unsigned  ROWS = 194;
 	static const unsigned  COLS = 185;
 	static const unsigned  RAW_DATA_LENGTH = 8*ROWS*8*COLS;
+    */
 	
 public:
 	//---------------------------------------------constructors & destructor
-    CrossCorrelator( int arraylength=0 );                     //init with 1D data size
+    CrossCorrelator( int arraylength=1 );                     //init with 1D data size
 	CrossCorrelator( int16_t *dataCArray, int arraylength );    //init with actual data
-    CrossCorrelator( int16_t *dataCArray, float *qxCArray, float *qyCArray );    //init with actual data + q calibration
+    CrossCorrelator( int16_t *dataCArray, float *qxCArray, float *qyCArray, int arraylength );    //init with actual data + q calibration
 	~CrossCorrelator();
 	
 	//---------------------------------------------input/output
+    void initPrivateVariables();
 	void initFromFile( std::string filename, int type=0 );
     void initWithTestPattern( int type=0 );                     //generate some test
 	void printRawData(uint16_t *buffer,long lSize);
@@ -68,8 +73,8 @@ public:
 	void calculateXCCA();
 	
     //---------------------------------------------alternative approach (Jan's way)
-    // these functions have the byname FAST to distinguish them from the ones above 
-    // for lack of better name and in hope that it may be fast. We'll see...
+    // these functions have the byname _FAST to distinguish them from the ones above 
+    // (for lack of a better name and in the hope that they may be fast. We'll see...)
     
     // 'calculatePolarCoordinates' returns a 2D pattern in polar coordinates (r vs. phi)
     int calculatePolarCoordinates_FAST(array2D* polar); 
@@ -78,6 +83,7 @@ public:
     int calculateXCCA_FAST( array2D *polarData, array2D *corr );
     
     // looks up the value closest to xcoord, ycoord in the data
+    int createLookupTable();
     double lookup( double xcoord, double ycoord ) const;
     
     //compute 1D correlations using FFT, the result is returned in f, respectively
@@ -101,11 +107,8 @@ public:
 	// jas: centerXCArray() and centerYCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
     double centerX() const;
     void setCenterX( double cen_x );
-	double centerXCArray( float *qxCArray ); // calculates center in X from CArray of X positions
     double centerY() const;
     void setCenterY( double cen_y );
-	double centerYCArray( float *qyCArray ); // calculates center in Y from CArray of Y positions
-	void shiftCenter(); // jas: shifts center of qx, qy to the value determined by p_centerX and p_centerY
 	
 	//---------------------------------------------getters for dependent variables
 	double deltaq() const;
@@ -115,6 +118,9 @@ public:
 	int samplingLag() const;
 	
 };
+
+
+
 
 
 #endif

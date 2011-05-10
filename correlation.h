@@ -28,12 +28,17 @@
 /*
  *	Function prototypes
  */
+double centerXCArray( float *qxCArray ); // calculates center in X from CArray of X positions
+double centerYCArray( float *qyCArray ); // calculates center in Y from CArray of Y positions
+
 void correlate(tThreadInfo*, cGlobal*);
 
 
 
 
-
-
+///////////////OLD STUFF////////////////
+/*
+void shiftCenter(); // jas: shifts center of qx, qy to the value determined by p_centerX and p_centerY
+*/
 
 #endif
