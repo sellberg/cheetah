@@ -23,20 +23,16 @@
 
 #include "setup.h"
 #include "worker.h"
-
+#include "crosscorrelator.h"
 
 /*
  *	Function prototypes
  */
 void correlate(tThreadInfo*, cGlobal*);
-
-// jas: centerXCArray() and centerYCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
-double centerXCArray( float *qxCArray ); // calculates center in X from CArray of X positions
-double centerYCArray( float *qyCArray ); // calculates center in Y from CArray of Y positions
-
-
-
-
+void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
+void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
+double centerX( float *qx ); // calculates center in X from CArray of X positions
+double centerY( float *qy ); // calculates center in Y from CArray of Y positions
 
 ///////////////OLD STUFF////////////////
 /*

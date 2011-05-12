@@ -451,7 +451,7 @@ void event() {
 	threadInfo->detectorPosition = global.detectorZ;
 	
 	if (global.useAttenuationCorrection >= 0) {
-		threadInfo->attenuation = global.attenuations[global.nAttenuations-1];	// 1/transmission taken from last succesful readout of the Si filters
+		threadInfo->attenuation = global.attenuations[global.nAttenuations-1];	// 1/transmission taken from last successful readout of the Si filters
 	}
 	
 	threadInfo->pGlobal = &global;
@@ -461,8 +461,8 @@ void event() {
 		memset(threadInfo->quad_data[quadrant], 0, ROWS*COLS*16*sizeof(uint16_t));
 	}
 	
-
-
+	
+	
 	/*
 	 *	Copy raw cspad image data into worker thread structure for processing
 	 */
@@ -507,9 +507,6 @@ void event() {
 			}
 		}
 	}
-
-
-	
 	
 	
 	
