@@ -181,8 +181,8 @@ void arraydata::zero(){				//set all elements to zero
 }
 
 //--------------------------------------------------------------------
-double arraydata::getMin() const{
-	double tempmin = INFINITY;
+double arraydata::calcMin() const{
+	double tempmin = +INFINITY;
 	for (int i = 0; i < size(); i++) {
 		if (get_atAbsoluteIndex(i) < tempmin) {
 			tempmin = get_atAbsoluteIndex(i);
@@ -192,7 +192,7 @@ double arraydata::getMin() const{
 }
 
 //--------------------------------------------------------------------
-double arraydata::getMax() const{
+double arraydata::calcMax() const{
 	double tempmax = -INFINITY;
 	for (int i = 0; i < size(); i++) {
 		if (get_atAbsoluteIndex(i) > tempmax) {
@@ -470,10 +470,16 @@ array2D::array2D( unsigned int size_dim1, unsigned int size_dim2 )
 //constructor to generate a 2D array from a 1D array, given the desired dimensions
 array2D::array2D( array1D* dataOneD, unsigned int size_dim1, unsigned int size_dim2) 
         : arraydata( size_dim1*size_dim2 ){
+    
+    if (!dataOneD) {
+        cerr << "WARNING in array2D::array2D. Input array1D was not allocated! Nothing copied!" << endl;
+        return;
+    }
     if (dataOneD->size() != size_dim1*size_dim2) {
-        cerr << "Warning in array2D::array2D. Inconsistent array size. ";
+        cerr << "WARNING in array2D::array2D. Inconsistent array size. ";
         cerr << "size1D=" << dataOneD->size() << ", size2D=" << size_dim1*size_dim2 << endl;
     }
+    
  	setDim1( size_dim1 );
 	setDim2( size_dim2 );
 
@@ -600,8 +606,8 @@ int array2D::writeToTiff( std::string filename, int scaleFlag ) const{
 		// uint16 res_unit;
 		uint16 spp, bpp, photo;
 		
-		double MaxValue = getMax();
-		double MinValue = getMin();
+		double MaxValue = calcMax();
+		double MinValue = calcMin();
 		double MaxMinRange = MaxValue - MinValue;
 		
 		uint16 *tifdata = new uint16[width];
@@ -859,7 +865,7 @@ void array2D::setDim2( unsigned int size_dim2 ){
 void array2D::generateTestPattern( int type ){
     
     if (dim1()==0 || dim2()==0)
-        cout << "Warning in generateTestPattern. One or more dimensions are zero." << endl;
+        cout << "WARNING in generateTestPattern. One or more dimensions are zero." << endl;
 
 
     cout << "Writing test pattern type " << type << ": ";
@@ -876,6 +882,7 @@ void array2D::generateTestPattern( int type ){
 					}
 				}
 			}
+            break;
 		case 1:											
 			{
                 cout << "increment by absolute array index ";
@@ -906,6 +913,7 @@ void array2D::generateTestPattern( int type ){
 					}
 				}
 			}
+            break;
 		case 3:											
         	{
                 cout << "2D centro-symmetric sine with circular modulation ";
@@ -925,6 +933,7 @@ void array2D::generateTestPattern( int type ){
 					}
 				}
 			}
+            break;
 		case 4:											
         	{
                 cout << "2D centro-symmetric sine with straight modulation ";

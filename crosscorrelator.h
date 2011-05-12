@@ -24,6 +24,7 @@ private:
 	int p_samplingLength;
 	int p_samplingAngle;
 	int p_samplingLag;
+    std::string p_outputdir;  // the output directory if anything is dumped from withing this class (default is working dir)
 
 	array1D *data;			//data storage
 	array1D *qx;				//pixel x coordinate
@@ -38,25 +39,38 @@ private:
 	array3D *crossCorrelation;	
 	void updateDependentVariables();
     
+    array2D *table;         //lookup table
+
+/*    
     double p_centerX;
     double p_centerY;
+*/
+
+    //the following is used for debugging only and can be removed later if everything works
+    int debug;
     array1D *check1D;
-	
+    array2D *polarSampling;
+    
+        
+    /*
 	//jas: Constants copied from worker.h
 	static const unsigned  ROWS = 194;
 	static const unsigned  COLS = 185;
 	static const unsigned  RAW_DATA_LENGTH = 8*ROWS*8*COLS;
+    */
 	
 public:
 	//---------------------------------------------constructors & destructor
-    CrossCorrelator( int arraylength=0 );                     //init with 1D data size
-	CrossCorrelator( int16_t *dataCArray, int arraylength );    //init with actual data
-    CrossCorrelator( int16_t *dataCArray, float *qxCArray, float *qyCArray );    //init with actual data + q calibration
+    CrossCorrelator( int arraylength=1 );                                                           //init with 1D data size
+	CrossCorrelator( int16_t *dataCArray, int arraylength );                                        //init with actual data
+    CrossCorrelator( int16_t *dataCArray, float *qxCArray, float *qyCArray, int arraylength );      //init with actual data + centered(!) q calibration
 	~CrossCorrelator();
 	
 	//---------------------------------------------input/output
+    void initPrivateVariables();
+    void initDefaultQ();
 	void initFromFile( std::string filename, int type=0 );
-    void initWithTestPattern( int type=0 );                     //generate some test
+    void initWithTestPattern( int sizex, int sizey, int type=0 );                           //generate some test patterns
 	void printRawData(uint16_t *buffer,long lSize);
 	void dumpResults( std::string filename );
 	
@@ -66,8 +80,8 @@ public:
 	void calculateXCCA();
 	
     //---------------------------------------------alternative approach (Jan's way)
-    // these functions have the byname FAST to distinguish them from the ones above 
-    // for lack of better name and in hope that it may be fast. We'll see...
+    // these functions have the byname _FAST to distinguish them from the ones above 
+    // (for lack of a better name and in the hope that they may be fast. We'll see...)
     
     // 'calculatePolarCoordinates' returns a 2D pattern in polar coordinates (r vs. phi)
     int calculatePolarCoordinates_FAST(array2D* polar); 
@@ -76,6 +90,7 @@ public:
     int calculateXCCA_FAST( array2D *polarData, array2D *corr );
     
     // looks up the value closest to xcoord, ycoord in the data
+    int createLookupTable();
     double lookup( double xcoord, double ycoord ) const;
     
     //compute 1D correlations using FFT, the result is returned in f, respectively
@@ -96,14 +111,19 @@ public:
 	// jas: qmaxCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
 	double qmaxCArray( float *qxCArray, float *qyCArray, int arraylength ); // calculates qmax from CArrays of X/Y positions
     
-	// jas: centerXCArray() and centerYCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
+    void setOutputdir( std::string dir );
+    std::string outputdir();
+
+	///////////////OLD STUFF////////////////
+/*
     double centerX() const;
     void setCenterX( double cen_x );
-	double centerXCArray( float *qxCArray ); // calculates center in X from CArray of X positions
     double centerY() const;
     void setCenterY( double cen_y );
-	double centerYCArray( float *qyCArray ); // calculates center in Y from CArray of Y positions
-	void shiftCenter(); // jas: shifts center of qx, qy to the value determined by p_centerX and p_centerY
+	
+	void writeXCCA();
+	void writeSAXS();
+*/
 	
 	//---------------------------------------------getters for dependent variables
 	double deltaq() const;
@@ -119,6 +139,9 @@ public:
 	double getCrossCorrelation(unsigned index1, unsigned index2, unsigned index3) const;
 	
 };
+
+
+
 
 
 #endif

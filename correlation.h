@@ -31,6 +31,12 @@
 void correlate(tThreadInfo*, cGlobal*);
 void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
 void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
+double centerX( float *qx ); // calculates center in X from CArray of X positions
+double centerY( float *qy ); // calculates center in Y from CArray of Y positions
 
+///////////////OLD STUFF////////////////
+/*
+void shiftCenter(); // jas: shifts center of qx, qy to the value determined by p_centerX and p_centerY
+*/
 
 #endif
