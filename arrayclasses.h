@@ -134,7 +134,9 @@ public:
     
     void getRow( int rownum, array1D *row ) const;                        //returns one-dimensional row
     void getCol( int colnum, array1D *col ) const;
-        
+    void setRow( int rownum, array1D *row );                              //sets a one-dimensional row
+    void setCol( int colnum, array1D *col );
+            
 	void readFromHDF5( std::string filename );
 	
 	int writeToTiff( std::string filename, int scaleFlag = 0 ) const;     //needs libtiff

@@ -558,6 +558,33 @@ void array2D::getCol( int colnum, array1D *col ) const{
         col->set( j, this->get(colnum, j) );
     }
 }
+
+//-----------------------------------------------------setRow/setCol
+void array2D::setRow( int rownum, array1D *row ){
+    if (!row){
+        cerr << "Error in array2D::setRow. Row not allocated." << endl;
+    }else if (row->size() != dim1()){
+        cerr << "Error in array2D::setRow. Dimensions don't match." << endl;
+    }else{
+        //for a fixed row, i goes through columns (x-values)
+        for (int i = 0; i < row->size(); i++){
+            this->set( i, rownum, row->get(i) );
+        }
+    }
+}
+
+void array2D::setCol( int colnum, array1D *col ){
+    if (!col){
+        cerr << "Error in array2D::setRow. Row not allocated." << endl;
+    }else if (col->size() != dim2()){
+        cerr << "Error in array2D::setRow. Dimensions don't match." << endl;
+    }else{
+        //for a fixed column number, j goes through the rows (y-values)
+        for (int j = 0; j < col->size(); j++){
+            this->set( colnum, j, col->get(j) );
+        }
+    }
+}
     
 //------------------------------------------------------------- getASCIIdata
 std::string array2D::getASCIIdata() const{
