@@ -167,15 +167,9 @@ void CrossCorrelator::initPrivateVariables(){
 	phiave = NULL;
 	crossCorrelation = NULL;	    
     table = NULL;
- 
-/*       
-    p_centerX = 0;
-    p_centerY = 0;
-*/
-
-    debug = 1;      //DEBUG!!!
+    
+    p_debug = 0;      
     check1D = NULL;
-    polarSampling = NULL;
 }
 
 
@@ -652,26 +646,15 @@ void CrossCorrelator::setOutputdir( std::string dir ){
 string CrossCorrelator::outputdir(){
     return p_outputdir;
 }
-/*
-double CrossCorrelator::centerX() const{
-    return p_centerX;
+
+int CrossCorrelator::debug(){
+    return p_debug;
 }
 
-void CrossCorrelator::setCenterX( double cen_x ){
-    p_centerX = cen_x;
+void CrossCorrelator::setDebug( int debuglevel ){
+    p_debug = debuglevel;
 }
-
-
-
-double CrossCorrelator::centerY() const{
-    return p_centerY;
-}
-
-void CrossCorrelator::setCenterY( double cen_y ){
-    p_centerY = cen_y;
-}
-*/
-
+    
 double CrossCorrelator::deltaq() const{						//getter only, dependent variable
 	return p_deltaq;
 }
@@ -716,33 +699,35 @@ void CrossCorrelator::updateDependentVariables(){		//update the values that depe
 // ***********************************************************************************
 // CROSS-CORRELATION ALGORITHM 1 (_FAST)
 // ***********************************************************************************
+int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar, double number_q, double number_phi){
+
+    //call the more specific function with some reasonable default values
+    double start_q = 3*deltaq();    //default: start at a close-to but non-zero value
+    double stop_q = qmax();         //default: go out to the maximum q
+    double start_phi = 0;           //default: full circle
+    double stop_phi = 360;    
+    return this->calculatePolarCoordinates_FAST(polar, start_q, stop_q, number_q, start_phi, stop_phi, number_phi);
+}
 
 //----------------------------------------------------------------------------transform to polar coordinates
-int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
+int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar, 
+                                                        double start_q, double stop_q, double number_q,
+                                                        double start_phi, double stop_phi, double number_phi){
+                                                        
     cout << "calculatePolarCoordinates_FAST" << endl;
-
     int retval = 0;
     
-    //write output of the intermediate files?
-    int output_data_flag = 0;               
-    int output_polar_flag = 1;
+    //write output of the intermediate files? (all zero by default, turn on for debugging or whatever)
+    int output_data_ASCII = 0;
+    int output_polar_ASCII = 0;
+    int output_polar_TIF = 0;
 
-    //some of the following variables should be set specifically for each dataset
-    //this is currently still in testing mode
-    //needs to be changed, soon -----> put into ini file (or so)
-    double start_r = 2*deltaq();
-    double stop_r = qmax();
-    int number_r = 5;
-    double step_r = (stop_r - start_r)/number_r;
-
-    double start_phi = 0;
-    double stop_phi = 180;
-    int number_phi =  10;
+    double step_q = (stop_q - start_q)/number_q;
     double step_phi = (stop_phi - start_phi)/number_phi;
     
-    if (step_r < 0)
+    if (step_q < 0)
         cerr << "Error in CrossCorrelator::calculatePolarCoordinates_Jan -- step_r value " 
-            << step_r << " is smaller than zero." << endl;
+            << step_q << " is smaller than zero." << endl;
     if (step_phi < 0)
         cerr << "Error in CrossCorrelator::calculatePolarCoordinates_Jan -- step_phi value " 
             << step_phi << " is smaller than zero." << endl;
@@ -751,59 +736,47 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
         delete polar;
         polar = NULL;
     }
-    polar = new array2D(number_phi, number_r);
+    polar = new array2D( (int) floor(number_phi+0.5), (int) floor(number_q+0.5) );
 
-    //-------DEBUG!!!!!!!!!!!!
-    if (debug) {
+    if (debug()) {
         check1D = new array1D(*data);
-        polarSampling = new array2D( (unsigned int)ceil(2*stop_r), (unsigned int)ceil(2*stop_r) );
     }
-    //-------DEBUG!!!!!!!!!!!!
 
 
     double xcoord = 0.;
     double ycoord = 0.;
     double value = 0.;
-    double r = 0.;
+    double q = 0.;
     double p = 0.;
-    int rcounter = 0;
+    int qcounter = 0;
     int pcounter = 0;
     
-	for(r = start_r, rcounter=0; rcounter < number_r; r+=step_r, rcounter++){                        // r: for all rings/radii
-        cout << "ring r=" << r << ", #" << rcounter << endl;
+	for(q = start_q, qcounter=0; qcounter < number_q; q+=step_q, qcounter++){                        // q: for all rings/q-values
+        cout << "ring #" << qcounter << ", q=" << q << " " << endl;
 		for(p = start_phi, pcounter=0; pcounter < number_phi; p+=step_phi, pcounter++){				// phi: go through all angles
 
             //find lookup coordinates
-			xcoord = r * cos(p*M_PI/180);
-			ycoord = r * sin(p*M_PI/180);
-            polarSampling->set((unsigned int)floor(xcoord+stop_r), (unsigned int)floor(ycoord+stop_r), 65535);
-            
+			xcoord = q * cos(p*M_PI/180);
+			ycoord = q * sin(p*M_PI/180);
+
             //lookup that value in original scattering data
             value = lookup( xcoord, ycoord );
             
-			//assign the new values (note the functional determinant r)
-			polar->set(pcounter, rcounter, value * r);
+			//assign the new values (note the functional determinant q to account for bins growing as q grows)
+			polar->set(pcounter, qcounter, value * q);
 		}
 	}
 
-    if (output_data_flag) {
-//        data->writeToTiff("outputdir()+polar.tif");
-        cout << "data: " << data->getASCIIdata() << endl;
-    }
+    if (output_data_ASCII){ cout << "data: " << data->getASCIIdata() << endl; }
+    if (output_polar_ASCII){ cout << "polar: " << polar->getASCIIdata() << endl; }
+    if (output_polar_TIF){ polar->writeToTiff( outputdir()+"polar.tif" ); }            
     
-    if (output_polar_flag) {
-        polar->writeToTiff(outputdir()+"polar.tif");
-//        cout << "polar: " << polar->getASCIIdata() << endl;
-    }
-    
-    if (debug) {
-        int chklength = (int) floor(sqrt(check1D->size() ));
-        array2D *check2D = new array2D( check1D, chklength, chklength );
+    if (debug()) {
+        int l = (int) floor(sqrt(check1D->size() ));
+        array2D *check2D = new array2D( check1D, l, l );
         check2D->writeToTiff(outputdir()+"check2D.tif");
-        polarSampling->writeToTiff(outputdir()+"polarSampling.tif");
         delete check2D;
         delete check1D;
-        delete polarSampling;
     }
     
     return retval;
@@ -811,7 +784,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar){
 
 
 //---------------------------------------------------------------------------- lookup
-double CrossCorrelator::lookup( double xcoord, double ycoord ) const{
+double CrossCorrelator::lookup( double xcoord, double ycoord ) {
 
     double val = 0.;    //return data value at the given coordinates
     int index = 0;      //to do that, the index in the data is determined first
@@ -836,19 +809,9 @@ double CrossCorrelator::lookup( double xcoord, double ycoord ) const{
         index = (int) floor( table->get(ix, iy) + 0.5 );
         val = data->get( index );
     }
-    
-/*    
-    //test case: feed everything back into 2D and be done with it
-    int xdim = 100;
-    xcoord = round(xcoord);
-    ycoord = round(ycoord);
-    int index = (int) (xcoord + xdim*ycoord);
-    
-    val = data->get( index );
-*/
 
     //keep track of where the value was read in a separate 'check1D' array
-    if(debug){
+    if( debug() ){
         check1D->set(index, 65535);         
         cout << "lookup (" << xcoord << ", " << ycoord 
             << ") --> LUT: (xc,yc)=(" << xc << ", " << yc 
@@ -869,7 +832,6 @@ int CrossCorrelator::createLookupTable(){
     int retval = 0;
     
     cout << "createLookupTable() begin." << endl;
-
         
     int Nx = table->dim1();
     int Ny = table->dim2();
@@ -950,21 +912,25 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *polar, array2D *corr ){
         delete corr;
     corr = new array2D( polar->dim1(), polar->dim2() );
 
-    for(int r_ct=0; r_ct < polar->dim2(); r_ct++){							// r_ct: for all rings
+    for(int q_ct=0; q_ct < polar->dim2(); q_ct++){							// r_ct: for all rings
 
-
-        //perform autocorrelation
+        //get one row out of the polar coordinates (fixed q)
         array1D *f = new array1D;
-        polar->getRow( r_ct, f);
+        polar->getRow( q_ct, f);
         
-        cout << "f -- " << f->getASCIIdata() << endl;
         
-        autocorrelateFFT( f );
-        //correlateFFT( f, f );          // should yield the same result as AUTOcorrelate( f )
-
+        //perform autocorrelation --> compute via FFT
+        if (debug()){ cout << "#" << q_ct << ", f before FFT: " << f->getASCIIdata() << endl; }
+        autocorrelateFFT( f );          // should yield the same result as correlateFFT( f, f );
+        if (debug()){ cout << "#" << q_ct << ", f after FFT: " << f->getASCIIdata() << endl; }
+        
+        //feed result into corr
+        corr->setRow( q_ct, f );
+        
+        delete f;
 	}
     
-    corr->writeToTiff(outputdir()+"corr.tif");
+    corr->writeToTiff(outputdir()+"corr_scaled.tif", 1);            //dump scaled output from correlation
     
     return retval;
 }

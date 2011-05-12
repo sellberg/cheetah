@@ -41,24 +41,10 @@ private:
     
     array2D *table;         //lookup table
 
-/*    
-    double p_centerX;
-    double p_centerY;
-*/
-
-    //the following is used for debugging only and can be removed later if everything works
-    int debug;
+    //-----some debug features that can turned on via setDebug()
+    int p_debug;
     array1D *check1D;
-    array2D *polarSampling;
     
-        
-    /*
-	//jas: Constants copied from worker.h
-	static const unsigned  ROWS = 194;
-	static const unsigned  COLS = 185;
-	static const unsigned  RAW_DATA_LENGTH = 8*ROWS*8*COLS;
-    */
-	
 public:
 	//---------------------------------------------constructors & destructor
     CrossCorrelator( int arraylength=1 );                                                           //init with 1D data size
@@ -86,14 +72,16 @@ public:
     // (for lack of a better name and in the hope that they may be fast. We'll see...)
     
     // 'calculatePolarCoordinates' returns a 2D pattern in polar coordinates (r vs. phi)
-    int calculatePolarCoordinates_FAST(array2D* polar); 
+    int calculatePolarCoordinates_FAST(array2D* polar, double number_q=20, double number_phi=128); 
+    int calculatePolarCoordinates_FAST(array2D* polar, double number_q, double start_q, double stop_q,
+                                                        double number_phi=128, double start_phi=0, double stop_phi=360 );
     
     // 'calculateXCCA' returns the autocorrelation function (r = const.)          
     int calculateXCCA_FAST( array2D *polarData, array2D *corr );
     
     // looks up the value closest to xcoord, ycoord in the data
     int createLookupTable();
-    double lookup( double xcoord, double ycoord ) const;
+    double lookup( double xcoord, double ycoord );
     
     //compute 1D correlations using FFT, the result is returned in f, respectively
     int correlateFFT( array1D *f, array1D *g );    // result of corr(f,g) -> f
@@ -115,20 +103,16 @@ public:
     
     void setOutputdir( std::string dir );
     std::string outputdir();
-/*
-    double centerX() const;
-    void setCenterX( double cen_x );
-    double centerY() const;
-    void setCenterY( double cen_y );
-*/
-	
+
+    int debug();                                        // control the amount of (commandline) talking while running, default: 0
+    void setDebug( int debuglevel );
+    
 	//---------------------------------------------getters for dependent variables
 	double deltaq() const;
 	double deltaphi() const;
 	int samplingLength() const;
 	int samplingAngle() const;
 	int samplingLag() const;
-	
 };
 
 
