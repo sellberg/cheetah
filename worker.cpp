@@ -940,7 +940,7 @@ void saveRunningSums(cGlobal *global) {
 					buffer4[i] = (float) global->iceAssembled[i];
 				}
 				pthread_mutex_unlock(&global->icesumassembled_mutex);
-				writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
+				writeSimpleHDF5(filename, buffer4, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
 				free(buffer4);
 				
 			}
@@ -959,7 +959,7 @@ void saveRunningSums(cGlobal *global) {
 				pthread_mutex_unlock(&global->icesumraw_mutex);
 				//for(long i=0; i<global->pix_nn; i++)
 				//	if (buffer1[i] < 0) buffer1[i] = 0;
-				writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
+				writeSimpleHDF5(filename, buffer5, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 				free(buffer5);
 				
 			}
@@ -981,7 +981,7 @@ void saveRunningSums(cGlobal *global) {
 					buffer6[i] = (float) global->waterAssembled[i];
 				}
 				pthread_mutex_unlock(&global->watersumassembled_mutex);
-				writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
+				writeSimpleHDF5(filename, buffer6, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
 				free(buffer6);				
 				
 			}
@@ -1000,7 +1000,7 @@ void saveRunningSums(cGlobal *global) {
 				pthread_mutex_unlock(&global->watersumraw_mutex);
 				//for(long i=0; i<global->pix_nn; i++)
 				//	if (buffer1[i] < 0) buffer1[i] = 0;
-				writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
+				writeSimpleHDF5(filename, buffer7, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 				free(buffer7);				
 				
 			}

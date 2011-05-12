@@ -58,8 +58,6 @@ public:
 	void initFromFile( std::string filename, int type=0 );
     void initWithTestPattern( int type=0 );                     //generate some test
 	void printRawData(uint16_t *buffer,long lSize);
-	void writeSAXS();
-	void writeXCCA();
 	void dumpResults( std::string filename );
 	
 	//---------------------------------------------calculations (Jonas's way)
@@ -113,6 +111,12 @@ public:
 	int samplingLength() const;
 	int samplingAngle() const;
 	int samplingLag() const;
+	
+	//---------------------------------------------getters for calculated arrays
+	double getQave(unsigned index) const;
+	double getPhiave(unsigned index) const;
+	double getIave(unsigned index) const;
+	double getCrossCorrelation(unsigned index1, unsigned index2, unsigned index3) const;
 	
 };
 

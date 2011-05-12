@@ -225,12 +225,18 @@ void CrossCorrelator::calculatePolarCoordinates()
 			phii += M_PI;
 		}
 		
-		if (phii < 0) { // make sure the angle is between 0 and 2PI
+		if (phii < -deltaphi()/2) { // make sure the binned angle is between 0 and 2PI-deltaphi()
 			phii += 2*M_PI;
 		}
 		
+//		if (phii < 0) {
+//			cout << "phii: " << phii << ", sampleAngle(phii): " << round(phii/deltaphi()) << endl;
+//		} else if (phii > (samplingAngle()-1)*deltaphi()) {
+//			cout << "phii: " << phii << ", sampleAngle(phii): " << round(phii/deltaphi()) << endl;
+//		}
+		
 		phi->set( i, round(phii/deltaphi()) * deltaphi() );
-	
+		
 	}
 }	
 
@@ -391,75 +397,6 @@ void CrossCorrelator::calculateXCCA(){
 
 
 
-//----------------------------------------------------------------------------writeSAXS
-void CrossCorrelator::writeSAXS()
-{	
-	// jas: writeSAXS is currently just used to check that the algorithm works
-	// this was done for r0003 and it has NOT been generalized yet!
-	
-	// write cross-correlation and average SAXS intensity to binary
-	printf("writing data to file...\n");
-	FILE *filePointerWrite;
-	double samplingLengthD = (double) samplingLength(); // save everything as doubles
-	double samplingLagD = (double) samplingLag();
-	double samplingAngleD = (double) samplingAngle();
-	double *buffer;
-	buffer = (double*) calloc(samplingLength()*samplingLength()*samplingLag(), sizeof(double));
-	
-	filePointerWrite = fopen("r0003-xcca.bin","w+"); // jas: TEST FILE, need to change this to a general string name later
-	
-	// angular averages
-	for (int i=0; i<samplingLength(); i++) {
-		buffer[i] = iave->get(i);
-	}
-	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
-	fwrite(&buffer[0],sizeof(double),samplingLength(),filePointerWrite);
-	
-	// q binning
-	for (int i=0; i<samplingLength(); i++) {
-		buffer[i] = qave->get(i);
-	}
-	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-	fwrite(&buffer[0],sizeof(double),samplingLength(),filePointerWrite);
-	
-	// angle binning
-	for (int i=0; i<samplingAngle(); i++) {
-		buffer[i] = phiave->get(i);
-	}
-	fwrite(&samplingAngleD,sizeof(double),1,filePointerWrite);
-	fwrite(&buffer[0],sizeof(double),samplingAngle(),filePointerWrite);
-	
-	// cross-correlation - full version
-//	for (int i=0; i<samplingLength(); i++) {
-//		for (int j=0; j<samplingLength(); j++) {
-//			for (int k=0; k<samplingLag(); k++) {
-//				buffer[i*samplingLength()*samplingLag()+j*samplingLag()+k] = crossCorrelation->get(i,j,k);
-//			}
-//		}
-//	}
-//	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-//	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-//	fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
-//	fwrite(&buffer[0],sizeof(double),samplingLength()*samplingLength()*samplingLag(),filePointerWrite);
-	
-	// cross-correlation - autocorrelation only (q1=q2)
-	for (int i=0; i<samplingLength(); i++) {
-		for (int k=0; k<samplingLag(); k++) {
-			buffer[i*samplingLag()+k] = crossCorrelation->get(i,i,k);
-		}
-	}
-	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-	fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
-	fwrite(&buffer[0],sizeof(double),samplingLength()*samplingLag(),filePointerWrite);
-	
-	fclose(filePointerWrite);
-	free(buffer);
-	
-	cout << "writeSAXS done" << endl;
-}
-
-
-
 //----------------------------------------------------------------------------dumpResults
 void CrossCorrelator::dumpResults( std::string filename ){
 	cout << "Writing results to TIFF file '" << filename << "'." << endl;
@@ -473,41 +410,6 @@ void CrossCorrelator::dumpResults( std::string filename ){
     dataTwoD->writeToTiff( filename );
     delete dataTwoD;
 }
-
-
-
-//----------------------------------------------------------------------------writeXCCA
-void CrossCorrelator::writeXCCA(){
-	printf("writing data to file...\n");
-	
-	// All saving is currently handled by writeSAXS()
-	
-	//jas: saving &array1D->get(0) does NOT work with fwrite, need to loop through array1D and save into Carray before saving to file...
-	
-//	FILE *filePointerWrite;
-//	
-//	filePointerWrite = fopen("f909-q0-xcca.bin","w+");
-//	
-//	double samplingLengthD = (double) samplingLength(); // save everything as doubles
-//	double samplingLagD = (double) samplingLag();
-//	double samplingAngleD = (double) samplingAngle();
-//	
-//	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
-//	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-//	fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
-//	fwrite(&crossCorrelation->get(0,0,0),sizeof(double),samplingLength()*samplingLength()*samplingLag(),filePointerWrite); // saving data as arrays of LAG in the following order [0][0][LAG], [0][1][LAG], ... , [0][LENGTH][LAG], [1][0][LAG], [1][1][LAG], and so on
-//	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-//	fwrite(&iave->get(0),sizeof(double),samplingLength(),filePointerWrite);
-//	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-//	fwrite(&qave->get(0),sizeof(double),samplingLength(),filePointerWrite);
-//	fwrite(&samplingAngleD,sizeof(double),1,filePointerWrite);
-//	fwrite(&phiave->get(0),sizeof(double),samplingAngle,filePointerWrite);
-//	
-//	fclose(filePointerWrite);
-	
-	cout << "writeXCCA done" << endl;
-}
-
 
 
 
@@ -631,20 +533,36 @@ void CrossCorrelator::updateDependentVariables(){		//update the values that depe
 //	p_deltaq = 2*qmax()/(matrixSize()-1);
 //	p_samplingLength = int(qmax()/p_deltaq+1+0.001);
 //	p_deltaphi = 2*atan(1/(2*(p_samplingLength-1.0)));
-//	p_samplingAngle = (int) floor(2*M_PI/p_deltaphi);
-//	p_samplingLag = (int) ceil(p_samplingAngle/2.0)+2;
+//	p_samplingAngle = int(2*round(M_PI/p_deltaphi)); // make sure p_samplingAngle is even (exclude 2PI)
+//	p_deltaphi = (double) 2.0*M_PI/(p_samplingAngle); // make sure deltaphi samples exactly an interval of 2PI
+//	p_samplingLag = (int) round(p_samplingAngle/2.0+1);
 	
 	// COARSE BINNING
 	p_deltaq = 20*qmax()/(matrixSize()-1);
 	p_samplingLength = int(qmax()/p_deltaq+1+0.001);
 	p_deltaphi = 2*atan(1/(2*(p_samplingLength-1.0)));
-	p_deltaphi = round(M_PI/deltaphi)*p_deltaphi; // make M_PI/delptaphi an integer
-	p_samplingAngle = (int) floor(2*M_PI/p_deltaphi);
-	p_samplingLag = (int) ceil(p_samplingAngle/2.0)+2;
+	p_samplingAngle = int(2*round(M_PI/p_deltaphi)); // make sure p_samplingAngle is even (exclude 2PI)
+	p_deltaphi = (double) 2.0*M_PI/(p_samplingAngle); // make sure deltaphi samples exactly an interval of 2PI
+	p_samplingLag = (int) round(p_samplingAngle/2.0+1);
 	
 	cout << "p_deltaq: " << p_deltaq << ", p_samplingLength: " << p_samplingLength << ", p_deltaphi: " << p_deltaphi << ", p_samplingAngle: " << p_samplingAngle << ", p_samplingLag: " << p_samplingLag << endl;
 }
 
+double CrossCorrelator::getQave(unsigned index) const {
+	return qave->get(index);
+}
+
+double CrossCorrelator::getPhiave(unsigned index) const {
+	return phiave->get(index);
+}
+
+double CrossCorrelator::getIave(unsigned index) const {
+	return iave->get(index);
+}
+
+double CrossCorrelator::getCrossCorrelation(unsigned index1, unsigned index2, unsigned index3) const {
+	return crossCorrelation->get(index1,index2,index3);
+}
 
 
 

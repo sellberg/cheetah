@@ -44,41 +44,161 @@ using std::endl;
 //-------------------------------------------------------------------
 void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     
-    int alg = 0;        //select the correlation algorithm... 
-                        //should be governed by a setting in the ini file at some point
-                        
-    cout << "CORRELATING... using alg " << alg << " in thread #" << threadInfo->threadNum << "." << endl;
+    DEBUGL2_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 
-    //int arraylength = RAW_DATA_LENGTH;
+    int arraylength = RAW_DATA_LENGTH;
 	
 	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y );
     
-    switch (alg) {
-        case 0:{
-                cout << "XCCA regular" << endl;
-                cc->calculatePolarCoordinates();
-                cc->calculateSAXS();
-                cc->calculateXCCA();	
-                
-                cc->writeSAXS();
-                //cc->writeXCCA();
-            }
-            break;
-        case 1:{
-                cout << "XCCA FAST" << endl;
-                array2D *polar = new array2D;
-                array2D *corr = new array2D;
-                cc->calculatePolarCoordinates_FAST( polar );
-                cc->calculateXCCA_FAST( polar, corr );
-                delete polar;
-                delete corr;
-            }
-            break;
-        default:
-            cerr << "Error in correlate()! Correlation algorithm " << alg << " not known." << endl;
-    }
+	if (global->useCorrelation == 1) {
+		
+		DEBUGL2_ONLY cout << "XCCA regular" << endl;
+		
+		cc->calculatePolarCoordinates();
+		cc->calculateSAXS();
+		cc->calculateXCCA();	
+		
+		//writeSAXS(threadInfo, global, cc, threadInfo->eventname);
+		writeXCCA(threadInfo, global, cc, threadInfo->eventname);
+		
+	} else if (global->useCorrelation == 2) {
+		
+		DEBUGL2_ONLY cout << "XCCA fast" << endl;
+		
+		array2D *polar = new array2D;
+		array2D *corr = new array2D;
+		
+		cc->calculatePolarCoordinates_FAST( polar );
+		cc->calculateXCCA_FAST( polar, corr );
+		
+		delete polar;
+		delete corr;
 
-    delete cc;
+	} else {
+		cerr << "Error in correlate()! Correlation algorithm " << global->useCorrelation << " not known." << endl;
+	}
+	
+	delete cc;
 }
 
+
+
+//----------------------------------------------------------------------------writeSAXS
+// write SAXS intensity to binary
+//-------------------------------------------------------------------------------------
+void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname) {	
+	
+	DEBUGL2_ONLY printf("writing SAXS to file...\n");
+	FILE *filePointerWrite;
+	char outfile[1024];
+	double samplingLengthD = (double) cc->samplingLength(); // save everything as doubles
+	double *buffer;
+	buffer = (double*) calloc(cc->samplingLength(), sizeof(double));
+	
+	sprintf(outfile,"%s-saxs.bin",eventname);
+	printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)global->runNumber, (int)info->threadNum, global->datarate, outfile);
+	
+	filePointerWrite = fopen(outfile,"w+");
+
+	// angular averages
+	for (int i=0; i<cc->samplingLength(); i++) {
+		buffer[i] = cc->getIave(i);
+	}
+	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
+	fwrite(&buffer[0],sizeof(double),cc->samplingLength(),filePointerWrite);
+	
+	// q binning
+	for (int i=0; i<cc->samplingLength(); i++) {
+		buffer[i] = cc->getQave(i);
+	}
+	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+	fwrite(&buffer[0],sizeof(double),cc->samplingLength(),filePointerWrite);
+	
+	fclose(filePointerWrite);
+	free(buffer);
+	
+	DEBUGL2_ONLY cout << "writeSAXS done" << endl;
+}
+
+
+
+//----------------------------------------------------------------------------writeXCCA
+// write cross-correlation to binary
+//-------------------------------------------------------------------------------------
+void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname) {
+	
+	DEBUGL2_ONLY printf("writing XCCA to file...\n");
+	FILE *filePointerWrite;
+	char outfile[1024];
+	double samplingLengthD = (double) cc->samplingLength(); // save everything as doubles
+	double samplingLagD = (double) cc->samplingLag();
+	double samplingAngleD = (double) cc->samplingAngle();
+	double *buffer;
+	buffer = (double*) calloc(cc->samplingLength()*cc->samplingLength()*cc->samplingLag(), sizeof(double));
+	
+	if (global->autoCorrelationOnly)
+		sprintf(outfile,"%s-xaca.bin",eventname);
+	else {
+		sprintf(outfile,"%s-xcca.bin",eventname);
+	}
+	printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)global->runNumber, (int)info->threadNum, global->datarate, outfile);
+	
+	filePointerWrite = fopen(outfile,"w+");
+	
+	// angular averages
+	for (int i=0; i<cc->samplingLength(); i++) {
+		buffer[i] = cc->getIave(i);
+	}
+	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
+	fwrite(&buffer[0],sizeof(double),cc->samplingLength(),filePointerWrite);
+	
+	// q binning
+	for (int i=0; i<cc->samplingLength(); i++) {
+		buffer[i] = cc->getQave(i);
+	}
+	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+	fwrite(&buffer[0],sizeof(double),cc->samplingLength(),filePointerWrite);
+	
+	// angle binning
+	for (int i=0; i<cc->samplingAngle(); i++) {
+		buffer[i] = cc->getPhiave(i);
+	}
+	fwrite(&samplingAngleD,sizeof(double),1,filePointerWrite);
+	fwrite(&buffer[0],sizeof(double),cc->samplingAngle(),filePointerWrite);
+	
+	// cross-correlation
+	if (global->autoCorrelationOnly) {
+		
+		// autocorrelation only (q1=q2)
+		for (int i=0; i<cc->samplingLength(); i++) {
+			for (int k=0; k<cc->samplingLag(); k++) {
+				buffer[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,i,k);
+			}
+		}
+		fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+		fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
+		fwrite(&buffer[0],sizeof(double),cc->samplingLength()*cc->samplingLag(),filePointerWrite);
+		
+	} else {
+		
+		// full version
+		for (int i=0; i<cc->samplingLength(); i++) {
+			for (int j=0; j<cc->samplingLength(); j++) {
+				for (int k=0; k<cc->samplingLag(); k++) {
+					buffer[i*cc->samplingLength()*cc->samplingLag()+j*cc->samplingLag()+k] = cc->getCrossCorrelation(i,j,k);
+				}
+			}
+		}
+		fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+		fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+		fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
+		fwrite(&buffer[0],sizeof(double),cc->samplingLength()*cc->samplingLength()*cc->samplingLag(),filePointerWrite);
+		
+	}
+	
+	fclose(filePointerWrite);
+	free(buffer);
+	
+	DEBUGL2_ONLY cout << "writeXCCA done" << endl;
+}
 

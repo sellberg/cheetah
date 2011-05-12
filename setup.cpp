@@ -154,6 +154,7 @@ void cGlobal::defaultConfiguration(void) {
     
 	// Correlation analysis
 	useCorrelation = 0;
+	autoCorrelationOnly = 1;
 	
 	// Saving options
 	saveRaw = 0;
@@ -161,7 +162,7 @@ void cGlobal::defaultConfiguration(void) {
 	saveInterval = 500;
 	
 	// Verbosity
-	debugLevel = 2;
+	debugLevel = 0;
 	
 	// Default to only a few threads
 	nThreads = 16;
@@ -451,6 +452,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "usecorrelation")) {
 		useCorrelation = atoi(value);
+	}
+	else if (!strcmp(tag, "autocorrelationonly")) {
+		autoCorrelationOnly = atoi(value);
 	}
 	else if (!strcmp(tag, "saveraw")) {
 		saveRaw = atoi(value);

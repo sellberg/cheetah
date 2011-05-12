@@ -23,17 +23,14 @@
 
 #include "setup.h"
 #include "worker.h"
-
+#include "crosscorrelator.h"
 
 /*
  *	Function prototypes
  */
 void correlate(tThreadInfo*, cGlobal*);
-
-
-
-
-
+void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
+void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
 
 
 #endif

@@ -115,7 +115,8 @@ public:
 	int			saveInterval;			 // powder pattern is repeatedly saved according to this interval
     
     // Correlation analysis
-    int         useCorrelation;     // set to nonzero to turn on angular cross correlation module
+    int         useCorrelation;     // set to nonzero to turn on angular cross correlation module, also controls what correlation algorithm to be used, 1: regular, 2: fast
+	int			autoCorrelationOnly;	// set to nonzero to only calculate autocorrelation (q1=q2)
 	
 	// Saving options
 	int			saveRaw;			 // set to save each hit in raw format, in addition to assembled format. Powders are only saved in raw if saveRaw and powdersum are enabled
