@@ -62,6 +62,8 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     //create cross correlator object that takes care of the computations
 	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH );
     
+    //TURN ON DEBUGGING FOR NOW --> a lot of (unnecessary) output --> turn off for actual data runs
+    cc->setDebug(1);
     
     switch (alg) {
         case 0:{
@@ -78,8 +80,19 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
                 cout << "XCCA FAST" << endl;
                 array2D *polar = new array2D;
                 array2D *corr = new array2D;
-                cc->calculatePolarCoordinates_FAST( polar );
+                
+                cc->createLookupTable();
+                
+                double start_q = 5*cc->deltaq();
+                double stop_q = cc->qmax();
+                double number_q = 20;
+                double start_phi = 0;
+                double stop_phi = 360;
+                double number_phi = 128;
+                cc->calculatePolarCoordinates_FAST(polar, start_q, stop_q, number_q, start_phi, stop_phi, number_phi);
+
                 cc->calculateXCCA_FAST( polar, corr );
+                
                 delete polar;
                 delete corr;
             }
