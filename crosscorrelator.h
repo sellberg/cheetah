@@ -24,6 +24,7 @@ private:
 	int p_samplingLength;
 	int p_samplingAngle;
 	int p_samplingLag;
+    std::string p_outputdir;  // the output directory if anything is dumped from withing this class (default is working dir)
 
 	array1D *data;			//data storage
 	array1D *qx;				//pixel x coordinate
@@ -44,8 +45,13 @@ private:
     double p_centerX;
     double p_centerY;
 */
+
+    //the following is used for debugging only and can be removed later if everything works
+    int debug;
     array1D *check1D;
-	
+    array2D *polarSampling;
+    
+        
     /*
 	//jas: Constants copied from worker.h
 	static const unsigned  ROWS = 194;
@@ -64,7 +70,7 @@ public:
     void initPrivateVariables();
     void initDefaultQ();
 	void initFromFile( std::string filename, int type=0 );
-    void initWithTestPattern( int type=0 );                     //generate some test
+    void initWithTestPattern( int sizex, int sizey, int type=0 );                           //generate some test patterns
 	void printRawData(uint16_t *buffer,long lSize);
 	void writeSAXS();
 	void writeXCCA();
@@ -107,6 +113,8 @@ public:
 	// jas: qmaxCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
 	double qmaxCArray( float *qxCArray, float *qyCArray, int arraylength ); // calculates qmax from CArrays of X/Y positions
     
+    void setOutputdir( std::string dir );
+    std::string outputdir();
 /*
     double centerX() const;
     void setCenterX( double cen_x );

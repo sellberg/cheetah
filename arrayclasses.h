@@ -57,8 +57,8 @@ public:
 	double get_atAbsoluteIndex( unsigned int index) const;					// get element value
 	void set_atAbsoluteIndex( unsigned int index, double val);			// set element value
 
-	double getMin() const;
-	double getMax() const;
+	double calcMin() const;
+	double calcMax() const;
 	
     std::string getASCIIdataAsRow() const;                         //can/should be overridden by subclasses
     std::string getASCIIdataAsColumn() const;
