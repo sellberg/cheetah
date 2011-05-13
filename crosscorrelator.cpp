@@ -399,66 +399,28 @@ void CrossCorrelator::calculateXCCA(){
 		phiave->set( i, i*deltaphi() );
 	}
 	
+	// create array of the speckle pattern with the correct binning
+	array2D *speckle = new array2D( samplingLength(), samplingAngle() );
+	
 	// create array over pixel counts for each sampled q and phi
 	array2D *pixelCount = new array2D( samplingLength(), samplingAngle() );
 	array2D *pixelBool = new array2D( samplingLength(), samplingAngle() );
-	
+
+	if (p_debug >= 1) printf("calculating speckle arrays...\n");
+
 	for (int i=0; i<arraySize(); i++) {
 		int qIndex = (int) round(q->get(i)/deltaq()); // the index in qave[] that corresponds to q[i]
 		int phiIndex = (int) round(phi->get(i)/deltaphi()); // the index in phiave[] that corresponds to phi[i]
 		if (p_debug >= 3) printf("qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
-		if (qIndex < samplingLength() && phiIndex < samplingAngle()) { // make sure qIndex is not larger 
-                                                                        //than the samplingLength 
-                                                                        //(corners where q > 1 are excluded)
+		if (qIndex < samplingLength() && phiIndex < samplingAngle()) { // make sure qIndex is not larger than the samplingLength
+			speckle->set(qIndex, phiIndex, speckle->get(qIndex, phiIndex) + data->get(i) );
 			pixelCount->set(qIndex, phiIndex, pixelCount->get(qIndex,phiIndex)+1);
 			if (pixelBool->get(qIndex, phiIndex) != 1) {
 				pixelBool->set(qIndex, phiIndex, 1);
 			}
 		} else if (p_debug >= 2) printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
 	}
-	
-	if (p_debug >= 2) {
-		for (int i=0; i<samplingLength(); i++) {
-			for (int j=0; j<samplingAngle(); j++) {
-				printf("q: %f, phi: %f --> bool: %f, count: %f\n", qave->get(i), phiave->get(j), pixelBool->get(i, j), pixelCount->get(i, j));
-			}
-		}
-	}
-	
-	// calculate normalization constant for cross-correlation
-	if (p_debug >= 1) cout << "# of angular lags: " << samplingLag() << endl;
-	if (p_debug >= 1) printf("calculating normalization array...\n");
-	array3D *normalization = new array3D( samplingLength(), samplingLength(), samplingLag() );
-	
-	for (int i=0; i<samplingLength(); i++) { // q1 index
-		for (int j=0; j<samplingLength(); j++) { // q2 index 
-			for (int k=0; k<samplingLag(); k++) { // phi lag => phi2 index = (l+k)%samplingAngle
-				for (int l=0; l<samplingAngle(); l++) { // phi1 index
-					if (p_debug >= 3) printf("phi2: %d\n",(l+k)%samplingAngle());
-					normalization->set(i, j, k, normalization->get(i, j, k) + pixelBool->get(i,l)*pixelBool->get(j, (l+k)%samplingAngle()) );
-				}
-			}
-		}
-	}
-
-	
-	// create array with average SAXS intensity
-	// NO NEED since we already have average intensity stored in iave[]
-	
-	// create array of the speckle pattern with the correct binning
-	array2D *speckle = new array2D( samplingLength(), samplingAngle() );
-	
-	// *** LOOPS COPIED FROM pixelCount/pixelBool ***
-	for (int i=0; i<arraySize(); i++) {
-		int qIndex = (int) round(q->get(i)/deltaq()); // the index in qave[] that corresponds to q[i]
-		int phiIndex = (int) round(phi->get(i)/deltaphi()); // the index in phiave[] that corresponds to phi[i]
-		if (p_debug >= 3) printf("qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
-		if (qIndex < samplingLength() && phiIndex < samplingAngle()) { // make sure qIndex is not larger than the samplingLength 
-			speckle->set(qIndex, phiIndex, speckle->get(qIndex, phiIndex) + data->get(i) );
-		} else if (p_debug >= 2) printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
-	}
-	// *** END OF LOOP COPIED FROM pixelCount/pixelBool ***
-	
+		
 	// subtract the average SAXS intensity from the speckle array
 	array2D *speckleNorm = new array2D( samplingLength(), samplingAngle() );
 	
@@ -468,18 +430,24 @@ void CrossCorrelator::calculateXCCA(){
 				speckle->set(i, j, speckle->get(i,j) / pixelCount->get(i,j) );
 				speckleNorm->set(i, j, speckle->get(i,j) - iave->get(i) );
 			}
+			if (p_debug >= 2) printf("q: %f, phi: %f --> bool: %f, count: %f\n", qave->get(i), phiave->get(j), pixelBool->get(i, j), pixelCount->get(i, j));
 		}
 	}
 	
-	// create cross-correlation array
+	// calculate cross-correlation array and normalization array for cross-correlation
+	if (p_debug >= 1) cout << "# of angular lags: " << samplingLag() << endl;
+
+	array3D *normalization = new array3D( samplingLength(), samplingLength(), samplingLag() );
+	
 	if (p_debug >= 1) printf("starting main loop to calculate cross-correlation...\n");
-		
-	// calculate cross-correlation
+	
 	for (int i=0; i<samplingLength(); i++) { // q1 index
 		for (int j=0; j<samplingLength(); j++) { // q2 index 
 			for (int k=0; k<samplingLag(); k++) { // phi lag => phi2 index = (l+k)%samplingAngle
 				for (int l=0; l<samplingAngle(); l++) { // phi1 index
 					crossCorrelation->set(i,j,k, crossCorrelation->get(i,j,k) + speckleNorm->get(i,l)*speckleNorm->get(j, (l+k)%samplingAngle()) );
+					normalization->set(i, j, k, normalization->get(i, j, k) + pixelBool->get(i,l)*pixelBool->get(j, (l+k)%samplingAngle()) );
+					if (p_debug >= 3) printf("phi2: %d\n",(l+k)%samplingAngle());
 				}
 			}
 		}
