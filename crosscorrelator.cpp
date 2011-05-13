@@ -63,9 +63,12 @@ CrossCorrelator::CrossCorrelator(int arraylength){
 	q = new array1D(arraySize());
 	phi = new array1D(arraySize());
 	
-	qave = new array1D(arraySize());
-	iave = new array1D(arraySize());
+	qave = new array1D(samplingLength());
+	iave = new array1D(samplingLength());
 	phiave = new array1D(samplingAngle());
+	
+	crossCorrelation = new array3D( samplingLength(), samplingLength(), samplingLag() );
+	
 }
 
 CrossCorrelator::CrossCorrelator( int16_t *dataCArray, int arraylength ){
@@ -92,6 +95,8 @@ CrossCorrelator::CrossCorrelator( int16_t *dataCArray, int arraylength ){
 	qave = new array1D(samplingLength());
 	iave = new array1D(samplingLength());
 	phiave = new array1D(samplingAngle());
+	
+	crossCorrelation = new array3D( samplingLength(), samplingLength(), samplingLag() );
     
 }
 
@@ -118,6 +123,34 @@ CrossCorrelator::CrossCorrelator(int16_t *dataCArray, float *qxCArray, float *qy
 	qave = new array1D(samplingLength());
 	iave = new array1D(samplingLength());
 	phiave = new array1D(samplingAngle());
+	
+	crossCorrelation = new array3D( samplingLength(), samplingLength(), samplingLag() );
+	
+}
+
+CrossCorrelator::CrossCorrelator(int16_t *dataCArray, float *qxCArray, float *qyCArray, int arraylength, double qMax, double qMin) {
+	
+    initPrivateVariables();
+    
+    //set basic properties, just like the default case
+    setArraySize(arraylength);
+    setQmaxmin(qMax, qMin);
+	
+    //special feature: copy data from array over to internal data structure
+    data = new array1D(dataCArray, arraySize());
+    
+    //allocate all other internal objects
+    qx = new array1D(qxCArray, arraySize());
+	qy = new array1D(qyCArray, arraySize());
+    table = new array2D(50, 50);
+	
+	q = new array1D(arraySize());
+	phi = new array1D(arraySize());
+	
+	qave = new array1D(samplingLength());
+	iave = new array1D(samplingLength());
+	phiave = new array1D(samplingAngle());
+	
 	crossCorrelation = new array3D( samplingLength(), samplingLength(), samplingLag() );
 	
 }
@@ -136,6 +169,8 @@ CrossCorrelator::~CrossCorrelator(){
 	delete qave;
 	delete iave;
 	delete phiave;
+	
+	delete crossCorrelation;
 }
 
 
@@ -150,6 +185,7 @@ CrossCorrelator::~CrossCorrelator(){
 void CrossCorrelator::initPrivateVariables(){
 	p_arraySize = 1;
 	p_qmax = 0;
+	p_qmin = 0;
 	p_deltaq = 0;
 	p_deltaphi = 0;
 	p_samplingLength = 0;
@@ -306,11 +342,11 @@ void CrossCorrelator::calculatePolarCoordinates()
 			phii += 2*M_PI;
 		}
 		
-//		if (phii < 0) {
-//			cout << "phii: " << phii << ", sampleAngle(phii): " << round(phii/deltaphi()) << endl;
-//		} else if (phii > (samplingAngle()-1)*deltaphi()) {
-//			cout << "phii: " << phii << ", sampleAngle(phii): " << round(phii/deltaphi()) << endl;
-//		}
+		if (phii < 0) {
+			if (p_debug >= 2) cout << "phii: " << phii << ", sampleAngle(phii): " << round(phii/deltaphi()) << endl;
+		} else if (phii > (samplingAngle()-1)*deltaphi()) {
+			if (p_debug >= 2) cout << "phii: " << phii << ", sampleAngle(phii): " << round(phii/deltaphi()) << endl;
+		}
 		
 		phi->set( i, round(phii/deltaphi()) * deltaphi() );
 		
@@ -325,17 +361,17 @@ void CrossCorrelator::calculateSAXS()
 	// using SAXS average for all shots to calculate cross-correlation 
     // or just the SAXS from the specific shots will give different results. 
     // The second choice is probably preferable and is performed here.
-	printf("calculating average SAXS intensity...\n");
+	if (p_debug >= 1) printf("calculating average SAXS intensity...\n");
 	
 	// calculate |q| for each pixel and bin lengths with correct resolution
 	for (int i=0; i<arraySize(); i++) {
 		q->set(i, round(sqrt( (qx->get(i)*qx->get(i))+(qy->get(i)*qy->get(i)) ) / deltaq()) * deltaq() );
-		// printf("q[%d]: %f\n",i,q[i]);
+		if (p_debug >= 3) printf("q[%d]: %f\n",i,q->get(i));
 	}
 	
 	// angular average for each |q|
-	printf("# of steps: %d\n",samplingLength());
-	// printf("average SAXS intensity:\n");
+	if (p_debug >= 1) printf("# of steps: %d\n",samplingLength());
+	if (p_debug >= 2) printf("average SAXS intensity:\n");
 	
 	for (int i=0; i<samplingLength(); i++) {
 		qave->set(i, i*deltaq());
@@ -348,7 +384,7 @@ void CrossCorrelator::calculateSAXS()
 			}
 		}
 		iave->set( i, itot/counter );
-		// cout << "Q: " << qave->get(i) << ",   \t# pixels: " << counter << ",\tI: " << iave->get(i) << endl;
+		if (p_debug >= 2) cout << "Q: " << qave->get(i) << ",   \t# pixels: " << counter << ",\tI: " << iave->get(i) << endl;
 	}
 }
 
@@ -357,22 +393,20 @@ void CrossCorrelator::calculateSAXS()
 //----------------------------------------------------------------------------calculateXCCA
 void CrossCorrelator::calculateXCCA(){
 
-	cout << "deltaPhi: " << deltaphi() << endl;
-	cout << "# of angles: " << samplingAngle() << endl;
+	if (p_debug >= 1) cout << "deltaPhi: " << deltaphi() << endl;
+	if (p_debug >= 1) cout << "# of angles: " << samplingAngle() << endl;
 	for (int i=0; i<samplingAngle(); i++) {
 		phiave->set( i, i*deltaphi() );
 	}
 	
 	// create array over pixel counts for each sampled q and phi
-	//unsigned pixelCount[(int)samplingLength()][samplingAngle];
-	//unsigned pixelBool[samplingLength()][samplingAngle];
 	array2D *pixelCount = new array2D( samplingLength(), samplingAngle() );
 	array2D *pixelBool = new array2D( samplingLength(), samplingAngle() );
 	
 	for (int i=0; i<arraySize(); i++) {
 		int qIndex = (int) round(q->get(i)/deltaq()); // the index in qave[] that corresponds to q[i]
 		int phiIndex = (int) round(phi->get(i)/deltaphi()); // the index in phiave[] that corresponds to phi[i]
-		// printf("qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
+		if (p_debug >= 3) printf("qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
 		if (qIndex < samplingLength() && phiIndex < samplingAngle()) { // make sure qIndex is not larger 
                                                                         //than the samplingLength 
                                                                         //(corners where q > 1 are excluded)
@@ -380,25 +414,27 @@ void CrossCorrelator::calculateXCCA(){
 			if (pixelBool->get(qIndex, phiIndex) != 1) {
 				pixelBool->set(qIndex, phiIndex, 1);
 			}
-		} // else printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
+		} else if (p_debug >= 2) printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
 	}
-	//  for (int i=0; i<samplingLength(); i++) {
-	//    for (int j=0; j<samplingAngle; j++) { 
-	//      printf("q: %f, phi: %f --> bool: %u, count: %u\n",qave[i],phiave[j],pixelBool[i][j],pixelCount[i][j]);
-	//    }
-	//  }
+	
+	if (p_debug >= 2) {
+		for (int i=0; i<samplingLength(); i++) {
+			for (int j=0; j<samplingAngle(); j++) {
+				printf("q: %f, phi: %f --> bool: %f, count: %f\n", qave->get(i), phiave->get(j), pixelBool->get(i, j), pixelCount->get(i, j));
+			}
+		}
+	}
 	
 	// calculate normalization constant for cross-correlation
-	cout << "# of angular lags: " << samplingLag() << endl;
-	printf("calculating normalization array...\n");
+	if (p_debug >= 1) cout << "# of angular lags: " << samplingLag() << endl;
+	if (p_debug >= 1) printf("calculating normalization array...\n");
 	array3D *normalization = new array3D( samplingLength(), samplingLength(), samplingLag() );
 	
 	for (int i=0; i<samplingLength(); i++) { // q1 index
 		for (int j=0; j<samplingLength(); j++) { // q2 index 
 			for (int k=0; k<samplingLag(); k++) { // phi lag => phi2 index = (l+k)%samplingAngle
 				for (int l=0; l<samplingAngle(); l++) { // phi1 index
-					// printf("phi2: %d\n",(l+k)%samplingAngle);
-					//normalization[i][j][k] += pixelBool[i][l]*pixelBool[j][(l+k)%samplingAngle()];
+					if (p_debug >= 3) printf("phi2: %d\n",(l+k)%samplingAngle());
 					normalization->set(i, j, k, normalization->get(i, j, k) + pixelBool->get(i,l)*pixelBool->get(j, (l+k)%samplingAngle()) );
 				}
 			}
@@ -416,11 +452,10 @@ void CrossCorrelator::calculateXCCA(){
 	for (int i=0; i<arraySize(); i++) {
 		int qIndex = (int) round(q->get(i)/deltaq()); // the index in qave[] that corresponds to q[i]
 		int phiIndex = (int) round(phi->get(i)/deltaphi()); // the index in phiave[] that corresponds to phi[i]
-		// printf("qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
+		if (p_debug >= 3) printf("qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
 		if (qIndex < samplingLength() && phiIndex < samplingAngle()) { // make sure qIndex is not larger than the samplingLength 
-                                                                        //(corners where q > 1 are excluded)
 			speckle->set(qIndex, phiIndex, speckle->get(qIndex, phiIndex) + data->get(i) );
-		} // else printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
+		} else if (p_debug >= 2) printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n",qIndex,phiIndex);
 	}
 	// *** END OF LOOP COPIED FROM pixelCount/pixelBool ***
 	
@@ -437,7 +472,7 @@ void CrossCorrelator::calculateXCCA(){
 	}
 	
 	// create cross-correlation array
-	printf("starting main loop to calculate cross-correlation...\n");
+	if (p_debug >= 1) printf("starting main loop to calculate cross-correlation...\n");
 		
 	// calculate cross-correlation
 	for (int i=0; i<samplingLength(); i++) { // q1 index
@@ -469,7 +504,7 @@ void CrossCorrelator::calculateXCCA(){
 	delete speckle;
 	delete speckleNorm;
 	
-	printf("done calculating cross-correlation...\n");
+	if (p_debug >= 1) printf("done calculating cross-correlation...\n");
 }
 
 
@@ -628,6 +663,12 @@ void CrossCorrelator::setMatrixSize( int matrixSize_val ){
 	updateDependentVariables();
 }
 
+void CrossCorrelator::setQmaxmin( double qmax_val, double qmin_val ){
+	p_qmax = qmax_val;
+	p_qmin = qmin_val;
+	updateDependentVariables();
+}
+
 double CrossCorrelator::qmax() const{
 	return p_qmax;
 }
@@ -637,10 +678,41 @@ void CrossCorrelator::setQmax( double qmax_val ){
 	updateDependentVariables();
 }
 
+double CrossCorrelator::qmin() const{
+	return p_qmin;
+}
+
+void CrossCorrelator::setQmin( double qmin_val ){
+	p_qmin = qmin_val;
+	updateDependentVariables();
+}
+
 double CrossCorrelator::qmaxCArray( float *qxCArray, float *qyCArray, int arraylength ) {
 	double qmax = 0;
 	for (int i=0; i<arraylength; i++) {
 		double qtemp = (double) sqrt(qxCArray[i]*qxCArray[i] + qyCArray[i]*qyCArray[i]);
+		if (qtemp > qmax) qmax = qtemp;
+	}
+	return qmax;
+}
+
+double CrossCorrelator::qxmaxCArray( float *qxCArray, int arraylength ) {
+	double qmax = 0;
+	for (int i=0; i<arraylength; i++) {
+		double qtemp; 
+		if (qxCArray[i] > 0) qtemp = (double) qxCArray[i];
+		else qtemp = (double) -qxCArray[i];
+		if (qtemp > qmax) qmax = qtemp;
+	}
+	return qmax;
+}
+
+double CrossCorrelator::qymaxCArray( float *qyCArray, int arraylength ) {
+	double qmax = 0;
+	for (int i=0; i<arraylength; i++) {
+		double qtemp; 
+		if (qyCArray[i] > 0) qtemp = (double) qyCArray[i];
+		else qtemp = (double) -qyCArray[i];
 		if (qtemp > qmax) qmax = qtemp;
 	}
 	return qmax;
@@ -693,7 +765,7 @@ void CrossCorrelator::updateDependentVariables(){		//update the values that depe
 	
 	// COARSE BINNING
 	p_deltaq = 20*qmax()/(matrixSize()-1);
-	p_samplingLength = int(qmax()/p_deltaq+1+0.001);
+	p_samplingLength = (int) round(qmax()/p_deltaq)+1;
 	p_deltaphi = 2*atan(1/(2*(p_samplingLength-1.0)));
 	p_samplingAngle = int(2*round(M_PI/p_deltaphi)); // make sure p_samplingAngle is even (exclude 2PI)
 	p_deltaphi = (double) 2.0*M_PI/(p_samplingAngle); // make sure deltaphi samples exactly an interval of 2PI

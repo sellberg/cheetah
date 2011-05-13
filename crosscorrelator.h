@@ -19,6 +19,7 @@ class CrossCorrelator {
 private:
 	int p_arraySize;
 	double p_qmax;
+	double p_qmin;
 	double p_deltaq;		// step size (bin length) in q-direction
 	double p_deltaphi;		// step size (bin length) in phi direction
 	int p_samplingLength;
@@ -50,6 +51,8 @@ public:
     CrossCorrelator( int arraylength=1 );                                                           //init with 1D data size
 	CrossCorrelator( int16_t *dataCArray, int arraylength );                                        //init with actual data
     CrossCorrelator( int16_t *dataCArray, float *qxCArray, float *qyCArray, int arraylength );      //init with actual data + centered(!) q calibration
+	CrossCorrelator( int16_t *dataCArray, float *qxCArray, float *qyCArray, int arraylength, double qMax, double qMin );
+	
 	~CrossCorrelator();
 	
 	//---------------------------------------------input/output
@@ -94,11 +97,17 @@ public:
                                                         // to come up with a q-calibration
                                                         // need to change this soon...
 	
+	void setQmaxmin( double qmax_val, double qmin_val );	
 	double qmax() const;
 	void setQmax( double qmax_val );
+	double qmin() const;
+	void setQmin( double qmax_val );
+	
 	// jas: qmaxCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
 	double qmaxCArray( float *qxCArray, float *qyCArray, int arraylength ); // calculates qmax from CArrays of X/Y positions
-    
+    double qxmaxCArray( float *qxCArray, int arraylength ); // calculates qmax from CArray of X positions
+	double qymaxCArray( float *qyCArray, int arraylength ); // calculates qmax from CArray of Y positions
+	
     void setOutputdir( std::string dir );
     std::string outputdir();
 
