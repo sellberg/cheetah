@@ -116,8 +116,17 @@ public:
     
     // Correlation analysis
     int         useCorrelation;     // set to nonzero to turn on angular cross correlation module, also controls what correlation algorithm to be used, 1: regular, 2: fast
-	int			autoCorrelationOnly;	// set to nonzero to only calculate autocorrelation (q1=q2)
-	
+	int			autoCorrelationOnly;		// set to nonzero to only calculate autocorrelation (q1=q2)
+    double 		fastCorrelationStartQ;		// customize the _FAST correlation algorithm (#2)
+    double 		fastCorrelationStopQ;		// startQ/stopQ are in units of detector pixels
+    double 		fastCorrelationNumQ;		// number of q values between start and stop
+    double 		fastCorrelationStartPhi;	// start angle in degrees, default: 0
+    double 		fastCorrelationStopPhi;		// stop angle in degrees, default: 360
+    double 		fastCorrelationNumPhi;		// number of angular steps, default: 256 (attention: if possible, use powers of 2, that makes FFT especially fast)
+	int		 	*fastCorrelationLUT;		// lookup table (LUT) needed for the fast correlation
+	int			fastCorrelationLUTdim1;		// dim1 of LUT
+	int			fastCorrelationLUTdim2;		// dim2 of LUT
+    
 	// Saving options
 	int			saveRaw;			 // set to save each hit in raw format, in addition to assembled format. Powders are only saved in raw if saveRaw and powdersum are enabled
 	int			hdf5dump;			 // set to write every frame to h5 format 

@@ -155,6 +155,14 @@ void cGlobal::defaultConfiguration(void) {
 	// Correlation analysis
 	useCorrelation = 0;
 	autoCorrelationOnly = 1;
+    fastCorrelationStartQ = 100;
+    fastCorrelationStopQ = 600;
+    fastCorrelationNumQ = 50;
+    fastCorrelationStartPhi = 0;
+    fastCorrelationStopPhi = 360;
+    fastCorrelationNumPhi = 256;
+	fastCorrelationLUTdim1 = 100;
+	fastCorrelationLUTdim2 = 100;
 	
 	// Saving options
 	saveRaw = 0;
@@ -288,6 +296,11 @@ void cGlobal::setup() {
 	nAttenuations = 0; // Number of attenuations saved in attenuation array
 	attenuationOffset = 0; // Integer to compensate for the offset of nevents w.r.t. the recorded attenuations
 	
+	/*
+	 *	Setup global cross correlation variables
+	 */
+	fastCorrelationLUT = new int[fastCorrelationLUTdim1*fastCorrelationLUTdim2];
+	 
 	// Make sure to use SLAC timezone!
 	setenv("TZ","US/Pacific",1);
 	
@@ -455,6 +468,30 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "autocorrelationonly")) {
 		autoCorrelationOnly = atoi(value);
+	}
+    else if (!strcmp(tag, "fastcorrelationstartq")) {
+		fastCorrelationStartQ = atoi(value);
+	}
+    else if (!strcmp(tag, "fastcorrelationstopq")) {
+		fastCorrelationStopQ = atoi(value);
+	}
+    else if (!strcmp(tag, "fastcorrelationnumq")) {
+		fastCorrelationNumQ = atoi(value);
+	}
+    else if (!strcmp(tag, "fastcorrelationstartphi")) {
+		fastCorrelationStartPhi = atoi(value);
+	}
+    else if (!strcmp(tag, "fastcorrelationstopphi")) {
+		fastCorrelationStopPhi = atoi(value);
+	}
+    else if (!strcmp(tag, "fastcorrelationnumphi")) {
+		fastCorrelationNumPhi = atoi(value);
+	}
+    else if (!strcmp(tag, "fastcorrelationlutdim1")) {
+		fastCorrelationLUTdim1 = atoi(value);
+	}
+    else if (!strcmp(tag, "fastcorrelationlutdim2")) {
+		fastCorrelationLUTdim2 = atoi(value);
 	}
 	else if (!strcmp(tag, "saveraw")) {
 		saveRaw = atoi(value);
@@ -778,6 +815,36 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	image_nx = 2*(unsigned)max;
 	image_nn = image_nx*image_nx;
 	printf("\tImage output array will be %i x %i\n",(int)image_nx,(int)image_nx);
+	
+	
+	//write lookup table for fast cross-correlation
+	double qx_range = fabs(xmax - xmin);
+    double qx_stepsize = qx_range/(pix_nx-1);
+	double qy_range = fabs(ymax - ymin);
+    double qy_stepsize = qy_range/(pix_ny-1);
+	for (int i = 0; i < nn; i++){           //go through all the data
+		//get q-values from qx and qy arrays
+		//and determine at what index (ix, iy) to put them in the lookup table
+		double ix = (pix_x[i]-xmin) / qx_stepsize;
+		double iy = (pix_y[i]-ymin) / qy_stepsize;
+		
+		//fill table at the found coordinates with the data index
+		//overwriting whatever value it had before
+	    //(the add-one-half->floor trick is to achieve reasonable rounded integers)
+		int lutindex = (int) ( floor(ix+0.5) + pix_nx*floor(iy+0.5) );
+		this->fastCorrelationLUT[lutindex] = i;
+		
+		/////////////////////////////////////////////////////////////////////////////////////////
+		//ATTENTION: THIS METHOD WILL LEAD TO A LOSS OF DATA,
+		//ESPECIALLY FOR SMALL TABLE SIZES,
+		//BUT IT WILL BUY A LOT OF SPEED IN THE LOOKUP PROCESS
+		//--> this should be improved to a more precise version, 
+		//    maybe even one that allows the lookup(x,y) to interpolate
+		//    for that to work, we need to find the four closest points in the data or so
+		//    (for instance, instead of one index, the table could contain 
+		//    a vector of all applicable indices)
+		/////////////////////////////////////////////////////////////////////////////////////////
+	}//for
 	
 }
 
@@ -1116,7 +1183,8 @@ void cGlobal::updateLogfile(void){
 	// Update logfile
 	printf("Writing log file: %s\n", logfile);
 	fp = fopen (logfile,"a");
-	fprintf(fp, "nFrames: %i,  nHits: %i (%2.2f%%), wallTime: %ihr %imin %isec (%2.1f fps)\n", (int)nprocessedframes, (int)nhits, hitrate, hrs, mins, secs, fps);
+	fprintf(fp, "nFrames: %i,  nHits: %i (%2.2f%%), wallTime: %ihr %imin %isec (%2.1f fps)\n", 
+		(int)nprocessedframes, (int)nhits, hitrate, hrs, mins, secs, fps);
 	fclose (fp);
 	
 	
