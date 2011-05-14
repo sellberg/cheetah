@@ -41,6 +41,7 @@ using std::endl;
 
 
 
+
 //----------------------------------------------------------correlate
 // apply angular cross correlation
 //-------------------------------------------------------------------
@@ -64,7 +65,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     DEBUGL2_ONLY cc->setDebug(1);                           //turn on debug level inside the CrossCorrelator, if needed
 
 
-	if (global->useCorrelation == 1) {
+	if (global->useCorrelation == 1) {					//----------------------------------------------alg1
 		
 		DEBUGL2_ONLY cout << "XCCA regular" << endl;
 		
@@ -75,27 +76,32 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		//writeSAXS(threadInfo, global, cc, threadInfo->eventname);
 		writeXCCA(threadInfo, global, cc, threadInfo->eventname);
 		
-	} else if (global->useCorrelation == 2) {
+		
+		
+	} else if (global->useCorrelation == 2) {			//----------------------------------------------alg1
 		
 		DEBUGL2_ONLY cout << "XCCA fast" << endl;
 
         array2D *polar = new array2D;
         array2D *corr = new array2D;
         
-        cc->createLookupTable();
-        
-        double start_q = 5*cc->deltaq();
-        double stop_q = cc->qmax();
-        double number_q = 20;
-        double start_phi = 0;
-        double stop_phi = 360;
-        double number_phi = 128;
+        //cc->createLookupTable( 100, 100 );
+		cc->setLookupTable( global->fastCorrelationLUT, global->fastCorrelationLUTdim1, global->fastCorrelationLUTdim2 );
+		
+        double start_q = global->fastCorrelationStartQ*cc->deltaq();
+        double stop_q = global->fastCorrelationStopQ*cc->deltaq();
+        double number_q = global->fastCorrelationNumQ;
+        double start_phi = global->fastCorrelationStartPhi;
+        double stop_phi = global->fastCorrelationStopPhi;;
+        double number_phi = global->fastCorrelationNumPhi;
         cc->calculatePolarCoordinates_FAST(polar, start_q, stop_q, number_q, start_phi, stop_phi, number_phi);
 
         cc->calculateXCCA_FAST( polar, corr );
         
         delete polar;
         delete corr;
+
+
 
 	} else {
 		cerr << "Error in correlate()! Correlation algorithm " << global->useCorrelation << " not known." << endl;
@@ -255,6 +261,11 @@ double centerY( float *qy ) {
 	cout << "corrected center in Y: " << center/quads << endl;
 	return center/quads;
 }
+
+
+
+
+
 
 
 

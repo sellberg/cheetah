@@ -39,7 +39,8 @@ public:
 
     //helper functions
     void init();
-    void copy( const double* src_data, int arraysize );
+    void copy( const double* src_data, unsigned int size_val );
+    void copy( const int* src_data, unsigned int size_val );
     void copy( const arraydata& src );
     void copy( const array1D& src );
     void destroy();

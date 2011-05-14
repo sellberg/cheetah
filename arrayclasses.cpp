@@ -106,7 +106,14 @@ void arraydata::init(){
     p_data = NULL;
 }
 
-void arraydata::copy( const double* src_data, int arraysize ){
+
+//-----------------------------------------------------copy
+void array1D::copy( const array1D& src ){
+    setDim1( src.size() );
+    this->arraydata::copy( src.data(), src.size() );
+}
+
+void arraydata::copy( const double* src_data, unsigned int arraysize ){		//src type: double c-array
     p_size = arraysize;
     if (p_size > 0){
         p_data = new double[ arraysize ];
@@ -118,8 +125,19 @@ void arraydata::copy( const double* src_data, int arraysize ){
     }
 }
 
+void arraydata::copy( const int* src_data, unsigned int arraysize ){		//src type: int c-array
+    p_size = arraysize;
+    if (p_size > 0){
+        p_data = new double[ arraysize ];
+        for (int i = 0; i < p_size; i++) {
+            p_data[i] = (double) src_data[i];	//convert to double
+        }
+    }else{
+        p_data = NULL;
+    }
+}
 
-void arraydata::copy( const arraydata& src ){
+void arraydata::copy( const arraydata& src ){						//src type: arraydata object
     this->copy( src.data(), src.size());
 }
 
@@ -376,12 +394,6 @@ array1D::array1D( array2D* dataTwoD )
 array1D::~array1D(){
 }
 
-
-//-----------------------------------------------------copy
-void array1D::copy( const array1D& src ){
-    setDim1( src.size() );
-    this->arraydata::copy( src.data(), src.size());
-}
 
 
 

@@ -25,6 +25,7 @@
 #include "worker.h"
 #include "crosscorrelator.h"
 
+
 /*
  *	Function prototypes
  */
@@ -34,9 +35,5 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 double centerX( float *qx ); // calculates center in X from CArray of X positions
 double centerY( float *qy ); // calculates center in Y from CArray of Y positions
 
-///////////////OLD STUFF////////////////
-/*
-void shiftCenter(); // jas: shifts center of qx, qy to the value determined by p_centerX and p_centerY
-*/
 
 #endif

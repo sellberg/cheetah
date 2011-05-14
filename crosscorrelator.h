@@ -78,8 +78,16 @@ public:
     int calculateXCCA_FAST( array2D *polarData, array2D *corr );
     
     // looks up the value closest to xcoord, ycoord in the data
-    int createLookupTable();
     double lookup( double xcoord, double ycoord );
+	
+	// sets the lookup table necessary for lookup() to work. this needs to be provided externally, (a default one is available)
+	void setLookupTable( array2D *LUT );
+	void setLookupTable( int *cLUT, unsigned int LUT_dim1, unsigned int LUT_dim2 );
+
+	// a lookup table can be created within this object, if none was available externally
+	// (for cheetah, performance is better if this is calculated once in advance 
+	// and then handed to the CrossCorrelator for each shot)
+	int createLookupTable(int Nx, int Ny);
     
     //compute 1D correlations using FFT, the result is returned in f, respectively
     int correlateFFT( array1D *f, array1D *g );    // result of corr(f,g) -> f

@@ -808,6 +808,10 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar,
 
 
 //---------------------------------------------------------------------------- lookup
+// rearrange data into a fast lookup table to get values fast using 
+// val=lookup(x,y)
+// dimensions of the argument 'table' determines the accuracy of the lookup
+//----------------------------------------------------------------------------
 double CrossCorrelator::lookup( double xcoord, double ycoord ) {
 
     double val = 0.;    //return data value at the given coordinates
@@ -847,19 +851,29 @@ double CrossCorrelator::lookup( double xcoord, double ycoord ) {
 }
 
 
-//---------------------------------------------------------------------------- lookup
-// rearrange data into a fast lookup table to get values fast using 
-// val=lookup(x,y)
-// dimensions of the argument 'table' determines the accuracy of the lookup
+
 //----------------------------------------------------------------------------
-int CrossCorrelator::createLookupTable(){
+void CrossCorrelator::setLookupTable( array2D *LUT ){
+	table->copy(*LUT);										//store a copy locally
+}
+
+void CrossCorrelator::setLookupTable( int *cLUT, unsigned int LUT_dim1, unsigned int LUT_dim2 ){
+	table->arraydata::copy(cLUT, LUT_dim1*LUT_dim2);		//store a copy locally
+	table->setDim1(LUT_dim1);								//and set dimensions
+	table->setDim2(LUT_dim2);
+}
+
+int CrossCorrelator::createLookupTable( int Nx, int Ny ){
     int retval = 0;
     
-    cout << "createLookupTable() begin." << endl;
-        
-    int Nx = table->dim1();
-    int Ny = table->dim2();
-
+	if (debug()){ cout << "CrossCorrelator::createLookupTable() begin." << endl; }
+	
+	if (table) {
+  		cerr << "Warning: previous table will be overwritten." << endl;
+		delete table;
+		table = new array2D( Nx, Ny );
+	}
+	
     double qx_min = qx->calcMin();
     double qx_max = qx->calcMax();
     double qx_range = fabs(qx_max - qx_min);
@@ -878,17 +892,11 @@ int CrossCorrelator::createLookupTable(){
     p_deltaq = (qx_stepsize<=qy_stepsize) ? qx_stepsize : qy_stepsize;         
     p_qmax = (qx_max<=qy_max) ? qx_max : qy_max;                                
 
-/*
-    qx_min = qy_min = -qmax();
-    qx_max = qy_max = +qmax();
-    qx_stepsize = qy_stepsize = deltaq();
-*/
-
     table->zero();
     
-    if ( (qx->size()!=qy->size()) || (qx->size()!=data->size()) ) {
+    if ( qx->size()!=qy->size() ) {
         cerr << "Error in createLookupTable! Array sizes don't match: " 
-            << "qx=" << qx->size() << ", qy=" << qy->size() << ", data=" << data->size() << endl;
+            << "qx=" << qx->size() << ", qy=" << qy->size() << endl;
         retval++;
     } else {
         double ix = 0;
@@ -901,7 +909,7 @@ int CrossCorrelator::createLookupTable(){
             
             //and fill table at the found coordinates with the data index
             //overwriting whatever value it had before
-            //(the multiply->floor->divide trick is to achieve reasonable rounded integers)
+		    //(the add-one-half->floor trick is to achieve reasonable rounded integers)
             table->set( (int) floor(ix+0.5), (int) floor(iy+0.5), i );
             
             /////////////////////////////////////////////////////////////////////////////////////////
@@ -917,13 +925,15 @@ int CrossCorrelator::createLookupTable(){
             
         }//for
     }//if
+
     
-    cout << "createLookupTable() done." << endl;
-    
-    cout << "table = " << table->getASCIIdata() << endl;
-    
+	if (debug()){ cout << "table = " << table->getASCIIdata() << endl; }
+    if (debug()){ cout << "CrossCorrelator::createLookupTable() done." << endl; }
+	
     return retval;
 }
+
+
 
 
 //----------------------------------------------------------------------------calculate XCCA
