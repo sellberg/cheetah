@@ -22,7 +22,6 @@
 //#include <stdio.h>
 //#include <string.h>
 //#include <pthread.h>
-//#include <math.h>
 //#include <stdlib.h>
 
 #include <pthread.h>
@@ -47,7 +46,7 @@ using std::endl;
 //-------------------------------------------------------------------
 void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     
-    DEBUGL2_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
+    DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 
     int arraylength = RAW_DATA_LENGTH;
 	
@@ -62,12 +61,12 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     //create cross correlator object that takes care of the computations
 	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH );
 
-    DEBUGL2_ONLY cc->setDebug(1);                           //turn on debug level inside the CrossCorrelator, if needed
-
+    DEBUGL1_ONLY cc->setDebug(1);                           //turn on debug level inside the CrossCorrelator, if needed
+    DEBUGL2_ONLY cc->setDebug(2);                           //turn on debug level inside the CrossCorrelator, if needed
 
 	if (global->useCorrelation == 1) {					//----------------------------------------------alg1
 		
-		DEBUGL2_ONLY cout << "XCCA regular" << endl;
+		DEBUGL1_ONLY cout << "XCCA regular" << endl;
 		
 		cc->calculatePolarCoordinates();
 		cc->calculateSAXS();
@@ -80,7 +79,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		
 	} else if (global->useCorrelation == 2) {			//----------------------------------------------alg1
 		
-		DEBUGL2_ONLY cout << "XCCA fast" << endl;
+		DEBUGL1_ONLY cout << "XCCA fast" << endl;
 
         array2D *polar = new array2D;
         array2D *corr = new array2D;
@@ -117,7 +116,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 //-------------------------------------------------------------------------------------
 void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname) {	
 	
-	DEBUGL2_ONLY printf("writing SAXS to file...\n");
+	DEBUGL1_ONLY printf("writing SAXS to file...\n");
 	FILE *filePointerWrite;
 	char outfile[1024];
 	double samplingLengthD = (double) cc->samplingLength(); // save everything as doubles
@@ -146,7 +145,7 @@ void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	fclose(filePointerWrite);
 	free(buffer);
 	
-	DEBUGL2_ONLY cout << "writeSAXS done" << endl;
+	DEBUGL1_ONLY cout << "writeSAXS done" << endl;
 }
 
 
@@ -156,7 +155,7 @@ void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 //-------------------------------------------------------------------------------------
 void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname) {
 	
-	DEBUGL2_ONLY printf("writing XCCA to file...\n");
+	DEBUGL1_ONLY printf("writing XCCA to file...\n");
 	FILE *filePointerWrite;
 	char outfile[1024];
 	double samplingLengthD = (double) cc->samplingLength(); // save everything as doubles
@@ -228,7 +227,7 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	fclose(filePointerWrite);
 	free(buffer);
 	
-	DEBUGL2_ONLY cout << "writeXCCA done" << endl;
+	DEBUGL1_ONLY cout << "writeXCCA done" << endl;
 }
 
 

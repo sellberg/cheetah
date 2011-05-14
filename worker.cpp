@@ -67,7 +67,7 @@ void *worker(void *threadarg) {
 			threadInfo->raw_data[ii] = threadInfo->quad_data[quadrant][k];
 		}
 	}
-	threadInfo->corrected_data = (int16_t*) calloc(RAW_DATA_LENGTH,sizeof(int16_t));
+	threadInfo->corrected_data = (float*) calloc(RAW_DATA_LENGTH,sizeof(float));
 	for(long i=0;i<global->pix_nn;i++)
 		threadInfo->corrected_data[i] = threadInfo->raw_data[i];
 	
@@ -424,7 +424,7 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 			for(long i=0; i<global->image_nn; i++)
 				if(threadInfo->image[i] > global->powderthresh)
 					global->waterAssembled[i] += threadInfo->image[i];
-			pthread_mutex_unlock(&global->watersumraw_mutex);			
+			pthread_mutex_unlock(&global->watersumraw_mutex);
 		}
 	}
 }
@@ -507,13 +507,12 @@ void assemble2Dimage(tThreadInfo *threadInfo, cGlobal *global){
 
 	
 	// Allocate memory for output image
-	threadInfo->image = (int16_t*) calloc(global->image_nn,sizeof(int16_t));
+	threadInfo->image = (float*) calloc(global->image_nn,sizeof(float));
 
 	// Copy interpolated image across into image array
 	for(long i=0;i<global->image_nn;i++){
-			threadInfo->image[i] = (int16_t) data[i];
+			threadInfo->image[i] = data[i];
 	}
-	
 	
 	// Free temporary arrays
 	free(data);
@@ -606,6 +605,10 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	size[1] = global->image_nx;	// size[1] = width
 	max_size[0] = global->image_nx;
 	max_size[1] = global->image_nx;
+	int16_t *buffer1 = (int16_t*) calloc(global->image_nn, sizeof(int16_t));
+	for(long i=0; i<global->image_nn; i++){
+		buffer1[i] = (int16_t) info->image[i];
+	}
 	dataspace_id = H5Screate_simple(2, size, max_size);
 	dataset_id = H5Dcreate(gid, "data", H5T_STD_I16LE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 	if ( dataset_id < 0 ) {
@@ -613,7 +616,7 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 		H5Fclose(hdf_fileID);
 		return;
 	}
-	hdf_error = H5Dwrite(dataset_id, H5T_STD_I16LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, info->image);
+	hdf_error = H5Dwrite(dataset_id, H5T_STD_I16LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buffer1);
 	if ( hdf_error < 0 ) {
 		ERROR("%i: Couldn't write data\n", (int)info->threadNum);
 		H5Dclose(dataspace_id);
@@ -622,14 +625,18 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	}
 	H5Dclose(dataset_id);
 	H5Sclose(dataspace_id);
+	free(buffer1);	
 	
-
 	// Save raw data?
 	if(global->saveRaw) {
 		size[0] = 8*COLS;	// size[0] = height
 		size[1] = 8*ROWS;	// size[1] = width
 		max_size[0] = 8*COLS;
 		max_size[1] = 8*ROWS;
+		int16_t *buffer2 = (int16_t*) calloc(RAW_DATA_LENGTH, sizeof(int16_t));
+		for(long i=0; i<RAW_DATA_LENGTH; i++){
+			buffer2[i] = (int16_t) info->corrected_data[i];
+		}
 		dataspace_id = H5Screate_simple(2, size, max_size);
 		dataset_id = H5Dcreate(gid, "rawdata", H5T_STD_I16LE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 		if ( dataset_id < 0 ) {
@@ -637,7 +644,7 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 			H5Fclose(hdf_fileID);
 			return;
 		}
-		hdf_error = H5Dwrite(dataset_id, H5T_STD_I16LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, info->corrected_data);
+		hdf_error = H5Dwrite(dataset_id, H5T_STD_I16LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buffer2);
 		if ( hdf_error < 0 ) {
 			ERROR("%i: Couldn't write data\n", (int)info->threadNum);
 			H5Dclose(dataspace_id);
@@ -646,6 +653,7 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 		}
 		H5Dclose(dataset_id);
 		H5Sclose(dataspace_id);
+		free(buffer2);
 	}
 
 	

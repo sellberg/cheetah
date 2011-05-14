@@ -202,12 +202,12 @@ public:
 	
 	// Common variables
 	int32_t			*darkcal;		//stores darkcal from the file darkcalFile
-	int64_t			*powderRaw;		//stores powder pattern in raw format
-	int64_t			*powderAssembled;	//stores the assembled powder pattern
-	int64_t			*waterRaw;		//stores powder pattern in raw format
-	int64_t			*waterAssembled;	//stores the assembled powder pattern
-	int64_t			*iceRaw;		//stores powder pattern in raw format
-	int64_t			*iceAssembled;		//stores the assembled powder pattern
+	double			*powderRaw;		//stores powder pattern in raw format, WAS int64_t
+	double			*powderAssembled;	//stores the assembled powder pattern, WAS int64_t
+	double			*waterRaw;		//stores powder pattern in raw format, WAS int64_t
+	double			*waterAssembled;	//stores the assembled powder pattern, WAS int64_t
+	double			*iceRaw;		//stores powder pattern in raw format, WAS int64_t
+	double			*iceAssembled;		//stores the assembled powder pattern, WAS int64_t
 	int16_t			*badpixelmask;		//stores the bad pixel mask from the file badpixelmaskFile
 	float			*hotpixelmask;		//stores the hot pixel mask calculated by the auto hot pixel finder
 	float			*selfdark;		//stores the background calculated by the running (persistant) background subtraction

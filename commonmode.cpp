@@ -23,7 +23,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <stdlib.h>
-
+#include <cmath>
 
 #include "commonmode.h"
 
@@ -59,7 +59,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 				for(long j=0; j<COLS; j++){
 					e = (j + mj*COLS) * (8*ROWS);
 					e += i + mi*ROWS;
-					histogram[threadInfo->corrected_data[e]] += 1;
+					histogram[int(round(threadInfo->corrected_data[e]))] += 1;
 				}
 			}
 			
@@ -72,7 +72,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 					break;
 				}
 			}
-			//DEBUGL2_ONLY printf("Median of module (%i,%i) = %i\n",mi,mj,median);
+			DEBUGL2_ONLY printf("Median of module (%i,%i) = %i\n",mi,mj,median);
 
 			// Subtract median value
 			for(long i=0; i<ROWS; i++){
@@ -138,7 +138,7 @@ void cmSubModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 							jj = smj + j + mj*COLS;
 							ii = smi + i + mi*ROWS;
 							e = ii + jj*8*ROWS;
-							histogram[threadInfo->corrected_data[e]] += 1;
+							histogram[int(round(threadInfo->corrected_data[e]))] += 1;
 						}
 					}
 					
