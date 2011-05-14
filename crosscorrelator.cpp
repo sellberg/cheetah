@@ -71,7 +71,7 @@ CrossCorrelator::CrossCorrelator(int arraylength){
 	
 }
 
-CrossCorrelator::CrossCorrelator( int16_t *dataCArray, int arraylength ){
+CrossCorrelator::CrossCorrelator( float *dataCArray, int arraylength ){
     
     initPrivateVariables();
 
@@ -100,7 +100,7 @@ CrossCorrelator::CrossCorrelator( int16_t *dataCArray, int arraylength ){
     
 }
 
-CrossCorrelator::CrossCorrelator(int16_t *dataCArray, float *qxCArray, float *qyCArray, int arraylength) {
+CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCArray, int arraylength) {
 	
     initPrivateVariables();
     
@@ -128,7 +128,7 @@ CrossCorrelator::CrossCorrelator(int16_t *dataCArray, float *qxCArray, float *qy
 	
 }
 
-CrossCorrelator::CrossCorrelator(int16_t *dataCArray, float *qxCArray, float *qyCArray, int arraylength, double qMax, double qMin) {
+CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, double qMax, double qMin) {
 	
     initPrivateVariables();
     
@@ -733,13 +733,13 @@ void CrossCorrelator::updateDependentVariables(){		//update the values that depe
 	
 	// COARSE BINNING
 	p_deltaq = 20*qmax()/(matrixSize()-1);
-	p_samplingLength = (int) round(qmax()/p_deltaq)+1;
+	p_samplingLength = int(qmax()/p_deltaq+1+0.001);
 	p_deltaphi = 2*atan(1/(2*(p_samplingLength-1.0)));
 	p_samplingAngle = int(2*round(M_PI/p_deltaphi)); // make sure p_samplingAngle is even (exclude 2PI)
 	p_deltaphi = (double) 2.0*M_PI/(p_samplingAngle); // make sure deltaphi samples exactly an interval of 2PI
 	p_samplingLag = (int) round(p_samplingAngle/2.0+1);
 	
-	cout << "updateDependentVariables done. p_deltaq: " << p_deltaq << ", p_samplingLength: " << p_samplingLength << ", p_deltaphi: " << p_deltaphi << ", p_samplingAngle: " << p_samplingAngle << ", p_samplingLag: " << p_samplingLag << endl;
+	cout << "updateDependentVariables done. qmax: " << qmax() << ", p_deltaq: " << p_deltaq << ", p_samplingLength: " << p_samplingLength << ", p_deltaphi: " << p_deltaphi << ", p_samplingAngle: " << p_samplingAngle << ", p_samplingLag: " << p_samplingLag << endl;
 }
 
 double CrossCorrelator::getQave(unsigned index) const {

@@ -188,21 +188,22 @@ void cGlobal::setup() {
 	 */
 	hotpixelmask = (float*) calloc(pix_nn, sizeof(float));
 	selfdark = (float*) calloc(pix_nn, sizeof(float));
-	powderRaw = (int64_t*) calloc(pix_nn, sizeof(int64_t));
-	powderAssembled = (int64_t*) calloc(image_nn, sizeof(int64_t));
-	iceRaw = (int64_t*) calloc(pix_nn, sizeof(int64_t));
-	iceAssembled = (int64_t*) calloc(image_nn, sizeof(int64_t));
-	waterRaw = (int64_t*) calloc(pix_nn, sizeof(int64_t));
-	waterAssembled = (int64_t*) calloc(image_nn, sizeof(int64_t));
+	powderRaw = (double*) calloc(pix_nn, sizeof(double));
+	powderAssembled = (double*) calloc(image_nn, sizeof(double));
+	iceRaw = (double*) calloc(pix_nn, sizeof(double));
+	iceAssembled = (double*) calloc(image_nn, sizeof(double));
+	waterRaw = (double*) calloc(pix_nn, sizeof(double));
+	waterAssembled = (double*) calloc(image_nn, sizeof(double));
 
-	for(long i=0; i<pix_nn; i++) {
-		hotpixelmask[i] = 0;
-		selfdark[i] = 0;
-		powderRaw[i] = 0;
-	}
-	for(long i=0; i<image_nn; i++) {
-		powderAssembled[i] = 0;
-	}	
+	// should not be necessary since calloc initializes all its bits to zero
+//	for(long i=0; i<pix_nn; i++) {
+//		hotpixelmask[i] = 0;
+//		selfdark[i] = 0;
+//		powderRaw[i] = 0;
+//	}
+//	for(long i=0; i<image_nn; i++) {
+//		powderAssembled[i] = 0;
+//	}	
 
 	
 	/*

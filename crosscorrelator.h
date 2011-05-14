@@ -49,9 +49,9 @@ private:
 public:
 	//---------------------------------------------constructors & destructor
     CrossCorrelator( int arraylength=1 );                                                           //init with 1D data size
-	CrossCorrelator( int16_t *dataCArray, int arraylength );                                        //init with actual data
-    CrossCorrelator( int16_t *dataCArray, float *qxCArray, float *qyCArray, int arraylength );      //init with actual data + centered(!) q calibration
-	CrossCorrelator( int16_t *dataCArray, float *qxCArray, float *qyCArray, int arraylength, double qMax, double qMin );
+	CrossCorrelator( float *dataCArray, int arraylength );                                        //init with actual data
+    CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength );      //init with actual data + centered(!) q calibration
+	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, double qMax, double qMin );
 	
 	~CrossCorrelator();
 	
