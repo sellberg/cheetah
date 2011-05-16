@@ -471,19 +471,19 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 		autoCorrelationOnly = atoi(value);
 	}
     else if (!strcmp(tag, "fastcorrelationstartq")) {
-		fastCorrelationStartQ = atoi(value);
+		fastCorrelationStartQ = atof(value);
 	}
     else if (!strcmp(tag, "fastcorrelationstopq")) {
-		fastCorrelationStopQ = atoi(value);
+		fastCorrelationStopQ = atof(value);
 	}
     else if (!strcmp(tag, "fastcorrelationnumq")) {
 		fastCorrelationNumQ = atoi(value);
 	}
     else if (!strcmp(tag, "fastcorrelationstartphi")) {
-		fastCorrelationStartPhi = atoi(value);
+		fastCorrelationStartPhi = atof(value);
 	}
     else if (!strcmp(tag, "fastcorrelationstopphi")) {
-		fastCorrelationStopPhi = atoi(value);
+		fastCorrelationStopPhi = atof(value);
 	}
     else if (!strcmp(tag, "fastcorrelationnumphi")) {
 		fastCorrelationNumPhi = atoi(value);
@@ -819,10 +819,22 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	
 	
 	//write lookup table for fast cross-correlation
+	int lutNx = fastCorrelationLUTdim1;
+	int lutNy = fastCorrelationLUTdim2;
+	int lutSize = lutNx*lutNy;
+	cout << "Creating lookup table (LUT) of size " << lutNx << " x " << lutNy << " (" << lutSize << " entries)" << endl;
+	if (fastCorrelationLUT) {		// free memory of old LUT first, if necessary
+  		delete[] fastCorrelationLUT;
+	}
+	fastCorrelationLUT = new int[lutSize];
 	double qx_range = fabs(xmax - xmin);
-    double qx_stepsize = qx_range/(pix_nx-1);
+    double qx_stepsize = qx_range/(lutNx-1);
 	double qy_range = fabs(ymax - ymin);
-    double qy_stepsize = qy_range/(pix_ny-1);
+    double qy_stepsize = qy_range/(lutNy-1);
+	cout << "\tLUT qx-values: min=" << xmin << ", max=" << xmax << ", range=" << qx_range << ", stepsize=" << qx_stepsize << endl;
+	cout << "\tLUT qy-values: min=" << ymin << ", max=" << ymax << ", range=" << qy_range << ", stepsize=" << qy_stepsize << endl;
+	
+	int lutFailCount = 0;
 	for (int i = 0; i < nn; i++){           //go through all the data
 		//get q-values from qx and qy arrays
 		//and determine at what index (ix, iy) to put them in the lookup table
@@ -832,8 +844,16 @@ void cGlobal::readDetectorGeometry(char* filename) {
 		//fill table at the found coordinates with the data index
 		//overwriting whatever value it had before
 	    //(the add-one-half->floor trick is to achieve reasonable rounded integers)
-		int lutindex = (int) ( floor(ix+0.5) + pix_nx*floor(iy+0.5) );
-		this->fastCorrelationLUT[lutindex] = i;
+		int lutindex = (int) ( floor(ix+0.5) + lutNx*floor(iy+0.5) );
+		if (lutindex < 0 || lutindex >= lutSize) {
+			std::cerr << endl;
+  			std::cerr << "Error in cGlobal::readDetectorGeometry! lookup table index out of bounds" << endl;
+			std::cerr << "\t (was trying to set fastCorrelationLUT[" << lutindex << "] = " << i << ")" << endl;
+			std::cerr << "\tLUT: pix_x, pix_y = (" << pix_x[i] << ", " << pix_y[i] << ") --> ix, iy = (" << ix << ", " << iy << ")" << endl;
+			lutFailCount++;
+		} else {
+			fastCorrelationLUT[lutindex] = i;
+		}
 		
 		/////////////////////////////////////////////////////////////////////////////////////////
 		//ATTENTION: THIS METHOD WILL LEAD TO A LOSS OF DATA,
@@ -846,6 +866,8 @@ void cGlobal::readDetectorGeometry(char* filename) {
 		//    a vector of all applicable indices)
 		/////////////////////////////////////////////////////////////////////////////////////////
 	}//for
+	cout << "LUT created ";
+	cout << "(info: LUT assignment failed in " << lutFailCount << " of " << lutSize << " cases)" << endl;
 	
 }
 

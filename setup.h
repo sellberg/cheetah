@@ -241,6 +241,7 @@ public:
 	void readAttenuations(char *);
 	void expandAttenuationCapacity();
 
+
 	void writeInitialLog(void);			// functions to write the log file
 	void updateLogfile(void);			
 	void writeFinalLog(void);
