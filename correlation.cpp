@@ -232,34 +232,3 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	DEBUGL1_ONLY cout << "writeXCCA done" << endl;
 }
 
-
-/* OLD FUNCTIONS MOVED TO setup.cpp
-//----------------------------------------------------------centerX
-//find center of scattering image in x-direction
-//----------------------------------------------------------
-double centerX( float *qx ) {
-    double center = 0;
-	int quads = 4;
-	// Loop over quads and pick out closest pixel to center
-	for (int i=0; i<quads; i++) {
-		center += (double) qx[8*ROWS*(2*COLS-1)+i*2*ROWS];
-	}
-	cout << "corrected center in X: " << center/quads << endl;
-	return center/quads;
-}
-
-
-//----------------------------------------------------------centerY
-//find center of scattering image in x-direction
-//----------------------------------------------------------
-double centerY( float *qy ) {
-    double center = 0;
-	int quads = 4;
-	// Loop over quads and pick out closest pixel to center
-	for (int i=0; i<quads; i++) {
-		center += (double) qy[8*ROWS*(2*COLS-1)+i*2*ROWS];
-	}
-	cout << "corrected center in Y: " << center/quads << endl;
-	return center/quads;
-}
-*/

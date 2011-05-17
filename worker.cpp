@@ -1022,6 +1022,8 @@ void calculatePowderSAXS(cGlobal *global) {
 	
 	// calculating SAXS average for all shots to calculate cross-correlation 
 	DEBUGL1_ONLY printf("calculating angular average from powder pattern...\n");
+	
+	// NOT YET IMPLEMENTED, ONLY SHELL
 	/*
 	// calculate |q| for each pixel and bin lengths with correct resolution
 	for (int i=0; i<arraySize(); i++) {

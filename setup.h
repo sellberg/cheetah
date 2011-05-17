@@ -124,10 +124,10 @@ public:
 	int			autoCorrelationOnly;		// set to nonzero to only calculate autocorrelation (q1=q2)
     double 		fastCorrelationStartQ;		// customize the _FAST correlation algorithm (#2)
     double 		fastCorrelationStopQ;		// startQ/stopQ are in units of detector pixels
-    double 		fastCorrelationNumQ;		// number of q values between start and stop
+    int 		fastCorrelationNumQ;		// number of q values between start and stop
     double 		fastCorrelationStartPhi;	// start angle in degrees, default: 0
     double 		fastCorrelationStopPhi;		// stop angle in degrees, default: 360
-    double 		fastCorrelationNumPhi;		// number of angular steps, default: 256 (attention: if possible, use powers of 2, that makes FFT especially fast)
+    int 		fastCorrelationNumPhi;		// number of angular steps, default: 256 (attention: if possible, use powers of 2, that makes FFT especially fast)
 	int		 	*fastCorrelationLUT;		// lookup table (LUT) needed for the fast correlation
 	int			fastCorrelationLUTdim1;		// dim1 of LUT
 	int			fastCorrelationLUTdim2;		// dim2 of LUT
@@ -256,6 +256,7 @@ public:
 	void readBackgroundmask(char *);
 	void readAttenuations(char *);
 	void expandAttenuationCapacity();
+
 
 	void writeInitialLog(void);			// functions to write the log file
 	void updateLogfile(void);			
