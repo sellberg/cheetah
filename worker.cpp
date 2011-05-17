@@ -30,6 +30,9 @@
 #include <cmath>
 #include <hdf5.h>
 #include <stdlib.h>
+#include <iostream>
+using std::cout;
+using std::endl;
 
 #include "worker.h"
 #include "hitfinder.h"
@@ -209,9 +212,9 @@ void *worker(void *threadarg) {
 								   || (hit.water && global->waterfinder.savehits) 
 								   || (hit.ice && global->icefinder.savehits) 
 								   || (!hit.background && global->backgroundfinder.savehits) )) {
-		pthread_mutex_lock(&global->powdersum1_mutex);
+		//pthread_mutex_lock(&global->powdersumraw_mutex);
 		correlate(threadInfo, global);
-		pthread_mutex_unlock(&global->powdersum1_mutex);
+		//pthread_mutex_unlock(&global->powdersumraw_mutex);
 	}
 	
 	
@@ -353,38 +356,38 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 
     if (global->generateDarkcal){
 		// Sum raw format data
-		pthread_mutex_lock(&global->powdersum1_mutex);
+		pthread_mutex_lock(&global->powdersumraw_mutex);
 		global->npowder += 1;
 		for(long i=0; i<global->pix_nn; i++)
 			global->powderRaw[i] += threadInfo->corrected_data[i];
-		pthread_mutex_unlock(&global->powdersum1_mutex);
+		pthread_mutex_unlock(&global->powdersumraw_mutex);
         
         
 		// Sum assembled data
-		pthread_mutex_lock(&global->powdersum2_mutex);
+		pthread_mutex_lock(&global->powdersumassembled_mutex);
 		for(long i=0; i<global->image_nn; i++)
             global->powderAssembled[i] += threadInfo->image[i];
-		pthread_mutex_unlock(&global->powdersum2_mutex);
+		pthread_mutex_unlock(&global->powdersumassembled_mutex);
 	}
 
     
 	if (hit->standard){
 		// Sum raw format data
 		if (global->powdersum && global->saveRaw) {
-			pthread_mutex_lock(&global->powdersum1_mutex);
-			global->npowder += 1;
+			pthread_mutex_lock(&global->powdersumraw_mutex);
 			for(long i=0; i<global->pix_nn; i++)
 				global->powderRaw[i] += threadInfo->corrected_data[i];
-			pthread_mutex_unlock(&global->powdersum1_mutex);
+			pthread_mutex_unlock(&global->powdersumraw_mutex);
 		}
 		
 		// Sum assembled data		
 		if (global->powdersum) {
-			pthread_mutex_lock(&global->powdersum2_mutex);
+			pthread_mutex_lock(&global->powdersumassembled_mutex);
+			global->npowder += 1;
 			for(long i=0; i<global->image_nn; i++)
 				if(threadInfo->image[i] > global->powderthresh)
 					global->powderAssembled[i] += threadInfo->image[i];
-			pthread_mutex_unlock(&global->powdersum2_mutex);
+			pthread_mutex_unlock(&global->powdersumassembled_mutex);
 		}
 	}
 
@@ -392,7 +395,6 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 		// Sum raw format data 	: ice
 		if (global->powdersum && global->saveRaw) {
 			pthread_mutex_lock(&global->icesumraw_mutex);
-			global->npowder += 1;
 			for(long i=0; i<global->pix_nn; i++)
 				global->iceRaw[i] += threadInfo->corrected_data[i];
 			pthread_mutex_unlock(&global->icesumraw_mutex);			
@@ -401,6 +403,7 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 		// Sum assembled data	: ice
 		if (global->powdersum) {
 			pthread_mutex_lock(&global->icesumassembled_mutex);
+			global->nice += 1;
 			for(long i=0; i<global->image_nn; i++)
 				if(threadInfo->image[i] > global->powderthresh)
 					global->iceAssembled[i] += threadInfo->image[i];
@@ -411,20 +414,20 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 	if (hit->water){
 		// Sum raw format data  : water
 		if (global->powdersum && global->saveRaw) {
-			pthread_mutex_lock(&global->watersumassembled_mutex);
-			global->npowder += 1;
+			pthread_mutex_lock(&global->watersumraw_mutex);
 			for(long i=0; i<global->pix_nn; i++)
 				global->waterRaw[i] += threadInfo->corrected_data[i];
-			pthread_mutex_unlock(&global->watersumassembled_mutex);			
+			pthread_mutex_unlock(&global->watersumraw_mutex);
 		}
 	
 		// Sum assembled data	: water
 		if (global->powdersum) {
-			pthread_mutex_lock(&global->watersumraw_mutex);
+			pthread_mutex_lock(&global->watersumassembled_mutex);
+			global->nwater += 1;
 			for(long i=0; i<global->image_nn; i++)
 				if(threadInfo->image[i] > global->powderthresh)
 					global->waterAssembled[i] += threadInfo->image[i];
-			pthread_mutex_unlock(&global->watersumraw_mutex);
+			pthread_mutex_unlock(&global->watersumassembled_mutex);			
 		}
 	}
 }
@@ -880,10 +883,10 @@ void saveRunningSums(cGlobal *global) {
 		printf("Processing darkcal\n");
 		sprintf(filename,"r%04u-darkcal.h5",global->runNumber);
 		int16_t *buffer3 = (int16_t*) calloc(global->pix_nn, sizeof(int16_t));
-		pthread_mutex_lock(&global->powdersum1_mutex);
+		pthread_mutex_lock(&global->powdersumraw_mutex);
 		for(long i=0; i<global->pix_nn; i++)
 			buffer3[i] = (int16_t) (global->powderRaw[i]/(float)global->npowder);
-		pthread_mutex_unlock(&global->powdersum1_mutex);
+		pthread_mutex_unlock(&global->powdersumraw_mutex);
 		//for(long i=0; i<global->pix_nn; i++)
 		//	if (buffer3[i] < 0) buffer3[i] = 0;
 		printf("Saving darkcal to file\n");
@@ -901,11 +904,11 @@ void saveRunningSums(cGlobal *global) {
 				printf("Saving assembled sum data to file\n");
 				sprintf(filename,"r%04u-AssembledSum.h5",global->runNumber);
 				float *buffer2 = (float*) calloc(global->image_nn, sizeof(float));
-				pthread_mutex_lock(&global->powdersum2_mutex);
+				pthread_mutex_lock(&global->powdersumassembled_mutex);
 				for(long i=0; i<global->image_nn; i++){
-					buffer2[i] = (float) global->powderAssembled[i];
+					buffer2[i] = (float) global->powderAssembled[i]/global->npowder;
 				}
-				pthread_mutex_unlock(&global->powdersum2_mutex);
+				pthread_mutex_unlock(&global->powdersumassembled_mutex);
 				writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
 				free(buffer2);
 				
@@ -919,12 +922,10 @@ void saveRunningSums(cGlobal *global) {
 				printf("Saving raw sum data to file\n");
 				sprintf(filename,"r%04u-RawSum.h5",global->runNumber);
 				float *buffer1 = (float*) calloc(global->pix_nn, sizeof(float));
-				pthread_mutex_lock(&global->powdersum1_mutex);
+				pthread_mutex_lock(&global->powdersumraw_mutex);
 				for(long i=0; i<global->pix_nn; i++)
-					buffer1[i] = (float) global->powderRaw[i];
-				pthread_mutex_unlock(&global->powdersum1_mutex);
-				//for(long i=0; i<global->pix_nn; i++)
-				//	if (buffer1[i] < 0) buffer1[i] = 0;
+					buffer1[i] = (float) global->powderRaw[i]/global->npowder;
+				pthread_mutex_unlock(&global->powdersumraw_mutex);
 				writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 				free(buffer1);
 				
@@ -945,7 +946,7 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer4 = (float*) calloc(global->image_nn, sizeof(float));
 				pthread_mutex_lock(&global->icesumassembled_mutex);
 				for(long i=0; i<global->image_nn; i++){
-					buffer4[i] = (float) global->iceAssembled[i];
+					buffer4[i] = (float) global->iceAssembled[i]/global->nice;
 				}
 				pthread_mutex_unlock(&global->icesumassembled_mutex);
 				writeSimpleHDF5(filename, buffer4, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
@@ -963,10 +964,8 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer5 = (float*) calloc(global->pix_nn, sizeof(float));
 				pthread_mutex_lock(&global->icesumraw_mutex);
 				for(long i=0; i<global->pix_nn; i++)
-					buffer5[i] = (float) global->iceRaw[i];
+					buffer5[i] = (float) global->iceRaw[i]/global->nice;
 				pthread_mutex_unlock(&global->icesumraw_mutex);
-				//for(long i=0; i<global->pix_nn; i++)
-				//	if (buffer1[i] < 0) buffer1[i] = 0;
 				writeSimpleHDF5(filename, buffer5, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 				free(buffer5);
 				
@@ -986,7 +985,7 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer6 = (float*) calloc(global->image_nn, sizeof(float));
 				pthread_mutex_lock(&global->watersumassembled_mutex);
 				for(long i=0; i<global->image_nn; i++){
-					buffer6[i] = (float) global->waterAssembled[i];
+					buffer6[i] = (float) global->waterAssembled[i]/global->nwater;
 				}
 				pthread_mutex_unlock(&global->watersumassembled_mutex);
 				writeSimpleHDF5(filename, buffer6, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
@@ -1004,10 +1003,8 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer7 = (float*) calloc(global->pix_nn, sizeof(float));
 				pthread_mutex_lock(&global->watersumraw_mutex);
 				for(long i=0; i<global->pix_nn; i++)
-					buffer7[i] = (float) global->waterRaw[i];
+					buffer7[i] = (float) global->waterRaw[i]/global->nwater;
 				pthread_mutex_unlock(&global->watersumraw_mutex);
-				//for(long i=0; i<global->pix_nn; i++)
-				//	if (buffer1[i] < 0) buffer1[i] = 0;
 				writeSimpleHDF5(filename, buffer7, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 				free(buffer7);				
 				
@@ -1020,3 +1017,33 @@ void saveRunningSums(cGlobal *global) {
 	
 }
 
+
+void calculatePowderSAXS(cGlobal *global) {
+	
+	// calculating SAXS average for all shots to calculate cross-correlation 
+	DEBUGL1_ONLY printf("calculating angular average from powder pattern...\n");
+	/*
+	// calculate |q| for each pixel and bin lengths with correct resolution
+	for (int i=0; i<arraySize(); i++) {
+		q->set(i, round(sqrt( (qx->get(i)*qx->get(i))+(qy->get(i)*qy->get(i)) ) / deltaq()) * deltaq() );
+	}
+	
+	// angular average for each |q|
+	DEBUGL1_ONLY printf("# of steps: %d\n",samplingLength());
+	DEBUGL2_ONLY printf("average SAXS intensity:\n");
+	
+	for (int i=0; i<samplingLength(); i++) {
+		qave->set(i, i*deltaq());
+		double itot = 0; // reset summed intensity
+		int counter = 0; // reset counter
+		for (int j=0; j<arraySize(); j++) {
+			if ( q->get(j) == qave->get(i) ) {
+				itot += data->get(j);
+				counter++;
+			}
+		}
+		iave->set( i, itot/counter );
+		DEBUGL2_ONLY cout << "Q: " << qave->get(i) << ",   \t# pixels: " << counter << ",\tI: " << iave->get(i) << endl;
+	}
+	*/
+}

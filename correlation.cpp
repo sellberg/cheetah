@@ -50,6 +50,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 
     int arraylength = RAW_DATA_LENGTH;
 	
+	/* OLD FUNCTIONALITY MOVED TO setup.cpp
     //jas: calculate center of CArray and shift qx, qy accordingly
 	double x0 = centerX(global->pix_x);
     double y0 = centerY(global->pix_y);
@@ -57,7 +58,8 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
         global->pix_x[i] = global->pix_x[i] - x0;
         global->pix_y[i] = global->pix_y[i] - y0;
     }
-    
+    */
+	
     //create cross correlator object that takes care of the computations
 	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH );
 
@@ -231,7 +233,7 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 }
 
 
-
+/* OLD FUNCTIONS MOVED TO setup.cpp
 //----------------------------------------------------------centerX
 //find center of scattering image in x-direction
 //----------------------------------------------------------
@@ -260,11 +262,4 @@ double centerY( float *qy ) {
 	cout << "corrected center in Y: " << center/quads << endl;
 	return center/quads;
 }
-
-
-
-
-
-
-
-
+*/

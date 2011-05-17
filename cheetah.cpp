@@ -586,6 +586,12 @@ void endjob()
 	}
 	
 	
+	// Calculate angular average of powder pattern
+	if (global.powdersum && global.powderSAXS) {
+		calculatePowderSAXS(&global);
+	}
+	
+	
 	// Save powder patterns
 	saveRunningSums(&global);
 	global.writeFinalLog();
@@ -608,10 +614,13 @@ void endjob()
 	free(global.darkcal);
 	free(global.powderAssembled);
 	free(global.powderRaw);
+	free(global.powderAverage);
 	free(global.iceAssembled);
 	free(global.iceRaw);
+	free(global.iceAverage);
 	free(global.waterAssembled);
 	free(global.waterRaw);
+	free(global.waterAverage);
 	free(global.hotpixelmask);
 	free(global.selfdark);
 	free(global.gaincal);
@@ -629,8 +638,8 @@ void endjob()
 	delete[] global.fastCorrelationLUT;
 	
 	pthread_mutex_destroy(&global.nActiveThreads_mutex);
-	pthread_mutex_destroy(&global.powdersum1_mutex);
-	pthread_mutex_destroy(&global.powdersum2_mutex);
+	pthread_mutex_destroy(&global.powdersumraw_mutex);
+	pthread_mutex_destroy(&global.powdersumassembled_mutex);
 	pthread_mutex_destroy(&global.correlation_mutex);
     pthread_mutex_destroy(&global.selfdark_mutex);
 	pthread_mutex_destroy(&global.hotpixel_mutex);

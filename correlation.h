@@ -32,8 +32,9 @@
 void correlate(tThreadInfo*, cGlobal*);
 void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
 void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
+/* OLD PROTOTYPES MOVED TO setup.h
 double centerX( float *qx ); // calculates center in X from CArray of X positions
 double centerY( float *qy ); // calculates center in Y from CArray of Y positions
-
+*/
 
 #endif

@@ -61,6 +61,7 @@ void cGlobal::defaultConfiguration(void) {
 	// Geometry
 	strcpy(geometryFile, "geometry/cspad_pixelmap.h5");
 	pixelSize = 110e-6;
+	useCenterCorrection = 0;
 	
 	// Bad pixel mask
 	strcpy(badpixelFile, "badpixels.h5");
@@ -151,6 +152,10 @@ void cGlobal::defaultConfiguration(void) {
 	// Powder pattern generation
 	powdersum = 1;
 	powderthresh = 0;
+	
+	// Angular averages of powder patterns
+	powderSAXS = 0;
+	deltaqSAXS = 1;
     
 	// Correlation analysis
 	useCorrelation = 0;
@@ -222,8 +227,8 @@ void cGlobal::setup() {
 	pthread_mutex_init(&nActiveThreads_mutex, NULL);
 	pthread_mutex_init(&hotpixel_mutex, NULL);
 	pthread_mutex_init(&selfdark_mutex, NULL);
-	pthread_mutex_init(&powdersum1_mutex, NULL);
-	pthread_mutex_init(&powdersum2_mutex, NULL);
+	pthread_mutex_init(&powdersumraw_mutex, NULL);
+	pthread_mutex_init(&powdersumassembled_mutex, NULL);
 	pthread_mutex_init(&correlation_mutex, NULL);
     pthread_mutex_init(&nhits_mutex, NULL);
 	pthread_mutex_init(&framefp_mutex, NULL);
@@ -257,12 +262,16 @@ void cGlobal::setup() {
 		useAutoHotpixel = 0;
 		startFrames = 0;
 		powderthresh = 0;
+		useAttenuationCorrection = -1;
+		useCorrelation = 0;
 	}
 	
 	/*
 	 *	Other stuff
 	 */
 	npowder = 0;
+	nwater = 0;
+	nice = 0;
 	nprocessedframes = 0;
 	nhits = 0;
 	lastclock = clock()-10;
@@ -428,6 +437,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	
 	// Processing options
+	else if (!strcmp(tag, "usecentercorrection")) {
+		useCenterCorrection = atoi(value);
+	}
 	else if (!strcmp(tag, "subtractcmmodule")) {
 		cmModule = atoi(value);
 	}
@@ -464,6 +476,12 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "powdersum")) {
 		powdersum = atoi(value);
 	}
+	else if (!strcmp(tag, "powdersaxs")) {
+		powderSAXS = atoi(value);
+	}
+	else if (!strcmp(tag, "deltaqsaxs")) {
+		deltaqSAXS = atof(value);
+	}
 	else if (!strcmp(tag, "usecorrelation")) {
 		useCorrelation = atoi(value);
 	}
@@ -471,22 +489,22 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 		autoCorrelationOnly = atoi(value);
 	}
     else if (!strcmp(tag, "fastcorrelationstartq")) {
-		fastCorrelationStartQ = atoi(value);
+		fastCorrelationStartQ = atoi(value); //jas: should use atof for double
 	}
     else if (!strcmp(tag, "fastcorrelationstopq")) {
-		fastCorrelationStopQ = atoi(value);
+		fastCorrelationStopQ = atoi(value); //jas: should use atof for double
 	}
     else if (!strcmp(tag, "fastcorrelationnumq")) {
-		fastCorrelationNumQ = atoi(value);
+		fastCorrelationNumQ = atoi(value); //jas: should use atof for double
 	}
     else if (!strcmp(tag, "fastcorrelationstartphi")) {
-		fastCorrelationStartPhi = atoi(value);
+		fastCorrelationStartPhi = atoi(value); //jas: should use atof for double
 	}
     else if (!strcmp(tag, "fastcorrelationstopphi")) {
-		fastCorrelationStopPhi = atoi(value);
+		fastCorrelationStopPhi = atoi(value); //jas: should use atof for double
 	}
     else if (!strcmp(tag, "fastcorrelationnumphi")) {
-		fastCorrelationNumPhi = atoi(value);
+		fastCorrelationNumPhi = atoi(value); //jas: should use atof for double
 	}
     else if (!strcmp(tag, "fastcorrelationlutdim1")) {
 		fastCorrelationLUTdim1 = atoi(value);
@@ -774,11 +792,24 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	}
 	
 	
-	// Divide array (in m) by pixel size to get pixel location indicies (ijk)
+	// Divide array (in m) by pixel size to get pixel location indices (ijk)
 	for(long i=0;i<nn;i++){
 		pix_x[i] /= pix_dx;
 		pix_y[i] /= pix_dx;
 		pix_z[i] /= pix_dx;
+	}
+	
+	
+	// Center correct the array w.r.t the square hole created by the quads (assume beam is centered)
+	if (useCenterCorrection) {
+		float x0 = pixelCenter(pix_x);
+		if (debugLevel >= 1) cout << "\tCorrected center in x: " << x0 << endl;
+		float y0 = pixelCenter(pix_y);
+		if (debugLevel >= 1) cout << "\tCorrected center in y: " << y0 << endl;
+		for (int i=0; i<nn; i++) {
+			pix_x[i] -= x0;
+			pix_y[i] -= y0;
+		}
 	}
 	
 	
@@ -787,17 +818,28 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	float	xmin =  1e9;
 	float	ymax = -1e9;
 	float	ymin =  1e9;
+	float	rmax = 0;
 	for(long i=0;i<nn;i++){
 		if (pix_x[i] > xmax) xmax = pix_x[i];
 		if (pix_x[i] < xmin) xmin = pix_x[i];
 		if (pix_y[i] > ymax) ymax = pix_y[i];
 		if (pix_y[i] < ymin) ymin = pix_y[i];
+		float rtemp = sqrt(pix_x[i]*pix_x[i] + pix_y[i]*pix_y[i]);
+		if (rtemp > rmax) rmax = rtemp;
 	}
+	
+	// Initialize global variables
+	pix_xmax = xmax;
+	pix_xmin = xmin;
+	pix_ymax = ymax;
+	pix_ymin = ymin;
+	pix_rmax = rmax;
+	
 	//xmax = ceil(xmax);
 	//xmin = floor(xmin);
 	//ymax = ceil(ymax);
 	//ymin = floor(ymin);
-
+		
 	fesetround(1);
 	xmax = lrint(xmax);
 	xmin = lrint(xmin);
@@ -817,11 +859,11 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	image_nn = image_nx*image_nx;
 	printf("\tImage output array will be %i x %i\n",(int)image_nx,(int)image_nx);
 	
-	
+	/*
 	//write lookup table for fast cross-correlation
-	double qx_range = fabs(xmax - xmin);
+	double qx_range = fabs(xmax - xmin); // jas: WRONG: qx_range = xmax || fabs(xmin)
     double qx_stepsize = qx_range/(pix_nx-1);
-	double qy_range = fabs(ymax - ymin);
+	double qy_range = fabs(ymax - ymin); // jas: WRONG: qy_range = ymax || fabs(ymin)
     double qy_stepsize = qy_range/(pix_ny-1);
 	for (int i = 0; i < nn; i++){           //go through all the data
 		//get q-values from qx and qy arrays
@@ -846,7 +888,21 @@ void cGlobal::readDetectorGeometry(char* filename) {
 		//    a vector of all applicable indices)
 		/////////////////////////////////////////////////////////////////////////////////////////
 	}//for
-	
+	 */
+}
+
+
+/*
+ *	Help function for readDetectorGeometry to calculate center of pixel array
+ */
+float cGlobal::pixelCenter( float *pixel_array ) {
+	float center = 0;
+	int quads = 4;
+	// Loop over quads and pick out closest pixel to center
+	for (int i=0; i<quads; i++) {
+		center += pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
+	}
+	return center/quads;
 }
 
 
@@ -1254,6 +1310,8 @@ void cGlobal::writeFinalLog(void){
 	fprintf(fp, "Elapsed time: %ihr %imin %isec\n",hrs,mins,secs);
 	fprintf(fp, "Frames processed: %i\n",(int)nprocessedframes);
 	fprintf(fp, "nFrames in powder pattern: %i\n",(int)npowder);
+	fprintf(fp, "nFrames in water powder pattern: %i\n",(int)nwater);
+	fprintf(fp, "nFrames in ice powder pattern: %i\n",(int)nice);
 	fprintf(fp, "Number of hits: %i\n",(int)nhits);
 	fprintf(fp, "Average hit rate: %2.2f %%\n",hitrate);
 	fprintf(fp, "Average data rate: %2.2f fps\n",fps);
