@@ -30,7 +30,6 @@ using std::ofstream;
 //include headers
 #include <hdf5.h>
 #include <tiffio.h>
-#include <fftw3.h>
 
 
 
@@ -53,7 +52,6 @@ arraydata::arraydata( unsigned int size_val ){
         cerr << "Error in arraydata constructor: could not allocate memory." << endl;
 
 	zero();					// set all elements to zero initially
-	setVerbose( 1 );		// set talkativity
 }
 
 arraydata::arraydata( int16_t *CArray, unsigned int size_val ){
@@ -89,6 +87,7 @@ arraydata::arraydata( const arraydata &src ){                       //copy const
 
 arraydata & arraydata::operator=(const arraydata & src){
     if ( this != &src ){
+		cout << "DEBUG: ASSIGNMENT OPERATOR FOR arraydata" << endl;
         destroy();
         init();
         copy( src );
@@ -100,22 +99,22 @@ arraydata::~arraydata(){
 	destroy();	
 }
 
-//--------------------------------------------------------------------init helper functions
+//--------------------------------------------------------------------helper functions
 void arraydata::init(){
     p_size = 0;
     p_data = NULL;
 }
 
-
-//-----------------------------------------------------copy
-void array1D::copy( const array1D& src ){
-    setDim1( src.size() );
-    this->arraydata::copy( src.data(), src.size() );
+void arraydata::destroy(){
+    delete []p_data;
+	p_data = NULL;
 }
 
+//-----------------------------------------------------copy
 void arraydata::copy( const double* src_data, unsigned int arraysize ){		//src type: double c-array
     p_size = arraysize;
     if (p_size > 0){
+		destroy();
         p_data = new double[ arraysize ];
         for (int i = 0; i < p_size; i++) {
             p_data[i] = src_data[i];
@@ -128,6 +127,7 @@ void arraydata::copy( const double* src_data, unsigned int arraysize ){		//src t
 void arraydata::copy( const int* src_data, unsigned int arraysize ){		//src type: int c-array
     p_size = arraysize;
     if (p_size > 0){
+		destroy();
         p_data = new double[ arraysize ];
         for (int i = 0; i < p_size; i++) {
             p_data[i] = (double) src_data[i];	//convert to double
@@ -142,11 +142,6 @@ void arraydata::copy( const arraydata& src ){						//src type: arraydata object
 }
 
 
-
-void arraydata::destroy(){
-    delete []p_data;
-}
-
 double *arraydata::data() const{
     return (double *)p_data;
 }
@@ -158,10 +153,8 @@ double arraydata::get_atAbsoluteIndex( unsigned int i) const{
 	if (i < size()) {
 		return p_data[i];
 	} else {
-		if (verbose()){
-			std::cerr << "Error in arraydata! Index " << i 
+		std::cerr << "Error in arraydata! Index " << i 
 			<< " is larger than absolute dimension " << size() << "." << endl;
-		}
 		
 		//fail 'silently', 
 		//i.e., return a valid numeric value 0,
@@ -177,10 +170,8 @@ void arraydata::set_atAbsoluteIndex( unsigned int i, double val){
 	if (i < size()) {
 		p_data[i] = val;
 	} else {									//fail 'silently', as in: don't do anything
-		if (verbose()){
-			std::cerr << "Error in arraydata! Index " << i 
+		std::cerr << "Error in arraydata! Index " << i 
 			<< " is larger than absolute dimension " << size() << "." << endl;
-		}
 	}
 }
 
@@ -224,26 +215,33 @@ double arraydata::calcMax() const{
 //------------------------------------------------------------- getASCIIdata
 string arraydata::getASCIIdataAsRow() const{
     ostringstream osst;
-	for (int i = 0; i<size(); i++) {
-        osst << get_atAbsoluteIndex(i) << " ";
+	if (size() == 0) {
+  		osst << "Array data has size zero." << endl;
+	}else{
+		for (int i = 0; i<size(); i++) {
+			osst << get_atAbsoluteIndex(i) << " ";
+		}
+		osst << endl;
 	}
-    osst << endl;
     return osst.str();
 }
 
 //------------------------------------------------------------- getASCIIdata
 string arraydata::getASCIIdataAsColumn() const{
     ostringstream osst;
-	for (int i = 0; i<size(); i++) {
-        osst << get_atAbsoluteIndex(i) << endl;
+	if (size() == 0) {
+  		osst << "Array data has size zero." << endl;
+	}else{
+		for (int i = 0; i<size(); i++) {
+			osst << get_atAbsoluteIndex(i) << endl;
+		}
 	}
     return osst.str();
 }
 
 //--------------------------------------------------------------------arraydata::readFromRawBinary
 void arraydata::readFromRawBinary( std::string filename ){
-	if ( verbose() ) 
-		cout << "reading from raw binary file " << filename << endl;
+	cout << "reading from raw binary file " << filename << endl;
 	
 	FILE *filePointerRead;
 	long lSize;
@@ -322,13 +320,13 @@ int arraydata::multiplyByArrayElementwise( arraydata *secondFactor ){
 
 
 //--------------------------------------------------------------------
-int arraydata::verbose() const{
-	return p_verbose;
-}
-
-void arraydata::setVerbose( int verbosity ){
-	p_verbose = verbosity;
-}
+//int arraydata::verbose() const{
+//	return p_verbose;
+//}
+//
+//void arraydata::setVerbose( int verbosity ){
+//	p_verbose = verbosity;
+//}
 
 
 
@@ -370,9 +368,6 @@ array1D::array1D( float *CArray, unsigned int size_dim1 )
     setDim1( size_dim1 );
 }
 
-//copy constructor
-//array1D::array1D( const arraydata &src ){
-//}
 
 //constructor to generate a 1D array from a 2D array
 array1D::array1D( array2D* dataTwoD ) 
@@ -382,7 +377,6 @@ array1D::array1D( array2D* dataTwoD )
     //copy contents of dataTwoD to this array1D object
     p_size = dataTwoD->size();
     if (p_size > 0){
-        p_data = new double[ dataTwoD->size() ];
         for (int i = 0; i < p_size; i++) {
             p_data[i] = dataTwoD->get_atAbsoluteIndex(i);
         }
@@ -391,9 +385,17 @@ array1D::array1D( array2D* dataTwoD )
     }
 }
 
+
+//-----------------------------------------------------destructor
 array1D::~array1D(){
 }
 
+
+//-----------------------------------------------------copy
+void array1D::copy( const array1D& src ){
+    setDim1( src.size() );
+    this->arraydata::copy( src.data(), src.size() );
+}
 
 
 
@@ -402,10 +404,8 @@ double array1D::get( unsigned int i ) const{
 	if ( i < dim1() ) {
 		return get_atAbsoluteIndex(i);		
 	} else {
-		if (verbose()){
-			std::cerr << "Error in array1D! Index " << i 
+		std::cerr << "Error in array1D! Index " << i 
 				<< " is larger than dimension " << dim1() << "." << endl;
-		}
 		return 0.;
 	}
 }
@@ -414,13 +414,9 @@ void array1D::set( unsigned int i, double value ){
 	if ( i < dim1() ) {
 		set_atAbsoluteIndex(i, value);
 	} else {
-		if (verbose()){
-			std::cerr << "Error in array1D! Index " << i 
-				<< " is larger than dimension " << dim1() << "." << endl;
-		}
+		std::cerr << "Error in array1D! Index " << i 
+			<< " is larger than dimension " << dim1() << "." << endl;
 	}
-
-
 }
 
 
@@ -437,12 +433,16 @@ void array1D::setDim1( unsigned int size_dim1 ){
 //------------------------------------------------------------- getASCIIdata
 string array1D::getASCIIdata() const{
     ostringstream osst;
-    osst << "1D data, dim1=" << dim1() << ", size=" << size() << endl;
-	osst << " [";
-    for (int i = 0; i<dim1(); i++) {
-        osst << " " << get(i);
-    }
-    osst << "]" << endl;
+	if (size() == 0) {
+  		osst << "1D data has size zero." << endl;
+	}else{
+		osst << "1D data, dim1=" << dim1() << ", size=" << size() << endl;
+		osst << " [";
+		for (int i = 0; i<dim1(); i++) {
+			osst << " " << get(i);
+		}
+		osst << "]" << endl;
+	}
     return osst.str();
 }
 
@@ -489,7 +489,8 @@ array2D::array2D( array1D* dataOneD, unsigned int size_dim1, unsigned int size_d
     }
     if (dataOneD->size() != size_dim1*size_dim2) {
         cerr << "WARNING in array2D::array2D. Inconsistent array size. ";
-        cerr << "size1D=" << dataOneD->size() << ", size2D=" << size_dim1*size_dim2 << endl;
+        cerr << "size1D=" << dataOneD->size() << ", size2D=" << size_dim1*size_dim2 
+			<< "=" << size_dim1 << "*" << size_dim2 << "" << endl;
     }
     
  	setDim1( size_dim1 );
@@ -498,7 +499,6 @@ array2D::array2D( array1D* dataOneD, unsigned int size_dim1, unsigned int size_d
     //copy contents of dataOneD to this array2D
     p_size = dataOneD->size();
     if (p_size > 0){
-        p_data = new double[ dataOneD->size() ];
         for (int i = 0; i < p_size; i++) {
             p_data[i] = dataOneD->get_atAbsoluteIndex(i);
         }
@@ -524,10 +524,8 @@ double array2D::get( unsigned int i, unsigned int j ) const{
 	if ( i < dim1() && j < dim2()) {
 		return get_atAbsoluteIndex( j*dim1() + i );
 	} else {
-		if (verbose()){
-			std::cerr << "Error in array2D::get! Index (" << i << ", " << j 
-				<< ") is larger than dimension (" << dim1() << ", " << dim2() << ")." << endl;
-		}
+		std::cerr << "Error in array2D::get! Index (" << i << ", " << j 
+			<< ") is larger than dimension (" << dim1() << ", " << dim2() << ")." << endl;
 		return 0.;
 	}
 }
@@ -536,39 +534,61 @@ void array2D::set( unsigned int i, unsigned int j, double value ){
 	if ( i < dim1() && j < dim2()) {
 		set_atAbsoluteIndex( j*dim1() + i, value);
 	} else {
-		if (verbose()){
-			std::cerr << "Error in array2D::set! Index (" << i << ", " << j 
-				<< ") is larger than dimension (" << dim1() << ", " << dim2() << ")." << endl;
-		}
+		std::cerr << "Error in array2D::set! Index (" << i << ", " << j 
+			<< ") is larger than dimension (" << dim1() << ", " << dim2() << ")." << endl;
 	}
 }
 
 
 //-----------------------------------------------------getRow/getCol
-void array2D::getRow( int rownum, array1D *row ) const{
-    if (row){
-        delete row;
-        row = NULL;
-    }
-    row = new array1D( this->dim1() );
-    
-    //for a fixed row, i goes through columns (x-values)
-    for (int i = 0; i < row->size(); i++){
-        row->set( i, this->get(i, rownum) );
-    }
+int array2D::getRow( int rownum, array1D **row ) const{
+	if (rownum >= dim2() || rownum < 0){ 
+		cerr << "Error in array2D::getRow. row number " << rownum << " too big or below zero." << endl; 
+		return 1;
+	}
+	if (this->dim1()==0){
+		cerr << "Error in array2D::getRow. array2D's dimension1 is zero" << endl; 
+		return 2;
+	}
+		
+	delete (*row);
+    (*row) = new array1D( this->dim1() );
+	
+	if (!(*row)){ 
+		cerr << "Error in array2D::getRow. Could not allocate row." << endl;
+		return 3;
+	}else{
+		//for a fixed row, i goes through columns (x-values)
+		for (int i = 0; i < (*row)->size(); i++){
+			(*row)->set( i, this->get(i, rownum) );
+		}
+		return 0;
+	}
 }
 
-void array2D::getCol( int colnum, array1D *col ) const{
-    if (col){
-        delete col;
-        col = NULL;
-    }
-    col = new array1D( this->dim2() );
-    
-    //for a fixed column number, j goes through the rows (y-values)
-    for (int j = 0; j < col->size(); j++){
-        col->set( j, this->get(colnum, j) );
-    }
+int array2D::getCol( int colnum, array1D **col ) const{
+    if (colnum >= dim1() || colnum < 0){ 
+		cerr << "Error in array2D::getCol. column number " << colnum << " too big or below zero." << endl; 
+		return 1;
+	}
+	if (this->dim2()==0){
+		cerr << "Error in array2D::getCol. array2D's dimension2 is zero" << endl; 
+		return 2;
+	}
+
+    delete (*col);
+    (*col) = new array1D( this->dim2() );
+ 
+	if (!(*col)){ 
+		cerr << "Error in array2D::getCol. Could not allocate column." << endl; 
+		return 3;
+	}else{
+		//for a fixed column number, j goes through the rows (y-values)
+		for (int j = 0; j < (*col)->size(); j++){
+			(*col)->set( j, this->get(colnum, j) );
+		}
+		return 0;
+	}
 }
 
 //-----------------------------------------------------setRow/setCol
@@ -576,7 +596,8 @@ void array2D::setRow( int rownum, array1D *row ){
     if (!row){
         cerr << "Error in array2D::setRow. Row not allocated." << endl;
     }else if (row->size() != dim1()){
-        cerr << "Error in array2D::setRow. Dimensions don't match." << endl;
+        cerr << "Error in array2D::setRow. Dimensions don't match. (row size="
+			<< row->size() << ", internal dim1=" << dim1() << ")" << endl;
     }else{
         //for a fixed row, i goes through columns (x-values)
         for (int i = 0; i < row->size(); i++){
@@ -589,7 +610,8 @@ void array2D::setCol( int colnum, array1D *col ){
     if (!col){
         cerr << "Error in array2D::setRow. Row not allocated." << endl;
     }else if (col->size() != dim2()){
-        cerr << "Error in array2D::setRow. Dimensions don't match." << endl;
+        cerr << "Error in array2D::setRow. Dimensions don't match. (col size="
+			<< col->size() << ", internal dim1=" << dim2() << ")" << endl;
     }else{
         //for a fixed column number, j goes through the rows (y-values)
         for (int j = 0; j < col->size(); j++){
@@ -601,13 +623,17 @@ void array2D::setCol( int colnum, array1D *col ){
 //------------------------------------------------------------- getASCIIdata
 std::string array2D::getASCIIdata() const{
     ostringstream osst;
-    osst << "2D data, dim1=" << dim1() << ", dim2=" << dim2() << ", size=" << size() << endl;
-	for (int j = 0; j<dim2(); j++){
-		osst << " [";
-	    for (int i = 0; i<dim1(); i++) {
-			osst << " " << get(i, j);
+	if (size() == 0) {
+  		osst << "2D data has size zero." << endl;
+	}else{
+		osst << "2D data, dim1=" << dim1() << ", dim2=" << dim2() << ", size=" << size() << endl;
+		for (int j = 0; j<dim2(); j++){
+			osst << " [";
+			for (int i = 0; i<dim1(); i++) {
+				osst << " " << get(i, j);
+			}
+			osst << "]" << endl;
 		}
-		osst << "]" << endl;
 	}
     return osst.str();
 }
@@ -615,6 +641,8 @@ std::string array2D::getASCIIdata() const{
 
 //-------------------------------------------------------------- writeToTiff
 // (needs TIFFLIB installation)
+// ATTENTION: libtiff is not explicitly thread-safe
+//			be sure to use mutexes when writing to disk
 //
 // scaleFlag 0: direct output of values, 
 //				cut off values larger than 2^16-1 = 65535
@@ -634,7 +662,7 @@ int array2D::writeToTiff( std::string filename, int scaleFlag ) const{
     }
 
     
-	TIFF *out= TIFFOpen(filename.c_str() ,"w");
+	TIFF *out = TIFFOpen(filename.c_str() ,"w");
 	if(out)
 	{
 		uint32 width = (uint32) dim1();
@@ -705,7 +733,7 @@ int array2D::writeToTiff( std::string filename, int scaleFlag ) const{
 		
 		cout << "'" << filename << "' written to disc!" << endl;
 		
-		delete tifdata;
+		delete[] tifdata;
 		TIFFClose(out);
 		return 0;
 	}else{
@@ -817,8 +845,7 @@ int array2D::writeToASCII( std::string filename ) const{
 
 //--------------------------------------------------------------------arraydata::readFromHDF5
 void array2D::readFromHDF5( std::string rfilename ){
-	if ( verbose() ) 
-		cout << "reading from HDF5 file " << rfilename << endl;
+	cout << "reading from HDF5 file " << rfilename << endl;
 	
 	hid_t       file;
 //    hid_t       space;
@@ -828,9 +855,6 @@ void array2D::readFromHDF5( std::string rfilename ){
 	double		*rdata = new double[size()];
 	
 	string dataset = "data";
-	
-	
-	
 	
 	/*
 	 * Get datatype and dataspace identifiers,  
@@ -854,8 +878,6 @@ void array2D::readFromHDF5( std::string rfilename ){
 	 */
 	
 	
-	
-	
 	// open file and dataset using the default properties
     file = H5Fopen (rfilename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
     dset = H5Dopen (file, dataset.c_str(), H5P_DEFAULT);
@@ -870,12 +892,9 @@ void array2D::readFromHDF5( std::string rfilename ){
     status = H5Fclose (file);
 	
 	//put data into private variable
-	if (p_data){
-        delete []p_data;
-        p_data = 0;
-    }
-	p_data = rdata;
+	this->arraydata::copy( rdata, size() );
 	
+	delete []rdata;
 	//set dimension!!!!!
 }
 
@@ -1045,10 +1064,8 @@ double array3D::get( unsigned int i, unsigned int j, unsigned int k ) const{
 	if ( i < dim1() && j < dim2() && k < dim3() ) {
 		return get_atAbsoluteIndex( k*dim1()*dim2() + j*dim1() + i );
 	} else {
-		if (verbose()){
-			std::cerr << "Error in array3D! Index (" << i << ", " << j << ", " << k 
-				<< ") is larger than dimension (" << dim1() << ", " << dim2() << ", " << dim3() << ")." << endl;
-		}
+		std::cerr << "Error in array3D! Index (" << i << ", " << j << ", " << k 
+			<< ") is larger than dimension (" << dim1() << ", " << dim2() << ", " << dim3() << ")." << endl;
 		return 0.;
 	}
 }
@@ -1057,10 +1074,8 @@ void array3D::set( unsigned int i, unsigned int j, unsigned int k, double value 
 	if ( i < dim1() && j < dim2() && k < dim3() ) {
 		set_atAbsoluteIndex( k*dim1()*dim2() + j*dim1() + i, value);
 	} else {
-		if (verbose()){
-			std::cerr << "Error in array3D! Index (" << i << ", " << j  << ", " << k 
-				<< ") is larger than dimension (" << dim1() << ", " << dim2() << ", " << dim3() << ")." << endl;
-		}
+		std::cerr << "Error in array3D! Index (" << i << ", " << j  << ", " << k 
+			<< ") is larger than dimension (" << dim1() << ", " << dim2() << ", " << dim3() << ")." << endl;
 	}
 }
 
@@ -1094,18 +1109,22 @@ void array3D::setDim3( unsigned int size_dim3 ){
 //------------------------------------------------------------- getASCIIdata
 string array3D::getASCIIdata() const{
     ostringstream osst;
-    osst << "3D data, dim1=" << dim1() << ", dim2=" << dim2() << ", dim3=" << dim3() << ", size=" << size() << endl;
-	for (int k = 0; k<dim3(); k++){
-		osst << " [[" << endl;
-		for (int j = 0; j<dim2(); j++){
-            osst << "  [";
-            for (int i = 0; i<dim1(); i++) {
-                osst << " " << get(i, j, k);
-            }//k
-            osst << "]" << endl;
-        }//j
-		osst << "]]" << endl;
-	}//i
+	if (size() == 0) {
+  		osst << "3D data has size zero." << endl;
+	}else{
+		osst << "3D data, dim1=" << dim1() << ", dim2=" << dim2() << ", dim3=" << dim3() << ", size=" << size() << endl;
+		for (int k = 0; k<dim3(); k++){
+			osst << " [[" << endl;
+			for (int j = 0; j<dim2(); j++){
+				osst << "  [";
+				for (int i = 0; i<dim1(); i++) {
+					osst << " " << get(i, j, k);
+				}//k
+				osst << "]" << endl;
+			}//j
+			osst << "]]" << endl;
+		}//i
+	}
     return osst.str();
 }
 
@@ -1128,25 +1147,6 @@ int array3D::writeToASCII( std::string filename ) const{
 
 
 //*********************************************************************************
-//lower level FFT routine performs real-to-complex transform
-//input: array1D's data, output: both real and imag parts are returned
-
-FourierTransformer::FourierTransformer(){
-    verbose = 0;
-}
-
-
-int FourierTransformer::transform( array1D *real, array1D *imag, int direction ){
-    int retval = 0;
-
-    if (verbose) {
-        cout << "BEFORE TRANSFORM REAL: " << real->getASCIIdata() << endl;
-        cout << "BEFORE TRANSFORM IMAG: " << imag->getASCIIdata() << endl;
-        real->writeToASCII("/Users/feldkamp/Desktop/before_trafo_real.txt");
-        imag->writeToASCII("/Users/feldkamp/Desktop/before_trafo_imag.txt");
-        
-    }
-
     //FFTW comments from official documentation:
     //http://www.fftw.org/fftw3_doc/Complex-One_002dDimensional-DFTs.html
     //
@@ -1171,70 +1171,232 @@ int FourierTransformer::transform( array1D *real, array1D *imag, int direction )
          fftw_destroy_plan(p);
          fftw_free(in); fftw_free(out);
     */
+
+//------------------------------------------------------------- constructor
+FourierTransformer::FourierTransformer( array1D *real, array1D *imag ){
+    verbose = 0;
+	p_forward_plan = NULL;
+	p_backward_plan = NULL;
+	
+	p_n = real->size();
+	
+	if ( p_n != imag->size() ){
+		cerr << "Error in FourierTransformer constructor. Sizes of real (" << real->size() 
+			<< ") and imag (" << imag->size() << ") don't match!";
+	}
+	
+	if ( p_n < 0 ){
+		cerr << "Error in FourierTransformer constructor. Size of real is below zero." << endl;
+		return;
+	}
+	
+    //allocate fftw-optimized memory for in and out vectors
+	p_in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * p_n);
+    p_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * p_n);
+
+	//FIRST, create fftw plans to get ready for transform
+	createPlans();	
+		
+	//THEN, fill data into input vector
+	for (int i=0; i<p_n; i++) {
+		p_in[i][0] = real->get(i);
+		p_in[i][1] = imag->get(i);  
+	}
+	
+	if (verbose) {
+		cout << "FourierTransformer::transform, before transform, real: " << real->getASCIIdata() << endl;
+		cout << "FourierTransformer::transform, before transform, imag: " << imag->getASCIIdata() << endl;
+	}
+	
+}
+
+FourierTransformer::~FourierTransformer(){
+    fftw_free(p_in);
+    fftw_free(p_out);
+	destroyPlans();
+}
+
+
+//------------------------------------------------------------- createNewPlan
+void FourierTransformer::createPlans(){
+	
+	if (verbose){
+		cout << "FourierTransformer is creating plans for FFT" << endl;
+	}
+	
+	//set up fftw plan input
+    unsigned int flags = FFTW_MEASURE;         	//usually FFTW_MEASURE or FFTW_ESTIMATE
+                                                // FFTW_MEASURE will yield faster transform
+												// but plans need to be saved for this
+	
+    //create plans (the most general and straight-forward case)
+    p_forward_plan = fftw_plan_dft_1d(p_n, p_in, p_out, FFTW_FORWARD, flags);
+	p_backward_plan = fftw_plan_dft_1d(p_n, p_in, p_out, FFTW_BACKWARD, flags);
+	
+	//alternative plans.... may be useful for optimization
+    //fftw_plan plan = fftw_plan_dft_r2c_1d(n, in, out, flags); 
+    //fftw_plan plan = fftw_plan_dft_r2c(int rank, const int *n, double *in, fftw_complex *out, unsigned int flags);
+}
+
+
+//------------------------------------------------------------- destroyPlan
+void FourierTransformer::destroyPlans(){
+    fftw_destroy_plan(p_forward_plan);
+	fftw_destroy_plan(p_backward_plan);
+}
+
+
+
+
+//------------------------------------------------------------- transform
+int FourierTransformer::transform( int direction ){
+
+	if (verbose) { cout << "FourierTransformer::transform performing FFT. " << endl; }
+
+    //execute fft using the 'new-array execute functions' with the known plans
+	if (direction>=0) {
+		fftw_execute( p_forward_plan );
+		//fftw_execute_dft( p_forward_plan, p_in, p_out );
+	}else{
+		fftw_execute( p_backward_plan );
+		//fftw_execute_dft( p_backward_plan, p_in, p_out );
+    }
+	
+	if (verbose) { cout << "FourierTransformer::transform done." << endl; }
     
+    return 0;
+}
+
+
+
+//------------------------------------------------------------- transform
+//lower level FFT routine performs real-to-complex transform
+//input: array1D's data, output: both real and imag parts are returned
+//-------------------------------------------------------------
+int FourierTransformer::transformWithNewPlans( int direction ){
+    int retval = 0;
+
     //set up fftw plan input
-    int n = real->size();                   //powers of 2 are especially fast!
-    //double *in;
-    fftw_complex *in;
-    fftw_complex *out;
     int sign = 0;
-    unsigned int flags = FFTW_ESTIMATE;             //usually FFTW_MEASURE or FFTW_ESTIMATE
-                                                // FFTW_MEASURE will be faster, but plans need to be saved for this
-                                                // --> implement for final version
+    unsigned int flags = FFTW_ESTIMATE;			//usually FFTW_MEASURE or FFTW_ESTIMATE
     
     if (direction>=0){
         sign = FFTW_FORWARD;
     }else{
         sign = FFTW_BACKWARD;
     }
-    
-    //allocate fftw-optimized memory for in and out vectors
-    in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n);
-    out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n);
-    
-    //create plan
-    //fftw_plan plan = fftw_plan_dft_r2c_1d(n, in, out, flags); 
-    fftw_plan plan = fftw_plan_dft_1d(n, in, out, sign, flags);
-    //fftw_plan plan = fftw_plan_dft_r2c(int rank, const int *n, double *in, fftw_complex *out, unsigned int flags);
 
-    //fill data into input vector
-    for (int i=0; i<n; i++) {
-        in[i][0] = real->get(i);
-        in[i][1] = 0;        
-    }
+    //create plan
+    fftw_plan plan = fftw_plan_dft_1d(p_n, p_in, p_out, sign, flags);
 
     //execute fft
     fftw_execute( plan );
     
-    //feed 'out' vector back into the argument arrays that were passed
-    //note that r2c_1d output is fast, but has changed output size (int)n/2+1;
-    int n_out = n;
-    delete real;
-    real = new array1D(n_out);
-    delete imag;
-    imag = new array1D(n_out);
-    
-    for (int i=0; i<n_out; i++) {               
-        real->set(i, out[i][0]);                  //real part
-        imag->set(i, out[i][1]);                  //imag part
-    }
-    
     //clean up
     fftw_destroy_plan(plan);
-    fftw_free(in);
-    fftw_free(out);
-    
-    if (verbose) {
-        cout << "AFTER TRANSFORM REAL: " << real->getASCIIdata() << endl;
-        cout << "AFTER TRANSFORM IMAG: " << imag->getASCIIdata() << endl;
-        real->writeToASCII("/Users/feldkamp/Desktop/after_trafo_real.txt");
-        imag->writeToASCII("/Users/feldkamp/Desktop/after_trafo_imag.txt");
-    }
-    
+	
     return retval;
 }
 
 
 
+//------------------------------------------------------------- getData
+void FourierTransformer::getData( array1D **real, array1D **imag ){
+    //feed 'out' vector back into the argument arrays that were passed
+    delete (*real);
+    (*real) = new array1D(p_n);
+    delete (*imag);
+    (*imag) = new array1D(p_n);
+    
+    for (int i=0; i<p_n; i++) {               
+        (*real)->set(i, p_out[i][0]);                  //real part
+        (*imag)->set(i, p_out[i][1]);                  //imag part
+    }
+    
+    if (verbose) {
+        cout << "FourierTransformer::transform, after transform, real: " << (*real)->getASCIIdata() << endl;
+        cout << "FourierTransformer::transform, after transform, imag: " << (*imag)->getASCIIdata() << endl;
+    }
+}
+
+array1D FourierTransformer::getReal(){
+    //feed 'out' vector back into the argument arrays that were passed
+    array1D real = array1D(p_n);
+    for (int i=0; i<p_n; i++) {               
+        real.set(i, p_out[i][0]);
+    }
+	
+    if (verbose) {
+        cout << "FourierTransformer::transform, after transform, real: " << real.getASCIIdata() << endl;
+    }
+	return real;
+}
+
+array1D FourierTransformer::getImag(){
+    //feed 'out' vector back into the argument arrays that were passed
+    array1D imag = array1D(p_n);
+    for (int i=0; i<p_n; i++) {               
+        imag.set(i, p_out[i][1]);
+    }
+	
+    if (verbose) {
+        cout << "FourierTransformer::transform, after transform, imag: " << imag.getASCIIdata() << endl;
+    }
+	return imag;
+}
 
 
+////------------------------------------------------------------- getPlan
+//fftw_plan FourierTransformer::getForwardPlan() const{
+//	if (!p_forward_plan){
+//		cerr << "Warning in FourierTransformer::getForwardPlan()! No plan available." << endl;
+//	}
+//	return p_forward_plan;
+//}
+//
+////------------------------------------------------------------- setPlan
+//void FourierTransformer::setForwardPlan(fftw_plan plan){
+//	if (!p_backward_plan){
+//		cerr << "Warning in FourierTransformer::getBackwardPlan()! No plan available." << endl;
+//	}
+//	p_forward_plan = plan;
+//}
+//
+//
+////------------------------------------------------------------- getPlan
+//fftw_plan FourierTransformer::getBackwardPlan() const{
+//	return p_backward_plan;
+//}
+//
+////------------------------------------------------------------- setPlan
+//void FourierTransformer::setBackwardPlan(fftw_plan plan){
+//	p_backward_plan = plan;
+//}
+//
+////------------------------------------------------------------- getPlanSize
+//int FourierTransformer::getPlanSize() const{
+//	return p_plansize;
+//}
+//
+////------------------------------------------------------------- setPlanSize
+//void FourierTransformer::setPlanSize(int size){
+//	p_plansize = size;
+//}
+
+
+//
+//FourierTransformer::FourierTransformer( fftw_plan forwardplan, fftw_plan backwardplan, int n ){
+//    verbose = 1;
+//	p_plansize = n;
+//	if (!forwardplan || !backwardplan) {		//no valid plans there? --> create default plans to initialize
+//		cerr << "FourierTransformer constructor: one or more FFTW plans not found." << endl;
+//		createPlans();		
+//	}else{										//otherwise: use the one that have been passed to here
+//		if (verbose) { 
+//			cout << "FourierTransformer constructor setting forwardPlan=" << getForwardPlan() 
+//				<< ", backwardPlan=" << getBackwardPlan() << endl; 
+//		}
+//		p_forward_plan = forwardplan;
+//		p_backward_plan = backwardplan;
+//	}
+//}

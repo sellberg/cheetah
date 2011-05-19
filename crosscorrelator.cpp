@@ -203,9 +203,10 @@ void CrossCorrelator::initPrivateVariables(){
 	phiave = NULL;
 	crossCorrelation = NULL;	    
     table = NULL;
-    
+	
     p_debug = 0;      
-    check1D = NULL;
+//    check1D = NULL;
+	
 }
 
 
@@ -763,22 +764,22 @@ double CrossCorrelator::getCrossCorrelation(unsigned index1, unsigned index2, un
 // ***********************************************************************************
 // CROSS-CORRELATION ALGORITHM 1 (_FAST)
 // ***********************************************************************************
-int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar, double number_q, double number_phi){
+int CrossCorrelator::calculatePolarCoordinates_FAST(array2D **polar, int number_q, int number_phi){
 
     //call the more specific function with some reasonable default values
     double start_q = 3*deltaq();    //default: start at a close-to but non-zero value
     double stop_q = qmax();         //default: go out to the maximum q
     double start_phi = 0;           //default: full circle
     double stop_phi = 360;    
-    return this->calculatePolarCoordinates_FAST(polar, start_q, stop_q, number_q, start_phi, stop_phi, number_phi);
+    return calculatePolarCoordinates_FAST(polar, number_q, start_q, stop_q, number_phi, start_phi, stop_phi);
 }
 
+
 //----------------------------------------------------------------------------transform to polar coordinates
-int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar, 
-                                                        double start_q, double stop_q, double number_q,
-                                                        double start_phi, double stop_phi, double number_phi){
-                                                        
-    cout << "calculatePolarCoordinates_FAST" << endl;
+int CrossCorrelator::calculatePolarCoordinates_FAST(array2D **polar, 
+                                                        int number_q, double start_q, double stop_q,
+                                                        int number_phi, double start_phi, double stop_phi ){
+	if( debug() ){ cout << "CrossCorrelator::calculatePolarCoordinates_FAST" << endl; }
     int retval = 0;
     
     //write output of the intermediate files? (all zero by default, turn on for debugging or whatever)
@@ -790,22 +791,18 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar,
     double step_phi = (stop_phi - start_phi)/number_phi;
     
     if (step_q < 0)
-        cerr << "Error in CrossCorrelator::calculatePolarCoordinates_Jan -- step_r value " 
+        cerr << "Error in CrossCorrelator::calculatePolarCoordinates_FAST -- step_r value " 
             << step_q << " is smaller than zero." << endl;
     if (step_phi < 0)
-        cerr << "Error in CrossCorrelator::calculatePolarCoordinates_Jan -- step_phi value " 
+        cerr << "Error in CrossCorrelator::calculatePolarCoordinates_FAST -- step_phi value " 
             << step_phi << " is smaller than zero." << endl;
     
-    if (polar){
-        delete polar;
-        polar = NULL;
-    }
-    polar = new array2D( (int) floor(number_phi+0.5), (int) floor(number_q+0.5) );
-
-    if (debug()) {
-        check1D = new array1D(*data);
-    }
-
+	delete (*polar);
+    (*polar) = new array2D( (int) floor(number_phi+0.5), (int) floor(number_q+0.5) );
+	if (!(*polar)){
+		cerr << "Error in CrossCorrelator::calculatePolarCoordinates_FAST. polar couldn't be allocated." << endl;
+		return 1;
+	}
 
     double xcoord = 0.;
     double ycoord = 0.;
@@ -827,31 +824,242 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D* polar,
             value = lookup( xcoord, ycoord );
             
 			//assign the new values (note the functional determinant q to account for bins growing as q grows)
-			polar->set(pcounter, qcounter, value * q);
+			(*polar)->set(pcounter, qcounter, value * q);
 		}
 	}
 
     if (output_data_ASCII){ cout << "data: " << data->getASCIIdata() << endl; }
-    if (output_polar_ASCII){ cout << "polar: " << polar->getASCIIdata() << endl; }
-    if (output_polar_TIF){ polar->writeToTiff( outputdir()+"polar.tif" ); }            
+    if (output_polar_ASCII){ cout << "polar: " << (*polar)->getASCIIdata() << endl; }
+    if (output_polar_TIF){ (*polar)->writeToTiff( outputdir()+"polar.tif" ); }            
     
+	//....some debugging output...
+
     if (debug()) {
-        int l = (int) floor(sqrt(check1D->size() ));
-        array2D *check2D = new array2D( check1D, l, l );
-        check2D->writeToTiff(outputdir()+"check2D.tif");
-        delete check2D;
-        delete check1D;
+		cout << "polarCoordinates done. dimensions=(" << (*polar)->dim1() << " x " << (*polar)->dim2() << ")" << endl;
     }
+	
+    return retval;
+}
+
+
+
+//----------------------------------------------------------------------------calculate XCCA
+int CrossCorrelator::calculateXCCA_FAST( array2D **polar, array2D **corr ){
+	if(debug()){ 
+		cout << "CrossCorrelator::calculateXCCA_FAST ("<< (*polar)->dim1() << ", " << (*polar)->dim2() << ")" << endl; 
+	}
+	
+	//do some sanity checks first
+	if (!(*polar)) {
+  		cerr << "Error in CrossCorrelator::calculateXCCA_FAST. Polar coordinate matrix not allocated. Aborting." << endl;
+		return 1;
+	}
+	if ((*polar)->dim1()==0 || (*polar)->dim2()==0) {
+		cerr << "Error in CrossCorrelator::calculateXCCA_FAST. Polar coordinate matrix dimension is zero. Aborting." << endl;
+		return 2;
+	}
+	
+	//create a new output array 'corr'
+	delete (*corr);
+	(*corr) = new array2D( (*polar)->dim1(), (*polar)->dim2() );
+	if (!(*corr)) {
+		cerr << "Error in CrossCorrelator::calculateXCCA_FAST. Output 'corr' could not be allocated. Aborting." << endl;
+		return 3;
+	}
+
+	//calculate the auto-correlation for all rings
+	for(int q_ct=0; q_ct < (*polar)->dim2(); q_ct++){							
+
+		//get one row out of the polar coordinates (fixed q)
+		array1D *f = new array1D;
+		if (!f){ 
+			cerr << "Error in CrossCorrelator::calculateXCCA_FAST. Single row 'f' could not be allocated. Aborting." << endl;
+			return 4;
+		}
+		(*polar)->getRow( q_ct, &f);
+		if (f->size() == 0) {
+			cerr << "Error in CrossCorrelator::calculateXCCA_FAST. Could not get single row. Aborting." << endl;
+			return 5;
+		}		
+		
+		//perform autocorrelation --> compute via FFT
+		if (debug()>1){ cout << "#" << q_ct << ", f before FFT: " << f->getASCIIdata() << endl; }
+		autocorrelateFFT( f );          // should yield the same result as correlateFFT( f, f );
+		if (debug()>1){ cout << "#" << q_ct << ", f after FFT: " << f->getASCIIdata() << endl; }
+		
+		//feed result into corr
+		(*corr)->setRow( q_ct, f );
+		
+		delete f;
+		f = NULL;
+	}//for
+	
+	//writing Tiff not explicitly thread-safe... is this a problem for the cheetah?
+	//corr->writeToTiff(outputdir()+"corr_scaled.tif", 1);            //dump scaled output from correlation
+		
+    return 0;
+}
+
+
+
+
+//----------------------------------------------------------------------------correlate
+// compute 1D correlation corr(f,g) using FFT, result is written to f
+int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
+    int retval = 0;
+
+	if (!f || !g) {
+  		cerr << "CrossCorrelator::autocorrelateFFT. Input not allocated." << endl;
+		return 1;
+	}
+	if (f->size()==0 || g->size()==0) {
+  		cerr << "CrossCorrelator::autocorrelateFFT. Input has size zero." << endl;
+		return 2;
+	}
+	    
+    //-------------------------------------------------------------------------
+    //   Correlation Theorem:
+    //   multiplying the FT of one function by the complex conjugate 
+    //   of the FT of the other gives the FT of their correlation
+    //
+    //   http://mathworld.wolfram.com/Cross-CorrelationTheorem.html
+    //-------------------------------------------------------------------------
+    
+    FourierTransformer *ft = NULL;
+        
+    // transform f -> F
+    array1D *f_real = new array1D( *f );
+    array1D *f_imag = new array1D(f->size());				// initialized to zeros --> f is real
+    ft = new FourierTransformer( f_real, f_imag );
+    int f_fail = ft->transform( 1 );
+	ft->getData( &f_real, &f_imag );
+	delete ft;
+    if (f_fail){
+        cerr << "Error in CrossCorrelator::correlateFFT. Transform (f->F) failed." << endl;
+        retval++;
+    }
+        
+    // transform g -> G
+    array1D *g_real = new array1D( *g );
+    array1D *g_imag = new array1D(g->size());				// initialized to zeros --> g is real
+	ft = new FourierTransformer( g_real, g_imag );
+    int g_fail = ft->transform( 1 );
+	ft->getData( &g_real, &g_imag );
+	delete ft;
+    if (g_fail){
+        cerr << "Error in CrossCorrelator::correlateFFT. Transform (g->G) failed." << endl;
+        retval++;
+    }
+
+    // compute F * G_cc (complex conjugate)
+    // if F = a+ib, G = c+id, then FG_cc = ac + bd + ibc - iad
+    array1D *FG_real = new array1D( g_real->size() );
+    array1D *FG_imag = new array1D( g_real->size() );
+    for (int i=0; i<f_real->size(); i++) {
+        FG_real->set( i,   f_real->get(i)*g_real->get(i) + f_imag->get(i)*g_imag->get(i)   );   // ac + bd
+        FG_imag->set( i,   f_imag->get(i)*g_real->get(i) - f_real->get(i)*g_imag->get(i)   );   // i(bc - ad)
+    }
+    
+    // transform the result back to find the correlation
+    // transform FG -> corr(f,g)
+	ft = new FourierTransformer( FG_real, FG_imag );
+    int FG_fail = ft->transform( -1 );
+	ft->getData( &FG_real, &FG_imag );
+	delete ft;
+    if (FG_fail){
+        cerr << "Error in CrossCorrelator::correlateFFT. Transform (FG->corr) failed." << endl;
+        retval++;
+    }
+    
+    
+    
+    // return result in original argument arrays
+    f->copy( *FG_real );
+    g->copy( *FG_imag );
+    
+    //normalize
+    f->multiplyByFactor( 1/((double)f->size()) );
+    g->multiplyByFactor( 1/((double)f->size()) );
+
+    
+    delete f_real;
+    delete f_imag;    
+    delete g_real;
+    delete g_imag;
+    delete FG_real;
+    delete FG_imag;
+    
     
     return retval;
 }
 
 
-//---------------------------------------------------------------------------- lookup
-// rearrange data into a fast lookup table to get values fast using 
-// val=lookup(x,y)
-// dimensions of the argument 'table' determines the accuracy of the lookup
-//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------autocorrelate
+// compute 1D autocorrelation corr(f,f) using FFT, result is written to f
+int CrossCorrelator::autocorrelateFFT( array1D *f ){         
+    int retval = 0;
+    
+	if (!f) {
+  		cerr << "CrossCorrelator::autocorrelateFFT. Input not allocated." << endl;
+		return 1;
+	}
+	if (f->size()==0) {
+  		cerr << "CrossCorrelator::autocorrelateFFT. Input has size zero." << endl;
+		return 2;
+	}
+	
+    //-------------------------------------------------------------------------
+    //   Wiener-Khinchin Theorem:
+    //   the autocorrelation of f is simply given by the Fourier transform 
+    //   of the absolute square of F
+    //   http://mathworld.wolfram.com/Wiener-KhinchinTheorem.html
+    //-------------------------------------------------------------------------
+    
+    FourierTransformer *ft = NULL;
+	
+    //transform forward
+    array1D *f_imag = new array1D(f->size());							// initialized to zeros --> f is real
+	
+	ft = new FourierTransformer(f, f_imag);
+    int fail = ft->transform( 1 );
+	ft->getData( &f, &f_imag );
+	delete ft;
+    if (fail){
+        cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform (forward) failed." << endl;
+        retval++;
+    }
+    
+    //calculate the magnitude squared
+    // if F = a+ib, then |F|^2 = a^2 + b^2
+    for (int i=0; i < f->size(); i++) {
+        f->set( i,   f->get(i)*f->get(i) + f_imag->get(i)*f_imag->get(i)   );
+    }    
+    f_imag->zero();                 //set to zero for back transform
+
+    //transform back
+    // after inverse transform, result is stored in original argument array f
+    ft = new FourierTransformer( f, f_imag );
+	int fail_inv = ft->transform( -1 );    
+	ft->getData( &f, &f_imag );
+	delete ft;
+    if (fail_inv){
+        cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform (backward) failed." << endl;
+        retval++;
+    }
+    
+	//normalize
+    f->multiplyByFactor( 1/((double)f->size()) ); 
+    
+    delete f_imag;
+    return retval;	   
+}
+
+
+
+
+
+
+//----------------------------------------------------------------------------lookup
 double CrossCorrelator::lookup( double xcoord, double ycoord ) {
 
     double val = 0.;    //return data value at the given coordinates
@@ -867,23 +1075,23 @@ double CrossCorrelator::lookup( double xcoord, double ycoord ) {
     
     if ( !table ){
         cerr << "Error in lookup! No lookup table was allocated." << endl;
-    } else if ( (ix < 0) || (ix > table->dim1()) ){
+    } else if ( (ix < 0) || (ix > table->dim1()-1) ){
         cerr << "Error in lookup! xcoord=" << xcoord << " is too large or too small.";
-        cerr << "(ix=" << ix << ", table dimx=" << table->dim1() << endl;
-    } else if ( (iy < 0) || (iy > table->dim2()) ){
+        cerr << " (ix=" << ix << ", table dimx=" << table->dim1() << ")" << endl;
+    } else if ( (iy < 0) || (iy > table->dim2()-1) ){
         cerr << "Error in lookup! ycoord=" << ycoord << " is too large or too small.";
-        cerr << "(iy=" << iy << ", table dimy=" << table->dim2() << endl;
+        cerr << " (iy=" << iy << ", table dimy=" << table->dim2() << ")" << endl;
     } else {
         index = (int) floor( table->get(ix, iy) + 0.5 );
         val = data->get( index );
     }
 
     //keep track of where the value was read in a separate 'check1D' array
-    if( debug() ){
-        check1D->set(index, 65535);         
+    if( debug()>2 ){
+        //check1D->set(index, 65535);         
         cout << "lookup (" << xcoord << ", " << ycoord 
             << ") --> LUT: (xc,yc)=(" << xc << ", " << yc 
-            << ")=>(" << ix << ", " << iy << ") "
+            << ") ==> (" << ix << ", " << iy << ") "
             << "--> index=" << index << ", --> val=" << val << endl;
     }
 
@@ -892,18 +1100,25 @@ double CrossCorrelator::lookup( double xcoord, double ycoord ) {
 
 
 
-//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------setlookupTable
 void CrossCorrelator::setLookupTable( array2D *LUT ){
 	table->copy(*LUT);										//store a copy locally
 }
 
-void CrossCorrelator::setLookupTable( int *cLUT, unsigned int LUT_dim1, unsigned int LUT_dim2 ){
-	table->arraydata::copy(cLUT, LUT_dim1*LUT_dim2);		//store a copy locally
+void CrossCorrelator::setLookupTable( const int *cLUT, unsigned int LUT_dim1, unsigned int LUT_dim2 ){
+	unsigned int tablelength = LUT_dim1*LUT_dim2;
+	table->arraydata::copy(cLUT, tablelength);		//store a copy in 'table' locally
 	table->setDim1(LUT_dim1);								//and set dimensions
 	table->setDim2(LUT_dim2);
 }
 
-int CrossCorrelator::createLookupTable( int Nx, int Ny ){
+
+//----------------------------------------------------------------------------createLookupTable
+// rearrange data into a fast lookup table to get values fast using 
+// val=lookup(x,y)
+// dimensions of the argument 'table' determines the accuracy of the lookup
+//---------------------------------------------------------------------------- 
+int CrossCorrelator::createLookupTable( int lutNx, int lutNy ){
     int retval = 0;
     
 	if (debug()){ cout << "CrossCorrelator::createLookupTable() begin." << endl; }
@@ -911,19 +1126,19 @@ int CrossCorrelator::createLookupTable( int Nx, int Ny ){
 	if (table) {
   		cerr << "Warning: previous table will be overwritten." << endl;
 		delete table;
-		table = new array2D( Nx, Ny );
+		table = new array2D( lutNx, lutNy );
 	}
 	
     double qx_min = qx->calcMin();
     double qx_max = qx->calcMax();
     double qx_range = fabs(qx_max - qx_min);
-    double qx_stepsize = qx_range/(Nx-1);
+    double qx_stepsize = qx_range/(lutNx-1);
     cout << "qx: min=" << qx_min << ", max=" << qx_max << ", range=" << qx_range << ", step size=" << qx_stepsize << endl;
     
     double qy_min = qy->calcMin();
     double qy_max = qy->calcMax();
     double qy_range = fabs(qy_max - qy_min);    
-    double qy_stepsize = qy_range/(Ny-1);    
+    double qy_stepsize = qy_range/(lutNy-1);    
     cout << "qy: min=" << qy_min << ", max=" << qy_max << ", range=" << qy_range << ", step size=" << qy_stepsize << endl;
     cout << "deltaq=" << deltaq() << ", qmax=" << qmax() << endl;
     
@@ -973,163 +1188,5 @@ int CrossCorrelator::createLookupTable( int Nx, int Ny ){
     return retval;
 }
 
-
-
-
-//----------------------------------------------------------------------------calculate XCCA
-int CrossCorrelator::calculateXCCA_FAST( array2D *polar, array2D *corr ){
-    cout << "calculateXCCA_FAST" << endl;
-    
-    int retval = 0;
-    
-    if (corr)
-        delete corr;
-    corr = new array2D( polar->dim1(), polar->dim2() );
-
-    for(int q_ct=0; q_ct < polar->dim2(); q_ct++){							// r_ct: for all rings
-
-        //get one row out of the polar coordinates (fixed q)
-        array1D *f = new array1D;
-        polar->getRow( q_ct, f);
-        
-        
-        //perform autocorrelation --> compute via FFT
-        if (debug()){ cout << "#" << q_ct << ", f before FFT: " << f->getASCIIdata() << endl; }
-        autocorrelateFFT( f );          // should yield the same result as correlateFFT( f, f );
-        if (debug()){ cout << "#" << q_ct << ", f after FFT: " << f->getASCIIdata() << endl; }
-        
-        //feed result into corr
-        corr->setRow( q_ct, f );
-        
-        delete f;
-	}
-    
-    corr->writeToTiff(outputdir()+"corr_scaled.tif", 1);            //dump scaled output from correlation
-    
-    return retval;
-}
-
-
-
-
-//----------------------------------------------------------------------------correlate
-// compute 1D correlation corr(f,g) using FFT, result is written to f
-int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
-    int retval = 0;
-    
-    //-------------------------------------------------------------------------
-    //   Correlation Theorem:
-    //   multiplying the FT of one function by the complex conjugate 
-    //   of the FT of the other gives the FT of their correlation
-    //
-    //   http://mathworld.wolfram.com/Cross-CorrelationTheorem.html
-    //-------------------------------------------------------------------------
-    
-    
-    FourierTransformer *ft = new FourierTransformer;
-        
-    // transform f -> F
-    array1D *f_real = new array1D( *f );
-    array1D *f_imag = new array1D;
-    int f_fail = ft->transform( f_real, f_imag );
-    delete ft;
-    
-    if (f_fail){
-        cerr << "Error in CrossCorrelator::correlateFFT. Transform (f->F) failed." << endl;
-        retval++;
-    }
-        
-    // transform g -> G
-    array1D *g_real = new array1D( *g );
-    array1D *g_imag = new array1D;
-    int g_fail = ft->transform( g_real, g_imag );
-    if (g_fail){
-        cerr << "Error in CrossCorrelator::correlateFFT. Transform (g->G) failed." << endl;
-        retval++;
-    }
-
-    // compute F * G_cc (complex conjugate)
-    // if F = a+ib, G = c+id, then FG_cc = ac + bd + ibc - iad
-    array1D *FG_real = new array1D( g_real->size() );
-    array1D *FG_imag = new array1D( g_real->size() );
-    for (int i=0; i<f_real->size(); i++) {
-        FG_real->set( i,   f_real->get(i)*g_real->get(i) + f_imag->get(i)*g_imag->get(i)   );   // ac + bd
-        FG_imag->set( i,   f_imag->get(i)*g_real->get(i) - f_real->get(i)*g_imag->get(i)   );   // i(bc - ad)
-    }
-    
-    // transform the result back to find the correlation
-    // transform FG -> corr(f,g)
-    int FG_fail = ft->transform( FG_real, FG_imag, -1 );
-    if (FG_fail){
-        cerr << "Error in CrossCorrelator::correlateFFT. Transform (FG->corr) failed." << endl;
-        retval++;
-    }
-    
-    
-    
-    // return result in original argument arrays
-    f->copy( *FG_real );
-    g->copy( *FG_imag );
-    
-    //normalize
-    f->multiplyByFactor( 1/((double)f->size()) );
-    g->multiplyByFactor( 1/((double)f->size()) );
-    
-    delete ft;
-    
-    delete f_real;
-    delete f_imag;    
-    delete g_real;
-    delete g_imag;
-    delete FG_real;
-    delete FG_imag;
-    
-    
-    return retval;
-}
-
-
-//----------------------------------------------------------------------------autocorrelate
-// compute 1D autocorrelation corr(f,f) using FFT, result is written to f
-int CrossCorrelator::autocorrelateFFT( array1D *f ){         
-    int retval = 0;
-    
-    //-------------------------------------------------------------------------
-    //   Wiener-Khinchin Theorem:
-    //   the autocorrelation of f is simply given by the Fourier transform 
-    //   of the absolute square of F
-    //   http://mathworld.wolfram.com/Wiener-KhinchinTheorem.html
-    //-------------------------------------------------------------------------
-    
-    //transform forward
-    array1D *f_imag = new array1D;
-    FourierTransformer *ft = new FourierTransformer;
-    int fail = ft->transform( f, f_imag, 1 );    
-    if (fail){
-        cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform (forward) failed." << endl;
-        retval++;
-    }
-    
-    //calculate the magnitude squared
-    // if F = a+ib, then |F|^2 = a^2 + b^2
-    for (int i=0; i < f->size(); i++) {
-        f->set( i,   f->get(i)*f->get(i) + f_imag->get(i)*f_imag->get(i)   );
-    }    
-    f_imag->zero();                 //set to zero for back transform
-
-    //transform back
-    // after inverse transform, result is stored in original argument array f
-    int fail_inv = ft->transform( f, f_imag, -1 );    
-    if (fail_inv){
-        cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform (backward) failed." << endl;
-        retval++;
-    }
-    
-    f->multiplyByFactor( 1/((double)f->size()) ); 
-    
-    delete ft;   
-    delete f_imag;
-    return retval;   
-}
 
 
