@@ -77,7 +77,7 @@ void *worker(void *threadarg) {
 	 */
 	nameEvent(threadInfo, global);
 		
-	
+
 	/*
 	 *	Subtract darkcal image (static electronic offsets)
 	 */

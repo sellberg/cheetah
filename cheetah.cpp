@@ -154,6 +154,7 @@ void beginjob() {
 	global.readWatermask(global.waterfinder.peaksearchFile);
 	global.readBackgroundmask(global.backgroundfinder.peaksearchFile);
 	global.readAttenuations(global.attenuationFile);
+	global.createLookupTable();	// <-- important that this is done after detector geometry is determined
 }
 
 
@@ -522,7 +523,7 @@ void event() {
 
 	// Avoid fork-bombing the system: wait until we have a spare thread in the thread pool
 	while(global.nActiveThreads >= global.nThreads) {
-		usleep(1000);
+		usleep(100);
 	}
 
 
