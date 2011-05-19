@@ -107,7 +107,7 @@ CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCA
     //set basic properties, just like the default case
     setArraySize(arraylength);
 	//jas: calculate qmax of CArray
-    setQmax(qmaxCArray(qxCArray, qyCArray, arraySize()));
+    setQmax(qmax2CArray(qxCArray, qyCArray, arraySize()));
 	
     //special feature: copy data from array over to internal data structure
     data = new array1D(dataCArray, arraySize());
@@ -656,7 +656,7 @@ void CrossCorrelator::setQmin( double qmin_val ){
 	updateDependentVariables();
 }
 
-double CrossCorrelator::qmaxCArray( float *qxCArray, float *qyCArray, int arraylength ) {
+double CrossCorrelator::qmax2CArray( float *qxCArray, float *qyCArray, int arraylength ) {
 	double qmax = 0;
 	for (int i=0; i<arraylength; i++) {
 		double qtemp = (double) sqrt(qxCArray[i]*qxCArray[i] + qyCArray[i]*qyCArray[i]);
@@ -665,23 +665,12 @@ double CrossCorrelator::qmaxCArray( float *qxCArray, float *qyCArray, int arrayl
 	return qmax;
 }
 
-double CrossCorrelator::qxmaxCArray( float *qxCArray, int arraylength ) {
+double CrossCorrelator::qmax1CArray( float *qCArray, int arraylength ) {
 	double qmax = 0;
 	for (int i=0; i<arraylength; i++) {
 		double qtemp; 
-		if (qxCArray[i] > 0) qtemp = (double) qxCArray[i];
-		else qtemp = (double) -qxCArray[i];
-		if (qtemp > qmax) qmax = qtemp;
-	}
-	return qmax;
-}
-
-double CrossCorrelator::qymaxCArray( float *qyCArray, int arraylength ) {
-	double qmax = 0;
-	for (int i=0; i<arraylength; i++) {
-		double qtemp; 
-		if (qyCArray[i] > 0) qtemp = (double) qyCArray[i];
-		else qtemp = (double) -qyCArray[i];
+		if (qCArray[i] > 0) qtemp = (double) qCArray[i];
+		else qtemp = (double) -qCArray[i];
 		if (qtemp > qmax) qmax = qtemp;
 	}
 	return qmax;

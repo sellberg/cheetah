@@ -48,6 +48,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     
     DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 	
+	/* OLD FUNCTIONALITY MOVED TO setup.cpp
     //jas: calculate center of CArray and shift qx, qy accordingly
 	double x0 = centerX(global->pix_x);
     double y0 = centerY(global->pix_y);
@@ -55,7 +56,8 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
         global->pix_x[i] = global->pix_x[i] - x0;
         global->pix_y[i] = global->pix_y[i] - y0;
     }
-    
+    */
+	
     //create cross correlator object that takes care of the computations
 	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH );
 
@@ -252,42 +254,4 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	
 	DEBUGL1_ONLY cout << "writeXCCA done" << endl;
 }
-
-
-
-//----------------------------------------------------------centerX
-//find center of scattering image in x-direction
-//----------------------------------------------------------
-double centerX( float *qx ) {
-    double center = 0;
-	int quads = 4;
-	// Loop over quads and pick out closest pixel to center
-	for (int i=0; i<quads; i++) {
-		center += (double) qx[8*ROWS*(2*COLS-1)+i*2*ROWS];
-	}
-	cout << "corrected center in X: " << center/quads << endl;
-	return center/quads;
-}
-
-
-//----------------------------------------------------------centerY
-//find center of scattering image in x-direction
-//----------------------------------------------------------
-double centerY( float *qy ) {
-    double center = 0;
-	int quads = 4;
-	// Loop over quads and pick out closest pixel to center
-	for (int i=0; i<quads; i++) {
-		center += (double) qy[8*ROWS*(2*COLS-1)+i*2*ROWS];
-	}
-	cout << "corrected center in Y: " << center/quads << endl;
-	return center/quads;
-}
-
-
-
-
-
-
-
 

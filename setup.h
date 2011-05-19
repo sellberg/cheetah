@@ -64,6 +64,7 @@ public:
 	// Real-space geometry
 	char		geometryFile[1024];		// File containing pixelmap (X,Y coordinate of each pixel in raw data stream)
 	float		pixelSize;			// in micrometers
+	int			useCenterCorrection;	// set to nonzero to shift 0 of pixel array to the center of the square hole
 	
 	// Bad pixel masks
 	int			useBadPixelMask;	// to specify pixels that you know are bad
@@ -114,6 +115,10 @@ public:
 	int			powderthresh;			 // pixels with an ADC value above this threshold will be added to the powder
 	int			saveInterval;			 // powder pattern is repeatedly saved according to this interval
     
+	// Angular averages
+	int			powderSAXS;		// set to nonzero to calculate angular averages of the powder patterns
+	double		deltaqSAXS;			// binning of angular averages, DeltaQ currently determines step size in pixels
+    
     // Correlation analysis
     int         useCorrelation;     // set to nonzero to turn on angular cross correlation module, also controls what correlation algorithm to be used, 1: regular, 2: fast
 	int			autoCorrelationOnly;		// set to nonzero to only calculate autocorrelation (q1=q2)
@@ -126,7 +131,7 @@ public:
 	int		 	*fastCorrelationLUT;		// lookup table (LUT) needed for the fast correlation
 	int			fastCorrelationLUTdim1;		// dim1 of LUT
 	int			fastCorrelationLUTdim2;		// dim2 of LUT
-    
+	
 	// Saving options
 	int			saveRaw;			 // set to save each hit in raw format, in addition to assembled format. Powders are only saved in raw if saveRaw and powdersum are enabled
 	int			hdf5dump;			 // set to write every frame to h5 format 
@@ -161,8 +166,8 @@ public:
 	pthread_mutex_t	nActiveThreads_mutex;		// there should be one mutex variable for each global variable which threads write to.
 	pthread_mutex_t	hotpixel_mutex;
 	pthread_mutex_t	selfdark_mutex;
-	pthread_mutex_t	powdersum1_mutex;
-	pthread_mutex_t	powdersum2_mutex;
+	pthread_mutex_t	powdersumraw_mutex;
+	pthread_mutex_t	powdersumassembled_mutex;
 	pthread_mutex_t correlation_mutex;
     pthread_mutex_t	nhits_mutex;
 	pthread_mutex_t	framefp_mutex;
@@ -180,6 +185,11 @@ public:
 	float			*pix_y;
 	float			*pix_z;
 	float			pix_dx;
+	float			pix_xmax;
+	float			pix_xmin;
+	float			pix_ymax;
+	float			pix_ymin;
+	float			pix_rmax;
 	unsigned		module_rows;
 	unsigned		module_cols;
 	long			image_nx;
@@ -198,22 +208,27 @@ public:
 	unsigned		attenuationCapacity;	// Allocated size of dynamic attenuation array
 	unsigned		nAttenuations;	// Number of attenuations saved in attenuation array
 	int				attenuationOffset;		// Integer to compensate for the offset of nevents w.r.t. the recorded attenuations
-
+	
 	
 	// Common variables
 	int32_t			*darkcal;		//stores darkcal from the file darkcalFile
-	double			*powderRaw;		//stores powder pattern in raw format, WAS int64_t
-	double			*powderAssembled;	//stores the assembled powder pattern, WAS int64_t
-	double			*waterRaw;		//stores powder pattern in raw format, WAS int64_t
-	double			*waterAssembled;	//stores the assembled powder pattern, WAS int64_t
-	double			*iceRaw;		//stores powder pattern in raw format, WAS int64_t
-	double			*iceAssembled;		//stores the assembled powder pattern, WAS int64_t
+	double			*powderRaw;		//stores powder pattern in raw format
+	double			*powderAssembled;	//stores the assembled powder pattern
+	double			*powderAverage;		// stores angular average of powder pattern
+	double			*waterRaw;		//stores powder pattern of water hits in raw format
+	double			*waterAssembled;	//stores the assembled powder pattern of water hits
+	double			*waterAverage;		// stores angular average of powder pattern of water hits
+	double			*iceRaw;		//stores powder pattern of ice hits in raw format
+	double			*iceAssembled;		//stores the assembled powder pattern of ice hits
+	double			*iceAverage;		// stores angular average of powder pattern	of ice hits
 	int16_t			*badpixelmask;		//stores the bad pixel mask from the file badpixelmaskFile
 	float			*hotpixelmask;		//stores the hot pixel mask calculated by the auto hot pixel finder
 	float			*selfdark;		//stores the background calculated by the running (persistant) background subtraction
 	float			*gaincal;		//stores the gain map read from the gaincalFile
 	float			avgGMD;			// what is this?
-	long			npowder;		// number of frames in the powder??
+	long			npowder;		// number of frames in the powder
+	long			nwater;		// number of frames in the water powder
+	long			nice;		// number of frames in the ice powder
 	long			nprocessedframes;	// number of frames that have been processed by the worker program
 	long			nhits;			// number of hits that have been found
 	double			detectorZ;		// position (mm) of the detector along the beam direction
@@ -231,6 +246,7 @@ public:
 	void parseCommandLineArguments(int, char**);	// reads command line arguments
 	void setup(void);				// function that sets parameter values from default/config file/command line arguments
 	void readDetectorGeometry(char *);		// following functions read the h5 files in raw format
+	float pixelCenter( float *pixel_array ); // help function for readDetectorGeometry to calculate center of pixel array
 	void readDarkcal(char *);
 	void readGaincal(char *);
 	void readPeakmask(char *);

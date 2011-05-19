@@ -117,9 +117,8 @@ public:
 	void setQmin( double qmax_val );
 	
 	// jas: qmaxCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
-	double qmaxCArray( float *qxCArray, float *qyCArray, int arraylength ); // calculates qmax from CArrays of X/Y positions
-    double qxmaxCArray( float *qxCArray, int arraylength ); // calculates qmax from CArray of X positions
-	double qymaxCArray( float *qyCArray, int arraylength ); // calculates qmax from CArray of Y positions
+	double qmax2CArray( float *qxCArray, float *qyCArray, int arraylength ); // calculates qmax from 2 CArrays
+    double qmax1CArray( float *qCArray, int arraylength ); // calculates qmax from 1 CArray
 	
     void setOutputdir( std::string dir );
     std::string outputdir();
