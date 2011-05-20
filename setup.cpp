@@ -199,25 +199,63 @@ void cGlobal::setup() {
 	/*
 	 *	Set up arrays for remembering powder data, background, etc.
 	 */
-	hotpixelmask = (float*) calloc(pix_nn, sizeof(float));
 	selfdark = (float*) calloc(pix_nn, sizeof(float));
-	powderRaw = (double*) calloc(pix_nn, sizeof(double));
-	powderAssembled = (double*) calloc(image_nn, sizeof(double));
-	iceRaw = (double*) calloc(pix_nn, sizeof(double));
-	iceAssembled = (double*) calloc(image_nn, sizeof(double));
-	waterRaw = (double*) calloc(pix_nn, sizeof(double));
-	waterAssembled = (double*) calloc(image_nn, sizeof(double));
+	
+	if (useAutoHotpixel) hotpixelmask = (float*) calloc(pix_nn, sizeof(float));
+	else hotpixelmask = NULL;
+	
+	if (powdersum) {
+		
+		if (hitfinder.use) powderAssembled = (double*) calloc(image_nn, sizeof(double));
+		else powderAssembled = NULL;
+		if (icefinder.use) iceAssembled = (double*) calloc(image_nn, sizeof(double));
+		else iceAssembled = NULL;
+		if (waterfinder.use) waterAssembled = (double*) calloc(image_nn, sizeof(double));
+		else waterAssembled = NULL;
 
-	// should not be necessary since calloc initializes all its bits to zero
-//	for(long i=0; i<pix_nn; i++) {
-//		hotpixelmask[i] = 0;
-//		selfdark[i] = 0;
-//		powderRaw[i] = 0;
-//	}
-//	for(long i=0; i<image_nn; i++) {
-//		powderAssembled[i] = 0;
-//	}	
-
+		if (saveRaw) {
+			
+			if (hitfinder.use) powderRaw = (double*) calloc(pix_nn, sizeof(double));
+			else powderRaw = NULL;
+			if (icefinder.use) iceRaw = (double*) calloc(pix_nn, sizeof(double));
+			else iceRaw = NULL;
+			if (waterfinder.use) waterRaw = (double*) calloc(pix_nn, sizeof(double));
+			else waterRaw = NULL;
+			
+		} else {
+			powderRaw = NULL;
+			iceRaw = NULL;
+			waterRaw = NULL;
+		}
+		if (powderSAXS) {
+			
+			powderQ = (double*) calloc(powder_nn, sizeof(double));
+			if (hitfinder.use) powderAverage = (double*) calloc(powder_nn, sizeof(double));
+			else powderAverage = NULL;
+			if (icefinder.use) iceAverage = (double*) calloc(powder_nn, sizeof(double));
+			else iceAverage = NULL;
+			if (waterfinder.use) waterAverage = (double*) calloc(powder_nn, sizeof(double));
+			else waterAverage = NULL;
+			
+		} else {
+			powderQ = NULL;
+			powderAverage = NULL;
+			iceAverage = NULL;		
+			waterAverage = NULL;
+		}
+	} else {
+		powderRaw = NULL;
+		powderAssembled = NULL;
+		powderAverage = NULL;
+		powderQ = NULL;
+		iceRaw = NULL;
+		iceAssembled = NULL;
+		iceAverage = NULL;
+		waterRaw = NULL;
+		waterAssembled = NULL;		
+		waterAverage = NULL;
+	}
+	
 	
 	/*
 	 *	Set up thread management
@@ -262,6 +300,7 @@ void cGlobal::setup() {
 		useAutoHotpixel = 0;
 		startFrames = 0;
 		powderthresh = 0;
+		powderSAXS = 0;
 		useAttenuationCorrection = -1;
 		useCorrelation = 0;
 	}
@@ -834,6 +873,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	pix_ymax = ymax;
 	pix_ymin = ymin;
 	pix_rmax = rmax;
+	powder_nn = (unsigned) round(rmax/deltaqSAXS)+1;
 	
 	//xmax = ceil(xmax);
 	//xmin = floor(xmin);

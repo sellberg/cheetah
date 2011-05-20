@@ -941,7 +941,7 @@ void saveRunningSums(cGlobal *global) {
 				/*
 				 *	Save assembled powder pattern : ice
 				 */
-				printf("Saving assembled sum data to file\n");
+				printf("Saving assembled sum data of ice to file\n");
 				sprintf(filename,"r%04u-AssembledSum_ice.h5",global->runNumber);
 				float *buffer4 = (float*) calloc(global->image_nn, sizeof(float));
 				pthread_mutex_lock(&global->icesumassembled_mutex);
@@ -959,7 +959,7 @@ void saveRunningSums(cGlobal *global) {
 				/*
 				 *	Save powder pattern in raw layout : ice
 				 */
-				printf("Saving raw sum data to file\n");
+				printf("Saving raw sum data of ice to file\n");
 				sprintf(filename,"r%04u-RawSum_ice.h5",global->runNumber);
 				float *buffer5 = (float*) calloc(global->pix_nn, sizeof(float));
 				pthread_mutex_lock(&global->icesumraw_mutex);
@@ -980,7 +980,7 @@ void saveRunningSums(cGlobal *global) {
 				/*
 				 *	Save assembled powder pattern : water
 				 */
-				printf("Saving assembled sum data to file\n");
+				printf("Saving assembled sum data of water to file\n");
 				sprintf(filename,"r%04u-AssembledSum_water.h5",global->runNumber);
 				float *buffer6 = (float*) calloc(global->image_nn, sizeof(float));
 				pthread_mutex_lock(&global->watersumassembled_mutex);
@@ -998,7 +998,7 @@ void saveRunningSums(cGlobal *global) {
 				/*
 				 *	Save powder pattern in raw layout : water
 				 */
-				printf("Saving raw sum data to file\n");
+				printf("Saving raw sum data of water to file\n");
 				sprintf(filename,"r%04u-RawSum_water.h5",global->runNumber);
 				float *buffer7 = (float*) calloc(global->pix_nn, sizeof(float));
 				pthread_mutex_lock(&global->watersumraw_mutex);
@@ -1023,29 +1023,51 @@ void calculatePowderSAXS(cGlobal *global) {
 	// calculating SAXS average for all shots to calculate cross-correlation 
 	DEBUGL1_ONLY printf("calculating angular average from powder pattern...\n");
 	
-	// NOT YET IMPLEMENTED, ONLY SHELL
-	/*
+	// allocate local variables
+	double *pix_r = new double[global->pix_nn];
+	
 	// calculate |q| for each pixel and bin lengths with correct resolution
-	for (int i=0; i<arraySize(); i++) {
-		q->set(i, round(sqrt( (qx->get(i)*qx->get(i))+(qy->get(i)*qy->get(i)) ) / deltaq()) * deltaq() );
+	for (int i=0; i<global->pix_nn; i++) {
+		pix_r[i] = (double) round( sqrt(((double) global->pix_x[i])*global->pix_x[i] + ((double) global->pix_y[i])*global->pix_y[i]) / global->deltaqSAXS) * global->deltaqSAXS;
 	}
 	
 	// angular average for each |q|
-	DEBUGL1_ONLY printf("# of steps: %d\n",samplingLength());
+	DEBUGL1_ONLY printf("# of steps: %d\n",global->powder_nn);
 	DEBUGL2_ONLY printf("average SAXS intensity:\n");
 	
-	for (int i=0; i<samplingLength(); i++) {
-		qave->set(i, i*deltaq());
-		double itot = 0; // reset summed intensity
-		int counter = 0; // reset counter
-		for (int j=0; j<arraySize(); j++) {
-			if ( q->get(j) == qave->get(i) ) {
-				itot += data->get(j);
-				counter++;
+	for (int i=0; i<global->powder_nn; i++) {
+		global->powderQ[i] = i*global->deltaqSAXS;
+		int counterp = 0; // reset counter
+		int counteri = 0; // reset counter
+		int counterw = 0; // reset counter
+		for (int j=0; j<global->pix_nn; j++) {
+			if ( pix_r[j] == global->powderQ[i] ) {
+				if (global->hitfinder.use) {
+					global->powderAverage[i] += global->powderRaw[j];
+					counterp++;
+				}
+				if (global->icefinder.use) {
+					global->iceAverage[i] += global->iceRaw[j];
+					counteri++;
+				}
+				if (global->waterfinder.use) {
+					global->waterAverage[i] += global->waterRaw[j];
+					counterw++;
+				}
 			}
 		}
-		iave->set( i, itot/counter );
-		DEBUGL2_ONLY cout << "Q: " << qave->get(i) << ",   \t# pixels: " << counter << ",\tI: " << iave->get(i) << endl;
+		if (global->hitfinder.use) global->powderAverage[i] /= counterp;
+		if (global->icefinder.use) global->iceAverage[i] /= counteri;
+		if (global->waterfinder.use) global->waterAverage[i] /= counterw;
+		
+		DEBUGL2_ONLY {
+			if (global->hitfinder.use) cout << "Q: " << global->powderQ[i] << ",   \t# pixels: " << counterp << ",\tI(powder): " << global->powderAverage[i] << endl;
+			if (global->icefinder.use) cout << "Q: " << global->powderQ[i] << ",   \t# pixels: " << counteri << ",\tI(water): " << global->iceAverage[i] << endl;
+			if (global->waterfinder.use) cout << "Q: " << global->powderQ[i] << ",   \t# pixels: " << counterw << ",\tI(ice): " << global->waterAverage[i] << endl;
+		}
 	}
-	*/
+	
+	// free memory of local variables
+	delete[] pix_r;
+	
 }

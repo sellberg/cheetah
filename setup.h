@@ -190,6 +190,7 @@ public:
 	float			pix_ymax;
 	float			pix_ymin;
 	float			pix_rmax;
+	unsigned		powder_nn;
 	unsigned		module_rows;
 	unsigned		module_cols;
 	long			image_nx;
@@ -215,6 +216,7 @@ public:
 	double			*powderRaw;		//stores powder pattern in raw format
 	double			*powderAssembled;	//stores the assembled powder pattern
 	double			*powderAverage;		// stores angular average of powder pattern
+	double			*powderQ;	// stores q-values for angular average of powder pattern
 	double			*waterRaw;		//stores powder pattern of water hits in raw format
 	double			*waterAssembled;	//stores the assembled powder pattern of water hits
 	double			*waterAverage;		// stores angular average of powder pattern of water hits
@@ -246,7 +248,7 @@ public:
 	void parseCommandLineArguments(int, char**);	// reads command line arguments
 	void setup(void);				// function that sets parameter values from default/config file/command line arguments
 	void readDetectorGeometry(char *);		// following functions read the h5 files in raw format
-	float pixelCenter( float *pixel_array ); // help function for readDetectorGeometry to calculate center of pixel array
+	float pixelCenter(float *pixel_array); // help function for readDetectorGeometry to calculate center of pixel array
 	void readDarkcal(char *);
 	void readGaincal(char *);
 	void readPeakmask(char *);
