@@ -47,8 +47,6 @@ using std::endl;
 void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     
     DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
-
-    int arraylength = RAW_DATA_LENGTH;
 	
 	/* OLD FUNCTIONALITY MOVED TO setup.cpp
     //jas: calculate center of CArray and shift qx, qy accordingly
@@ -66,7 +64,8 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     DEBUGL1_ONLY cc->setDebug(1);                           //turn on debug level inside the CrossCorrelator, if needed
     DEBUGL2_ONLY cc->setDebug(2);                           //turn on debug level inside the CrossCorrelator, if needed
 
-	if (global->useCorrelation == 1) {					//----------------------------------------------alg1
+	//--------------------------------------------------------------------------------------------alg1
+	if (global->useCorrelation == 1) {					
 		
 		DEBUGL1_ONLY cout << "XCCA regular" << endl;
 		
@@ -78,32 +77,56 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		writeXCCA(threadInfo, global, cc, threadInfo->eventname);
 		
 		
-		
-	} else if (global->useCorrelation == 2) {			//----------------------------------------------alg1
-		
+	//--------------------------------------------------------------------------------------------alg2
+	} else if (global->useCorrelation == 2) {					
 		DEBUGL1_ONLY cout << "XCCA fast" << endl;
 
         array2D *polar = new array2D;
         array2D *corr = new array2D;
         
-        //cc->createLookupTable( 100, 100 );
+        //cc->createLookupTable( 100, 100 );		// lookup table should in general not be created here (i.e., shot-by-shot)
 		cc->setLookupTable( global->fastCorrelationLUT, global->fastCorrelationLUTdim1, global->fastCorrelationLUTdim2 );
-		
-        double start_q = global->fastCorrelationStartQ*cc->deltaq();
-        double stop_q = global->fastCorrelationStopQ*cc->deltaq();
-        double number_q = global->fastCorrelationNumQ;
-        double start_phi = global->fastCorrelationStartPhi;
-        double stop_phi = global->fastCorrelationStopPhi;;
-        double number_phi = global->fastCorrelationNumPhi;
-        cc->calculatePolarCoordinates_FAST(polar, start_q, stop_q, number_q, start_phi, stop_phi, number_phi);
 
-        cc->calculateXCCA_FAST( polar, corr );
-        
+		//transform data to polar coordinates as determined by the cheetah ini file	(in detector pixels)
+		//to the q-calibrated values the cross-correlator expects
+        double start_q = global->fastCorrelationStartQ;
+        double stop_q = global->fastCorrelationStopQ;
+        int number_q = global->fastCorrelationNumQ;
+        double start_phi = global->fastCorrelationStartPhi;
+        double stop_phi = global->fastCorrelationStopPhi;
+        int number_phi = global->fastCorrelationNumPhi;
+		DEBUGL1_ONLY cout << "q from " << start_q << " to " <<  stop_q << " in " << number_q << ", "
+						<< "phi from " << start_phi << " to " <<  stop_phi << " in " << number_phi << "" << endl;
+						cout << "delta_q = " << cc->deltaq() << endl;
+		
+		//calculate polar coordinates: returns an array2D in the first polar argument
+        int polar_fail = cc->calculatePolarCoordinates_FAST(&polar, number_q, start_q, stop_q, number_phi, start_phi, stop_phi);
+		if (polar_fail){
+			cout << "ERROR in correlate! Could not calculate polar coordinates!" << endl;
+		}
+		
+		cout << "thread #" << threadInfo->threadNum << " locking mutex" << endl;
+		pthread_mutex_lock(&global->correlation_mutex);	
+
+		//perform the correlation
+		int XCCA_fail = cc->calculateXCCA_FAST( &polar, &corr );
+		if (XCCA_fail){
+			cout << "ERROR in correlate! Could not calculate XCCA!" << endl;
+		}
+		
+		//write output
+		writeXCCA(threadInfo, global, cc, threadInfo->eventname);        
+		
+		cout << "thread #" << threadInfo->threadNum << " unlocking mutex" << endl;
+		pthread_mutex_unlock(&global->correlation_mutex);
+		
+		//clean up
         delete polar;
         delete corr;
+		
+		DEBUGL1_ONLY cout << "XCCA done." << endl;
 
-
-
+	//--------------------------------------------------------------------------------------------default case
 	} else {
 		cerr << "Error in correlate()! Correlation algorithm " << global->useCorrelation << " not known." << endl;
 	}
@@ -157,7 +180,7 @@ void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 //-------------------------------------------------------------------------------------
 void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname) {
 	
-	DEBUGL1_ONLY printf("writing XCCA to file...\n");
+	DEBUGL1_ONLY cout << "writing XCCA to file..." << endl;
 	FILE *filePointerWrite;
 	char outfile[1024];
 	double samplingLengthD = (double) cc->samplingLength(); // save everything as doubles

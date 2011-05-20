@@ -258,7 +258,7 @@ public:
 	void readBackgroundmask(char *);
 	void readAttenuations(char *);
 	void expandAttenuationCapacity();
-
+	void createLookupTable();			// create lookup table (LUT) needed for the fast correlation algorithm	
 
 	void writeInitialLog(void);			// functions to write the log file
 	void updateLogfile(void);			

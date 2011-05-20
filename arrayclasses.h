@@ -13,6 +13,8 @@
 
 #include <string>
 
+#include <fftw3.h>
+
 //tell the compiler that these classes are going to be defined
 class array1D;
 class array2D;
@@ -24,9 +26,6 @@ class arraydata {
 protected:
 	double *p_data;												//pointer to the data array
 	unsigned int p_size;	
-	int p_verbose;												//1 = talk, 0 = silent
-
-
 	
 public:
 	arraydata();                                                //default constructor
@@ -71,8 +70,8 @@ public:
     int multiplyByFactor( double factor );
     int multiplyByArrayElementwise( arraydata *secondFactor );
 
-	int verbose() const;
-	void setVerbose( int verbosity );
+//	int verbose() const;
+//	void setVerbose( int verbosity );
 };
 
 
@@ -130,11 +129,11 @@ public:
 	unsigned int dim2() const;
 	void setDim2( unsigned int size_dim2 );
 	
-	double get( unsigned int i, unsigned int j ) const;                   //returns single pixel value
+	double get( unsigned int i, unsigned int j ) const;                 //returns single pixel value
 	void set( unsigned int i, unsigned int j, double value );
     
-    void getRow( int rownum, array1D *row ) const;                        //returns one-dimensional row
-    void getCol( int colnum, array1D *col ) const;
+    int getRow( int rownum, array1D **row ) const;                       //returns one-dimensional 'row' or 'col'
+    int getCol( int colnum, array1D **col ) const;						//return value is 0 if successful
     void setRow( int rownum, array1D *row );                              //sets a one-dimensional row
     void setCol( int colnum, array1D *col );
             
@@ -192,14 +191,42 @@ class FourierTransformer{
 
 private:
     int verbose;
-
+	fftw_complex *p_in;				//internal complex input array
+	fftw_complex *p_out;			//internal complex output array
+	fftw_plan p_forward_plan;
+	fftw_plan p_backward_plan;
+	int p_n;						//size of the input (and output) arrays
+	
+	void createPlans();
+	void destroyPlans();	
+	
 public:
-    FourierTransformer();
+//    FourierTransformer();
+    FourierTransformer( array1D *real, array1D *imag );
+//    FourierTransformer(int n=32);
+//	FourierTransformer(fftw_plan forwardplan, fftw_plan backwardplan, int n );	// initialize with two plans (created somewhere else)
+    ~FourierTransformer();	
 
     //wrapper for the FFTW discrete Fourier Transform
     //the two arrays 'real' and 'imag' are overwritten by
     //resulting arrays for the real and imaginary parts
-    int transform( array1D *real, array1D *imag, int direction=1 );
+    int transform( int direction=1 );
+	int transformWithNewPlans( int direction=1 );
+//	int transform( array1D *real, array1D *imag, int direction=1 );
+
+
+	void getData( array1D **real, array1D **imag );
+	array1D getReal();
+	array1D getImag();
+		
+//	int n() const;
+//	void setN( int size );
+	
+	//	fftw_plan getForwardPlan() const;
+//	void setForwardPlan(fftw_plan plan);
+//	fftw_plan getBackwardPlan() const;
+//	void setBackwardPlan(fftw_plan plan);
+
 };
 
 

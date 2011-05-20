@@ -39,6 +39,7 @@
 #include <stdlib.h>
 #include <iostream>
 using std::cout;
+using std::cerr;
 using std::endl;
 using std::string;
 
@@ -48,6 +49,7 @@ using std::string;
 #include "worker.h"
 #include "data2d.h"
 #include "attenuation.h"
+#include "arrayclasses.h"
 
 
 /*
@@ -898,59 +900,6 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	image_nx = 2*(unsigned)max;
 	image_nn = image_nx*image_nx;
 	printf("\tImage output array will be %i x %i\n",(int)image_nx,(int)image_nx);
-	
-	
-	//write lookup table for fast cross-correlation
-	int lutNx = fastCorrelationLUTdim1;
-	int lutNy = fastCorrelationLUTdim2;
-	int lutSize = lutNx*lutNy;
-	cout << "Creating lookup table (LUT) of size " << lutNx << " x " << lutNy << " (" << lutSize << " entries)" << endl;
-	if (fastCorrelationLUT) {		// free memory of old LUT first, if necessary
-  		delete[] fastCorrelationLUT;
-	}
-	fastCorrelationLUT = new int[lutSize];
-	double qx_range = fabs(xmax - xmin);
-    double qx_stepsize = qx_range/(lutNx-1);
-	double qy_range = fabs(ymax - ymin);
-    double qy_stepsize = qy_range/(lutNy-1);
-	cout << "\tLUT qx-values: min=" << xmin << ", max=" << xmax << ", range=" << qx_range << ", stepsize=" << qx_stepsize << endl;
-	cout << "\tLUT qy-values: min=" << ymin << ", max=" << ymax << ", range=" << qy_range << ", stepsize=" << qy_stepsize << endl;
-	
-	int lutFailCount = 0;
-	for (int i = 0; i < nn; i++){           //go through all the data
-		//get q-values from qx and qy arrays
-		//and determine at what index (ix, iy) to put them in the lookup table
-		double ix = (pix_x[i]-xmin) / qx_stepsize;
-		double iy = (pix_y[i]-ymin) / qy_stepsize;
-		
-		//fill table at the found coordinates with the data index
-		//overwriting whatever value it had before
-	    //(the add-one-half->floor trick is to achieve reasonable rounded integers)
-		int lutindex = (int) ( floor(ix+0.5) + lutNx*floor(iy+0.5) );
-		if (lutindex < 0 || lutindex >= lutSize) {
-			std::cerr << endl;
-  			std::cerr << "Error in cGlobal::readDetectorGeometry! lookup table index out of bounds" << endl;
-			std::cerr << "\t (was trying to set fastCorrelationLUT[" << lutindex << "] = " << i << ")" << endl;
-			std::cerr << "\tLUT: pix_x, pix_y = (" << pix_x[i] << ", " << pix_y[i] << ") --> ix, iy = (" << ix << ", " << iy << ")" << endl;
-			lutFailCount++;
-		} else {
-			fastCorrelationLUT[lutindex] = i;
-		}
-		
-		/////////////////////////////////////////////////////////////////////////////////////////
-		//ATTENTION: THIS METHOD WILL LEAD TO A LOSS OF DATA,
-		//ESPECIALLY FOR SMALL TABLE SIZES,
-		//BUT IT WILL BUY A LOT OF SPEED IN THE LOOKUP PROCESS
-		//--> this should be improved to a more precise version, 
-		//    maybe even one that allows the lookup(x,y) to interpolate
-		//    for that to work, we need to find the four closest points in the data or so
-		//    (for instance, instead of one index, the table could contain 
-		//    a vector of all applicable indices)
-		/////////////////////////////////////////////////////////////////////////////////////////
-	}
-	
-	cout << "LUT created ";
-	cout << "(info: LUT assignment failed in " << lutFailCount << " of " << lutSize << " cases)" << endl;
 }
 
 
@@ -1219,6 +1168,102 @@ void cGlobal::expandAttenuationCapacity() {
 	delete[] oldChangedAttenuations;
 	delete[] oldTotalThicknesses;
 }
+
+
+
+
+
+/*
+ *	Create lookup table (LUT) needed for the fast correlation algorithm
+ */
+void cGlobal::createLookupTable(){	
+	//write lookup table for fast cross-correlation
+	//debugLevel = 2;
+	int lutNx = fastCorrelationLUTdim1;
+	int lutNy = fastCorrelationLUTdim2;
+	int lutSize = lutNx*lutNy;
+	cout << "Creating lookup table (LUT) of size " << lutNx << " x " << lutNy << " (" << lutSize << " entries)" << endl;
+	if (fastCorrelationLUT) {		// free memory of old LUT first, if necessary
+  		delete[] fastCorrelationLUT;
+	}
+	fastCorrelationLUT = new int[lutSize];
+	
+	//find max and min of the q-calibration arrays
+	float	xmax = -HUGE_VAL;
+	float	xmin =  HUGE_VAL;
+	float	ymax = -HUGE_VAL;
+	float	ymin =  HUGE_VAL;
+	for(long i=0;i<pix_nn;i++){
+		if (pix_x[i] > xmax) xmax = pix_x[i];
+		if (pix_x[i] < xmin) xmin = pix_x[i];
+		if (pix_y[i] > ymax) ymax = pix_y[i];
+		if (pix_y[i] < ymin) ymin = pix_y[i];
+	}
+	double qx_range = fabs(xmax - xmin);
+    double qx_stepsize = qx_range/(lutNx-1);
+	double qy_range = fabs(ymax - ymin);
+    double qy_stepsize = qy_range/(lutNy-1);
+	cout << "\tLUT qx-values: min=" << xmin << ", max=" << xmax << ", range=" << qx_range << ", stepsize=" << qx_stepsize << endl;
+	cout << "\tLUT qy-values: min=" << ymin << ", max=" << ymax << ", range=" << qy_range << ", stepsize=" << qy_stepsize << endl;
+	
+	int lutFailCount = 0;
+	for (int i = 0; i < pix_nn; i++){           //go through all the q-calibration array
+												//get q-values from qx and qy arrays
+												//and determine at what index (ix, iy) to put them in the lookup table
+		double ix = (pix_x[i]-xmin) / qx_stepsize;
+		double iy = (pix_y[i]-ymin) / qy_stepsize;
+		
+		//fill table at the found coordinates with the data index
+		//overwriting whatever value it had before
+	    //(the add-one-half->floor trick is to achieve reasonable rounded integers)
+		int lutindex = (int) ( floor(ix+0.5) + lutNx*floor(iy+0.5) );
+		if (lutindex < 0 || lutindex >= lutSize) {
+			cerr << endl;
+  			cerr << "Error in cGlobal::readDetectorGeometry! lookup table index out of bounds" << endl;
+			cerr << "\t (was trying to set fastCorrelationLUT[" << lutindex << "] = " << i << ")" << endl;
+			cerr << "\tLUT: pix_x, pix_y = (" << pix_x[i] << ", " << pix_y[i] << ") --> ix, iy = (" << ix << ", " << iy << ")" << endl;
+			lutFailCount++;
+		} else {
+			fastCorrelationLUT[lutindex] = i;
+		}
+			
+		/////////////////////////////////////////////////////////////////////////////////////////
+		//ATTENTION: THIS METHOD WILL LEAD TO A LOSS OF DATA,
+		//ESPECIALLY FOR SMALL TABLE SIZES,
+		//BUT IT WILL BUY A LOT OF SPEED IN THE LOOKUP PROCESS
+		//--> this should be improved to a more precise version, 
+		//    maybe even one that allows the lookup(x,y) to interpolate
+		//    for that to work, we need to find the four closest points in the data or so
+		//    (for instance, instead of one index, the table could contain 
+		//    a vector of all applicable indices)
+		/////////////////////////////////////////////////////////////////////////////////////////
+		
+		if(debugLevel>2 && !(i%100)){
+			cout << "setting fastCorrelationLUT[" << lutindex << "] = " << i << "";
+			cout << "   LUT: pix_x, pix_y = (" << pix_x[i] << ", " << pix_y[i] << ") --> ix, iy = (" << ix << ", " << iy << ")" << endl;
+		}
+	}//for
+	cout << "\tLUT created ";
+	cout << "(info: LUT assignment failed in " << lutFailCount << " of " << lutSize << " cases)" << endl;
+	
+	
+	//explicit output to test...
+	if (debugLevel>2) {
+		std::ostringstream osst;
+		osst << "-------------------LUT begin---------------------------------";
+			for (int j = 0; j<lutNy; j++){
+			osst << " [";
+			for (int i = 0; i<lutNx; i++) {
+				osst << " " << fastCorrelationLUT[i+lutNx*j];
+			}
+			osst << "]" << endl;
+		}
+		osst << "------------------LUT end----------------------------------";		
+		cout << osst.str() << endl;
+	}//if	
+}
+
+
 
 
 /*

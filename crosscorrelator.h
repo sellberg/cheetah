@@ -41,10 +41,12 @@ private:
 	void updateDependentVariables();
     
     array2D *table;         //lookup table
+	fftw_plan p_fplan;		//forward FFT plan
+	fftw_plan p_bplan;		//backward FFT plan
 
     //-----some debug features that can turned on via setDebug()
     int p_debug;
-    array1D *check1D;
+//    array1D *check1D;
     
 public:
 	//---------------------------------------------constructors & destructor
@@ -73,19 +75,22 @@ public:
     // (for lack of a better name and in the hope that they may be fast. We'll see...)
     
     // 'calculatePolarCoordinates' returns a 2D pattern in polar coordinates (r vs. phi)
-    int calculatePolarCoordinates_FAST(array2D* polar, double number_q=20, double number_phi=128); 
-    int calculatePolarCoordinates_FAST(array2D* polar, double number_q, double start_q, double stop_q,
-                                                        double number_phi=128, double start_phi=0, double stop_phi=360 );
+    int calculatePolarCoordinates_FAST(array2D **polar, int number_q=20, int number_phi=128); 
+    int calculatePolarCoordinates_FAST(array2D **polar, int number_q, double start_q, double stop_q,
+                                                        int number_phi=128, double start_phi=0, double stop_phi=360 );
     
     // 'calculateXCCA' returns the autocorrelation function (r = const.)          
-    int calculateXCCA_FAST( array2D *polarData, array2D *corr );
+    int calculateXCCA_FAST( array2D **polar, array2D **corr );
     
     // looks up the value closest to xcoord, ycoord in the data
     double lookup( double xcoord, double ycoord );
 	
 	// sets the lookup table necessary for lookup() to work. this needs to be provided externally, (a default one is available)
 	void setLookupTable( array2D *LUT );
-	void setLookupTable( int *cLUT, unsigned int LUT_dim1, unsigned int LUT_dim2 );
+	void setLookupTable( const int *cLUT, unsigned int LUT_dim1, unsigned int LUT_dim2 );
+	
+	// sets the two plans needed for forward and backward Fourier Transform --> correlation
+	void setFFTWPlans( fftw_plan forwardplan, fftw_plan backwardplan );
 
 	// a lookup table can be created within this object, if none was available externally
 	// (for cheetah, performance is better if this is calculated once in advance 
