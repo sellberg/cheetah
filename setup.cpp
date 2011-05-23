@@ -328,26 +328,40 @@ void cGlobal::setup() {
 	/*
 	 *	Setup global attenuation variables
 	 */
-	nFilters = 10; // Counter for Si filters in XRT
-	filterThicknesses = new unsigned[nFilters]; // Array of filter thicknesses
-	for (int i=0; i<nFilters; i++) {
-		filterThicknesses[i] = int(20*pow((float)2.,i));
+	if (useAttenuationCorrection >= 0) {
+		nFilters = 10; // Counter for Si filters in XRT
+		filterThicknesses = new unsigned[nFilters]; // Array of filter thicknesses
+		for (int i=0; i<nFilters; i++) {
+			filterThicknesses[i] = int(20*pow((float)2.,i));
+		}
+		nThicknesses = 1; // Counter for number of possible thicknesses (0 um => counter starts at 1)
+		for (int i=1; i<=nFilters; i++) {
+			nThicknesses += factorial(nFilters)/(factorial(nFilters-i)*factorial(i));
+		} // 1023 combinations added
+		possibleThicknesses = new unsigned[nThicknesses]; // Array of all possible combinations of filter thicknesses
+		for (int i=0; i<=nThicknesses; i++) {
+			possibleThicknesses[i] = 20*i;
+		}
+		possibleAttenuations = new double[nThicknesses]; // Array of all possible attenuations obtained from possibleThicknesses
+		attenuationCapacity = 100; // Starting capacity of dynamic array
+		attenuations = new double[attenuationCapacity]; // Dynamic array of all calculated attenuations during the run
+		changedAttenuationEvents = new unsigned[attenuationCapacity]; // Dynamic array of all events where the attenuation changed during the run
+		totalThicknesses = new unsigned[attenuationCapacity]; // Dynamic array of all total thicknesses from used Si filters during the run
+		nAttenuations = 0; // Number of attenuations saved in attenuation array
+		attenuationOffset = 0; // Integer to compensate for the offset of nevents w.r.t. the recorded attenuations
+	} else {
+		filterThicknesses = NULL;
+		possibleThicknesses = NULL;
+		possibleAttenuations = NULL;
+		attenuations = NULL;
+		changedAttenuationEvents = NULL;
+		totalThicknesses = NULL;
+		nFilters = 0;
+		nThicknesses = 0;
+		attenuationCapacity = 0;
+		nAttenuations = 0;
+		attenuationOffset = 0;
 	}
-	nThicknesses = 1; // Counter for number of possible thicknesses (0 um => counter starts at 1)
-	for (int i=1; i<=nFilters; i++) {
-		nThicknesses += factorial(nFilters)/(factorial(nFilters-i)*factorial(i));
-	} // 1023 combinations added
-	possibleThicknesses = new unsigned[nThicknesses]; // Array of all possible combinations of filter thicknesses
-	for (int i=0; i<=nThicknesses; i++) {
-		possibleThicknesses[i] = 20*i;
-	}
-	possibleAttenuations = new double[nThicknesses]; // Array of all possible attenuations obtained from possibleThicknesses
-	attenuationCapacity = 100; // Starting capacity of dynamic array
-	attenuations = new double[attenuationCapacity]; // Dynamic array of all calculated attenuations during the run
-	changedAttenuationEvents = new unsigned[attenuationCapacity]; // Dynamic array of all events where the attenuation changed during the run
-	totalThicknesses = new unsigned[attenuationCapacity]; // Dynamic array of all total thicknesses from used Si filters during the run
-	nAttenuations = 0; // Number of attenuations saved in attenuation array
-	attenuationOffset = 0; // Integer to compensate for the offset of nevents w.r.t. the recorded attenuations
 	
 	/*
 	 *	Setup global cross correlation variables
