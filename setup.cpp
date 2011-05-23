@@ -64,6 +64,8 @@ void cGlobal::defaultConfiguration(void) {
 	strcpy(geometryFile, "geometry/cspad_pixelmap.h5");
 	pixelSize = 110e-6;
 	useCenterCorrection = 0;
+	pixelCenterX = 0;
+	pixelCenterY = 0;
 	
 	// Bad pixel mask
 	strcpy(badpixelFile, "badpixels.h5");
@@ -481,6 +483,12 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "usecentercorrection")) {
 		useCenterCorrection = atoi(value);
 	}
+	else if (!strcmp(tag, "pixelcenterx")) {
+		pixelCenterX = atof(value);
+	}
+	else if (!strcmp(tag, "pixelcentery")) {
+		pixelCenterY = atof(value);
+	}
 	else if (!strcmp(tag, "subtractcmmodule")) {
 		cmModule = atoi(value);
 	}
@@ -844,8 +852,10 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	// Center correct the array w.r.t the square hole created by the quads (assume beam is centered)
 	if (useCenterCorrection) {
 		float x0 = pixelCenter(pix_x);
+		if (pixelCenterX) x0 = pixelCenterX;
 		if (debugLevel >= 1) cout << "\tCorrected center in x: " << x0 << endl;
 		float y0 = pixelCenter(pix_y);
+		if (pixelCenterY) y0 = pixelCenterY;
 		if (debugLevel >= 1) cout << "\tCorrected center in y: " << y0 << endl;
 		for (int i=0; i<nn; i++) {
 			pix_x[i] -= x0;

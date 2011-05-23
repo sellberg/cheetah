@@ -65,6 +65,8 @@ public:
 	char		geometryFile[1024];		// File containing pixelmap (X,Y coordinate of each pixel in raw data stream)
 	float		pixelSize;			// in micrometers
 	int			useCenterCorrection;	// set to nonzero to shift 0 of pixel array to the center of the square hole
+	float		pixelCenterX;		// option to manually override the calculated center of the square hole (if useCenterCorrection is enabled) and set the center to X in pixels if pixelCenterX is nonzero
+	float		pixelCenterY;		// option to manually override the calculated center of the square hole (if useCenterCorrection is enabled) and set the center to Y in pixels if pixelCenterY is nonzero
 	
 	// Bad pixel masks
 	int			useBadPixelMask;	// to specify pixels that you know are bad
