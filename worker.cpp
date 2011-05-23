@@ -1020,10 +1020,10 @@ void saveRunningSums(cGlobal *global) {
 
 void calculatePowderSAXS(cGlobal *global) {
 	
-	// calculating SAXS average for all shots to calculate cross-correlation 
+	// calculating SAXS average from the powder pattern 
 	DEBUGL1_ONLY printf("calculating angular average from powder pattern...\n");
 	
-	// allocate local variables
+	// allocate local arrays
 	double *pix_r = new double[global->pix_nn];
 	
 	// calculate |q| for each pixel and bin lengths with correct resolution
@@ -1070,4 +1070,69 @@ void calculatePowderSAXS(cGlobal *global) {
 	// free memory of local variables
 	delete[] pix_r;
 	
+}
+
+void calculateCenterCorrection(cGlobal *global) {
+	
+	// calculating center correction from the powder pattern of the regular hitfinder
+	printf("calculating center correction from powder pattern...\n");
+	
+	// calculate size of arrays
+	int nR = (int) ceil((global->centerCorrectionMaxR-global->centerCorrectionMaxR)/global->centerCorrectionDeltaR) + 1;
+	int nC = (int) ceil((2*global->centerCorrectionMaxC)/global->centerCorrectionDeltaC) + 1;
+	
+	// allocate hough array and initialize to zero
+	int *hough = new int[nR][nC][nC];
+	for (int i=0; i<nR; i++) {
+		for (int j=0; j<nC; j++) {
+			for (int k=0; k<nC; k++) {
+				hough[i][j][k] = 0;
+			}
+		}
+	}
+	
+	// calculate hough array
+	for (int n=0; n<global->pix_nn; n++) {
+        if (global->powderRaw[n]/global->npowder > global->centerCorrectionThreshold) {
+			float x = global->pix_x[n];
+			float y = global->pix_y[n];
+			for (int na=0; a<nC; na++) {
+				double a = na*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+				for (int nb=0; nb<nC; nb++) {
+					double b = nb*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+					double r = sqrt(((double) x-a)*((double) x-a) + ((double) y-b)*((double) y-b));
+					if (r>global->centerCorrectionMinR && r<global->centerCorrectionMaxR) {
+						int nr = (int) round((r-global->centerCorrectionMinR)/global->centerCorrectionDeltaR);
+						hough[nr][na][nb] += 1;
+					}
+				}
+			}
+		}
+	}
+	
+	// find maximum in hough array
+	int max = 0;
+	int imax, jmax, kmax;
+	for(int i=0; i<nR; i++) {
+        for(int j=0; j<nC; j++) {
+			for(int k=0; k<nC; k++) {
+				if(hough[i][j][k] > max) {
+					max = hough[i][j][k];
+					imax = i;
+					jmax = j;
+					kmax = k;
+				}
+			}
+		}
+	}
+	
+	// assign new center to global variables
+	global->pixelCenterX = jmax*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+	global->pixelCenterY = kmax*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+	
+	cout << "\tCorrected center in x: " << global->pixelCenterX << endl;
+	cout << "\tCorrected center in y: " << global->pixelCenterY << endl;
+	
+	// cleanup memory
+	delete[] hough;
 }

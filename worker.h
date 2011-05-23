@@ -149,6 +149,7 @@ void writeHDF5(tThreadInfo*, cGlobal*,char*, FILE*);
 void writeSimpleHDF5(const char*, const void*, int, int, int);
 void saveRunningSums(cGlobal*);
 void calculatePowderSAXS(cGlobal *global);
+void calculateCenterCorrection(cGlobal *global);
 
 
 #endif

@@ -66,6 +66,13 @@ void cGlobal::defaultConfiguration(void) {
 	useCenterCorrection = 0;
 	pixelCenterX = 0;
 	pixelCenterY = 0;
+	calculateCenterCorrection = 0;
+	centerCorrectionThreshold = 150;
+	centerCorrectionMaxR = 600;
+	centerCorrectionMinR = 400;
+	centerCorrectionDeltaR = 1;
+	centerCorrectionMaxC = 50;
+	centerCorrectionDeltaC = 1;
 	
 	// Bad pixel mask
 	strcpy(badpixelFile, "badpixels.h5");
@@ -305,6 +312,7 @@ void cGlobal::setup() {
 		startFrames = 0;
 		powderthresh = 0;
 		powderSAXS = 0;
+		calculateCenterCorrection = 0;
 		useAttenuationCorrection = -1;
 		useCorrelation = 0;
 	}
@@ -367,7 +375,7 @@ void cGlobal::setup() {
 	 *	Setup global cross correlation variables
 	 */
 	fastCorrelationLUT = new int[fastCorrelationLUTdim1*fastCorrelationLUTdim2];
-	 
+	
 	// Make sure to use SLAC timezone!
 	setenv("TZ","US/Pacific",1);
 	
@@ -502,6 +510,27 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "pixelcentery")) {
 		pixelCenterY = atof(value);
+	}
+	else if (!strcmp(tag, "calculatecentercorrection")) {
+		calculateCenterCorrection = atoi(value);
+	}
+	else if (!strcmp(tag, "centercorrectionthreshold")) {
+		centerCorrectionThreshold = atof(value);
+	}
+	else if (!strcmp(tag, "centercorrectionmaxr")) {
+		centerCorrectionMaxR = atof(value);
+	}
+	else if (!strcmp(tag, "centercorrectionminr")) {
+		centerCorrectionMinR = atof(value);
+	}
+	else if (!strcmp(tag, "centercorrectiondeltar")) {
+		centerCorrectionDeltaR = atof(value);
+	}
+	else if (!strcmp(tag, "centercorrectionmaxc")) {
+		centerCorrectionMaxC = atof(value);
+	}
+	else if (!strcmp(tag, "centercorrectiondeltac")) {
+		centerCorrectionDeltaC = atof(value);
 	}
 	else if (!strcmp(tag, "subtractcmmodule")) {
 		cmModule = atoi(value);
@@ -864,7 +893,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	
 	
 	// Center correct the array w.r.t the square hole created by the quads (assume beam is centered)
-	if (useCenterCorrection) {
+	if (useCenterCorrection && !calculateCenterCorrection) {
 		float x0 = pixelCenter(pix_x);
 		if (pixelCenterX) x0 = pixelCenterX;
 		if (debugLevel >= 1) cout << "\tCorrected center in x: " << x0 << endl;

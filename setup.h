@@ -67,7 +67,14 @@ public:
 	int			useCenterCorrection;	// set to nonzero to shift 0 of pixel array to the center of the square hole
 	float		pixelCenterX;		// option to manually override the calculated center of the square hole (if useCenterCorrection is enabled) and set the center to X in pixels if pixelCenterX is nonzero
 	float		pixelCenterY;		// option to manually override the calculated center of the square hole (if useCenterCorrection is enabled) and set the center to Y in pixels if pixelCenterY is nonzero
-	
+	int			calculateCenterCorrection;	// set to nonzero to calculate center of pixel array using a Hough transform, overrides useCenterCorrection and disables it.
+	double		centerCorrectionThreshold;	// determines the threshold for which below pixel intensities are set to zero
+	double		centerCorrectionMaxR;	// maximum radius value in pixels that the hough transform will be performed for, the calibration ring should lie BELOW this value.
+	double		centerCorrectionMinR;	// minimum radius value in pixels that the hough transform will be performed for, the calibration ring should lie ABOVE this value.
+	double		centerCorrectionDeltaR;	// step length in pixels for the radius
+	double		centerCorrectionMaxC;	// maximum value in pixels of the shift in center that the hough transform will be performed for, the true center should lie inside +/- this value.
+	double		centerCorrectionDeltaC;	// step length in pixels for the center
+		
 	// Bad pixel masks
 	int			useBadPixelMask;	// to specify pixels that you know are bad
 	char		badpixelFile[1024];		// file containing the map of bad pixel locations (raw format)

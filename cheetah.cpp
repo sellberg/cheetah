@@ -587,6 +587,12 @@ void endjob()
 		printf("Waiting for %i worker threads to terminate\n", (int)global.nActiveThreads);
 		usleep(100000);
 	}
+
+	
+	// Calculate center correction from powder pattern
+	if (global.hitfinder.use && global.powdersum && global.calculateCenterCorrection) {
+		calculateCenterCorrection(&global);
+	}
 	
 	
 	// Calculate angular average of powder pattern
