@@ -591,7 +591,7 @@ void endjob()
 	
 	// Calculate center correction from powder pattern
 	if (global.hitfinder.use && global.powdersum && global.calculateCenterCorrection) {
-		calculateCenterCorrection(&global);
+		calculateCenterCorrection(&global, global.powderRaw, global.npowder);
 	}
 	
 	

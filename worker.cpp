@@ -185,6 +185,18 @@ void *worker(void *threadarg) {
 	
 	
 	/*
+	 *	Calculate center correction
+	 */
+	if (global->calculateCenterCorrectionHit && (hit.standard || hit.water || hit.ice)) {
+		calculateCenterCorrection(global, corrected_data);
+		if (global->useCenterCorrection) {
+			updatePixelArrays(global);
+			updateImageArrays(global);
+		}
+	}
+	
+	
+	/*
 	 *	Apply attenuation correction
 	 */
 	if (global->useAttenuationCorrection > 0) {
@@ -196,7 +208,6 @@ void *worker(void *threadarg) {
 	 *	Assemble quadrants into a 'realistic' 2D image
 	 */
 	assemble2Dimage(threadInfo, global);
-	
 	
 	
 	/*
@@ -212,9 +223,7 @@ void *worker(void *threadarg) {
 								   || (hit.water && global->waterfinder.savehits) 
 								   || (hit.ice && global->icefinder.savehits) 
 								   || (!hit.background && global->backgroundfinder.savehits) )) {
-		//pthread_mutex_lock(&global->powdersumraw_mutex);
 		correlate(threadInfo, global);
-		//pthread_mutex_unlock(&global->powdersumraw_mutex);
 	}
 	
 	
@@ -1072,10 +1081,10 @@ void calculatePowderSAXS(cGlobal *global) {
 	
 }
 
-void calculateCenterCorrection(cGlobal *global) {
+void calculateCenterCorrection(cGlobal *global, double *intensities, double normalization) {
 	
-	// calculating center correction from the powder pattern of the regular hitfinder
-	printf("calculating center correction from powder pattern...\n");
+	// calculating center correction from an array of doubles with intensities in raw format (index number matches pix_x and pix_y)
+	printf("calculating center correction...\n");
 	
 	// calculate size of arrays
 	int nR = (int) ceil((global->centerCorrectionMaxR-global->centerCorrectionMaxR)/global->centerCorrectionDeltaR) + 1;
@@ -1093,7 +1102,7 @@ void calculateCenterCorrection(cGlobal *global) {
 	
 	// calculate hough array
 	for (int n=0; n<global->pix_nn; n++) {
-        if (global->powderRaw[n]/global->npowder > global->centerCorrectionThreshold) {
+        if (intensities[n]/normalization > global->centerCorrectionThreshold) {
 			float x = global->pix_x[n];
 			float y = global->pix_y[n];
 			for (int na=0; a<nC; na++) {
@@ -1127,12 +1136,202 @@ void calculateCenterCorrection(cGlobal *global) {
 	}
 	
 	// assign new center to global variables
-	global->pixelCenterX = jmax*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
-	global->pixelCenterY = kmax*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+	global->pixelCenterX = (float) jmax*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+	global->pixelCenterY = (float) kmax*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
 	
 	cout << "\tCorrected center in x: " << global->pixelCenterX << endl;
 	cout << "\tCorrected center in y: " << global->pixelCenterY << endl;
 	
-	// cleanup memory
+	// cleanup of allocated memory
 	delete[] hough;
+}
+
+void calculateCenterCorrection(cGlobal *global, float *intensities) {
+	
+	// calculating center correction from an array of floats with intensities in raw format (index number matches pix_x and pix_y)
+	DEBUGL1_ONLY printf("calculating center correction...\n");
+	
+	// calculate size of arrays
+	int nR = (int) ceil((global->centerCorrectionMaxR-global->centerCorrectionMaxR)/global->centerCorrectionDeltaR) + 1;
+	int nC = (int) ceil((2*global->centerCorrectionMaxC)/global->centerCorrectionDeltaC) + 1;
+	
+	// allocate hough array and initialize to zero
+	int *hough = new int[nR][nC][nC];
+	for (int i=0; i<nR; i++) {
+		for (int j=0; j<nC; j++) {
+			for (int k=0; k<nC; k++) {
+				hough[i][j][k] = 0;
+			}
+		}
+	}
+	
+	// calculate hough array
+	for (int n=0; n<global->pix_nn; n++) {
+        if (intensities[n] > global->centerCorrectionThreshold) {
+			float x = global->pix_x[n];
+			float y = global->pix_y[n];
+			for (int na=0; a<nC; na++) {
+				double a = na*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+				for (int nb=0; nb<nC; nb++) {
+					double b = nb*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+					double r = sqrt(((double) x-a)*((double) x-a) + ((double) y-b)*((double) y-b));
+					if (r>global->centerCorrectionMinR && r<global->centerCorrectionMaxR) {
+						int nr = (int) round((r-global->centerCorrectionMinR)/global->centerCorrectionDeltaR);
+						hough[nr][na][nb] += 1;
+					}
+				}
+			}
+		}
+	}
+	
+	// find maximum in hough array
+	int max = 0;
+	int imax, jmax, kmax;
+	for(int i=0; i<nR; i++) {
+        for(int j=0; j<nC; j++) {
+			for(int k=0; k<nC; k++) {
+				if(hough[i][j][k] > max) {
+					max = hough[i][j][k];
+					imax = i;
+					jmax = j;
+					kmax = k;
+				}
+			}
+		}
+	}
+	
+	// assign new center to global variables
+	// MUST BE MADE THREAD SAFE WITH ITS OWN MUTEX LOCK/UNLOCK
+	global->pixelCenterX = (float) jmax*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+	global->pixelCenterY = (float) kmax*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+	
+	DEBUGL1_ONLY cout << "\tCorrected center in x: " << global->pixelCenterX << endl;
+	DEBUGL1_ONLY cout << "\tCorrected center in y: " << global->pixelCenterY << endl;
+	
+	// cleanup of allocated memory
+	delete[] hough;
+}
+
+void updatePixelArrays(cGlobal *global) {
+	// update pixel arrays
+	
+	//MUTEX LOCK
+	for (int i=0; i<global->pix_nn; i++) {
+		global->pix_x[i] -= global->pixelCenterX;
+		global->pix_y[i] -= global->pixelCenterY;
+		float rtemp = sqrt(pix_x[i]*pix_x[i] + pix_y[i]*pix_y[i]);
+		if (rtemp > global->pix_rmax) global->rmax = rtemp;
+	}
+	global->pix_xmax -= global->pixelCenterX;
+	global->pix_xmin -= global->pixelCenterX;
+	global->pix_ymax -= global->pixelCenterY;
+	global->pix_ymin -= global->pixelCenterY;
+	//MUTEX UNLOCK
+	
+}
+
+void updateImageArrays(cGlobal *global) {
+	// update size of image array
+	DEBUGL1_ONLY printf("Updating detector configuration:\n");
+	
+	float xmax = global->pix_xmax;
+	float xmin = global->pix_xmin;
+	float ymax = global->pix_ymax;
+	float ymin = global->pix_ymin;
+	
+	// NEED HEADER FOR lrint???
+	fesetround(1);
+	xmax = lrint(xmax);
+	xmin = lrint(xmin);
+	ymax = lrint(ymax);
+	ymin = lrint(ymin);
+	DEBUGL1_ONLY printf("\tImage bounds:\n");
+	DEBUGL1_ONLY printf("\tx range %f to %f\n",xmin,xmax);
+	DEBUGL1_ONLY printf("\ty range %f to %f\n",ymin,ymax);
+	
+	// How big must the output image be?
+	float max = xmax;
+	if(ymax > max) max = ymax;
+	if(fabs(xmin) > max) max = fabs(xmin);
+	if(fabs(ymin) > max) max = fabs(ymin);
+	long image_nx = 2*(unsigned)max;
+	long image_nn = image_nx*image_nx;
+	
+	// reallocate assembled arrays if necessary
+	if (image_nx > global->image_nx) {
+		
+		DEBUGL1_ONLY printf("\tUpdated image output array will be %i x %i\n",(int)image_nx,(int)image_nx);
+		
+		// for the assembled powder, we have to reallocate the already saved image
+		int deltanx = image_nx-global->image_nx;
+		double *buffer;
+		
+		if (global->generateDarkcal){
+			// Allocate temporary buffer
+			buffer = (double*) calloc(image_nn, sizeof(double));
+			// Update assembled data
+			pthread_mutex_lock(&global->powdersumassembled_mutex);
+			for(long i=0; i<global->image_nn; i++)
+				buffer[image_nx*deltanx/2+deltanx/2+deltanx*floor(i/global->image_nx)+i] += global->powderAssembled[i];
+			// Free old memory and update pointers
+			free(global->powderAssembled);
+			global->powderAssembled = buffer;
+			buffer = NULL;
+			DEBUGL2_ONLY cout << "last index of new array: " << global->powderAssembled[image_nx-1] << endl;
+			pthread_mutex_unlock(&global->powdersumassembled_mutex);
+		}
+		
+		if (hit->standard && global->powdersum){
+			// Allocate temporary buffer
+			buffer = (double*) calloc(image_nn, sizeof(double));
+			// Update assembled data
+			pthread_mutex_lock(&global->powdersumassembled_mutex);
+			for(long i=0; i<global->image_nn; i++)
+				buffer[image_nx*deltanx/2+deltanx/2+deltanx*floor(i/global->image_nx)+i] = global->powderAssembled[i];
+			// Free old memory and update pointers
+			free(global->powderAssembled);
+			global->powderAssembled = buffer;
+			buffer = NULL;
+			DEBUGL2_ONLY cout << "last index of new array: " << global->powderAssembled[image_nx-1] << endl;
+			pthread_mutex_unlock(&global->powdersumassembled_mutex);
+		}
+	
+		if (hit->ice && global->powdersum){
+			// Allocate temporary buffer
+			buffer = (double*) calloc(image_nn, sizeof(double));
+			// Update assembled data	: ice
+			pthread_mutex_lock(&global->icesumassembled_mutex);
+			for(long i=0; i<global->image_nn; i++)
+				buffer[image_nx*deltanx/2+deltanx/2+deltanx*floor(i/global->image_nx)+i] = global->iceAssembled[i];
+			// Free old memory and update pointers
+			free(global->iceAssembled);
+			global->iceAssembled = buffer;
+			buffer = NULL;
+			DEBUGL2_ONLY cout << "last index of new array: " << global->iceAssembled[image_nx-1] << endl;
+			pthread_mutex_unlock(&global->icesumassembled_mutex);			
+		}
+
+
+		if (hit->water && global->powdersum){
+			// Allocate temporary buffer
+			buffer = (double*) calloc(image_nn, sizeof(double));
+			// Update assembled data	: water
+			pthread_mutex_lock(&global->watersumassembled_mutex);
+			for(long i=0; i<global->image_nn; i++)
+				buffer[image_nx*deltanx/2+deltanx/2+deltanx*floor(i/global->image_nx)+i] = global->waterAssembled[i];
+			// Free old memory and update pointers
+			free(global->waterAssembled);
+			global->waterAssembled = buffer;
+			buffer = NULL;
+			DEBUGL2_ONLY cout << "last index of new array: " << global->waterAssembled[image_nx-1] << endl;
+			pthread_mutex_unlock(&global->watersumassembled_mutex);
+		}
+		
+		// all that needs to be done for assemble2DImage to work properly is to update image_nx/nn
+		// OBS: THIS MUST BE DONE AFTER THE REALLOCATION OF THE ARRAYS FOR THE CODE TO WORK
+		// MUTEX LOCK
+		global->image_nx = image_nx;
+		global->image_nn = image_nn;
+		// MUTEX UNLOCK
+	} else DEBUGL1_ONLY cout << "\tSize of image output array is unchanged." << endl;
 }

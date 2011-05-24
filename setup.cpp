@@ -66,7 +66,8 @@ void cGlobal::defaultConfiguration(void) {
 	useCenterCorrection = 0;
 	pixelCenterX = 0;
 	pixelCenterY = 0;
-	calculateCenterCorrection = 0;
+	calculateCenterCorrectionPowder = 0;
+	calculateCenterCorrectionHit = 0;
 	centerCorrectionThreshold = 150;
 	centerCorrectionMaxR = 600;
 	centerCorrectionMinR = 400;
@@ -312,7 +313,8 @@ void cGlobal::setup() {
 		startFrames = 0;
 		powderthresh = 0;
 		powderSAXS = 0;
-		calculateCenterCorrection = 0;
+		calculateCenterCorrectionPowder = 0;
+		calculateCenterCorrectionHit = 0;
 		useAttenuationCorrection = -1;
 		useCorrelation = 0;
 	}
@@ -511,8 +513,11 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "pixelcentery")) {
 		pixelCenterY = atof(value);
 	}
-	else if (!strcmp(tag, "calculatecentercorrection")) {
-		calculateCenterCorrection = atoi(value);
+	else if (!strcmp(tag, "calculatecentercorrectionpowder")) {
+		calculateCenterCorrectionPowder = atoi(value);
+	}
+	else if (!strcmp(tag, "calculatecentercorrectionhit")) {
+		calculateCenterCorrectionHit = atoi(value);
 	}
 	else if (!strcmp(tag, "centercorrectionthreshold")) {
 		centerCorrectionThreshold = atof(value);
@@ -893,7 +898,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	
 	
 	// Center correct the array w.r.t the square hole created by the quads (assume beam is centered)
-	if (useCenterCorrection && !calculateCenterCorrection) {
+	if (useCenterCorrection && !calculateCenterCorrectionPowder && !calculateCenterCorrectionHit) {
 		float x0 = pixelCenter(pix_x);
 		if (pixelCenterX) x0 = pixelCenterX;
 		if (debugLevel >= 1) cout << "\tCorrected center in x: " << x0 << endl;
