@@ -190,6 +190,19 @@ void *worker(void *threadarg) {
 	if (global->useAttenuationCorrection > 0) {
 		applyAttenuationCorrection(threadInfo, global);
 	}
+
+	
+	/*
+     *  Perform cross-correlation analysis
+     */
+	if (global->useCorrelation && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
+								   || (hit.water && global->waterfinder.savehits) 
+								   || (hit.ice && global->icefinder.savehits) 
+								   || (!hit.background && global->backgroundfinder.savehits) )) {
+		//pthread_mutex_lock(&global->powdersumraw_mutex);
+		correlate(threadInfo, global);
+		//pthread_mutex_unlock(&global->powdersumraw_mutex);
+	}
 	
 	
 	/*
@@ -203,19 +216,6 @@ void *worker(void *threadarg) {
 	 *	Add to powder if it's a hit or if we wish to generateDarkcal(member data of global)
 	 */
 	addToPowder(threadInfo, global, &hit);
-	
-	
-	/*
-     *  Perform cross-correlation analysis
-     */
-	if (global->useCorrelation && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
-								   || (hit.water && global->waterfinder.savehits) 
-								   || (hit.ice && global->icefinder.savehits) 
-								   || (!hit.background && global->backgroundfinder.savehits) )) {
-		//pthread_mutex_lock(&global->powdersumraw_mutex);
-		correlate(threadInfo, global);
-		//pthread_mutex_unlock(&global->powdersumraw_mutex);
-	}
 	
 	
 	/*
