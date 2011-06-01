@@ -47,6 +47,7 @@ private:
     //-----some debug features that can turned on via setDebug()
     int p_debug;
 //    array1D *check1D;
+	float *p_dataCArray; 	//!!!only temporary!!! keep the cheetah c-array to be able to write to it for debugging purposes
     
 public:
 	//---------------------------------------------constructors & destructor
@@ -75,12 +76,17 @@ public:
     // (for lack of a better name and in the hope that they may be fast. We'll see...)
     
     // 'calculatePolarCoordinates' returns a 2D pattern in polar coordinates (r vs. phi)
-    int calculatePolarCoordinates_FAST(array2D **polar, int number_q=20, int number_phi=128); 
-    int calculatePolarCoordinates_FAST(array2D **polar, int number_q, double start_q, double stop_q,
+//    int calculatePolarCoordinates_FAST(array2D **polar, int number_q=20, int number_phi=128); 
+//    int calculatePolarCoordinates_FAST(array2D **polar, int number_q, double start_q, double stop_q,
+//                                                        int number_phi=128, double start_phi=0, double stop_phi=360 );
+    int calculatePolarCoordinates_FAST(array2D *&polar, int number_q=20, int number_phi=128); 
+    int calculatePolarCoordinates_FAST(array2D *&polar, int number_q, double start_q, double stop_q,
                                                         int number_phi=128, double start_phi=0, double stop_phi=360 );
+
     
     // 'calculateXCCA' returns the autocorrelation function (r = const.)          
-    int calculateXCCA_FAST( array2D **polar, array2D **corr );
+//    int calculateXCCA_FAST( array2D **polar, array2D **corr );
+    int calculateXCCA_FAST( array2D *&polar, array2D *&corr );
     
     // looks up the value closest to xcoord, ycoord in the data
     double lookup( double xcoord, double ycoord );
@@ -96,6 +102,7 @@ public:
 	// (for cheetah, performance is better if this is calculated once in advance 
 	// and then handed to the CrossCorrelator for each shot)
 	int createLookupTable(int Nx, int Ny);
+	void calcLUTvariables( int lutNx, int lutNy, double &qx_min, double &qx_stepsize, double &qy_min, double &qy_stepsize );
     
     //compute 1D correlations using FFT, the result is returned in f, respectively
     int correlateFFT( array1D *f, array1D *g );    // result of corr(f,g) -> f
