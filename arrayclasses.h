@@ -21,30 +21,35 @@ class array2D;
 class array3D;
 class FourierTransformer;
 
-//*********************************************************************************
+
+
+//=================================================================================
+//
+// arraydata (the base class for array1D, array2D, array3D)
+//
+//=================================================================================
 class arraydata {
 protected:
 	double *p_data;												//pointer to the data array
 	unsigned int p_size;	
 	
 public:
-	arraydata();                                                //default constructor
-	arraydata( unsigned int sizeval );                     
-    arraydata( int16_t *CArray, unsigned int size_val );     //initialize with C-array of ints of a given length
-	arraydata( float *CArray, unsigned int size_val );			//initialize with C-array of floats of a given length
+//	arraydata();                                                //default constructor
+	arraydata( const unsigned int sizeval = 1 );                     
+    arraydata( const int16_t *CArray, const unsigned int size_val );     //initialize with C-array of ints of a given length
+	arraydata( const float *CArray, const unsigned int size_val );			//initialize with C-array of floats of a given length
     arraydata( const arraydata &src );                          //copy constructor
     arraydata & operator=(const arraydata & src);               //assignment operator
 	~arraydata();
 
     //helper functions
     void init();
-    void copy( const double* src_data, unsigned int size_val );
-    void copy( const int* src_data, unsigned int size_val );
+    void copy( const double* src_data, const unsigned int size_val );
+    void copy( const int* src_data, const unsigned int size_val );
     void copy( const arraydata& src );
     void copy( const array1D& src );
     void destroy();
     double *data() const;                                         //return pointer to internal raw data array
-//    void data_copy(double *copy);                               //return a new array pointer with a copy of the data
     
     void zero();												//set all elements to zero
 	void ones();												//set all elements to 1
@@ -68,7 +73,7 @@ public:
     
     //perform some basic math on array
     int multiplyByFactor( double factor );
-    int multiplyByArrayElementwise( arraydata *secondFactor );
+    int multiplyByArrayElementwise( const arraydata *secondFactor );
 
 //	int verbose() const;
 //	void setVerbose( int verbosity );
@@ -77,18 +82,21 @@ public:
 
 
 
-//*********************************************************************************
+//=================================================================================
+//
+// array1D
+//
+//=================================================================================
 class array1D : public arraydata{
 	
 private:
 	int p_dim1;
 	
 public:
-    array1D();                                                  //default constructor
-	array1D( unsigned int size_dim1 );                          
+//    array1D();                                                  //default constructor
+	array1D( unsigned int size_dim1 = 1);                          
     array1D( int16_t *CArray, unsigned int size_val );          //init with C-style array of ints
 	array1D( float *CArray, unsigned int size_val );			//init with C-style array of floats
-//    array1D( const arraydata &src );                            //copy constructor
     array1D( array2D* dataTwoD );                               //init with an array2D object
 	~array1D();
     
@@ -109,7 +117,11 @@ public:
 
 
 
-//*********************************************************************************
+//=================================================================================
+//
+// array2D
+//
+//=================================================================================
 class array2D : public arraydata{
 	
 private:
@@ -117,8 +129,8 @@ private:
 	int p_dim2;
 	
 public:
-    array2D();
-	array2D( unsigned int size_dim1, unsigned int size_dim2 );              //default constructor
+//    array2D();
+	array2D( unsigned int size_dim1 = 1, unsigned int size_dim2 = 1 );              //default constructor
     array2D( array1D* dataOneD, unsigned int size_dim1, unsigned int size_dim2);   // use 1D data to initialize
 	~array2D();
 
@@ -132,10 +144,10 @@ public:
 	double get( unsigned int i, unsigned int j ) const;                 //returns single pixel value
 	void set( unsigned int i, unsigned int j, double value );
     
-    int getRow( int rownum, array1D **row ) const;                       //returns one-dimensional 'row' or 'col'
-    int getCol( int colnum, array1D **col ) const;						//return value is 0 if successful
-    void setRow( int rownum, array1D *row );                              //sets a one-dimensional row
-    void setCol( int colnum, array1D *col );
+    int getRow( int rownum, array1D *&row ) const; 	                    //returns one-dimensional 'row' or 'col'
+    int getCol( int colnum, array1D *&col ) const;						//return value is 0 if successful
+    void setRow( int rownum, const array1D *row );                              //sets a one-dimensional row
+    void setCol( int colnum, const array1D *col );
             
 	void readFromHDF5( std::string filename );
 	
@@ -150,7 +162,12 @@ public:
 
 
 
-//*********************************************************************************
+
+//=================================================================================
+//
+// array3D
+//
+//=================================================================================
 class array3D : public arraydata{
 	
 private:
@@ -159,8 +176,8 @@ private:
 	int p_dim3;
 	
 public:
-    array3D();
-	array3D( unsigned int size_dim1, unsigned int size_dim2, unsigned int size_dim3 );  //default constructor
+//    array3D();
+	array3D( unsigned int size_dim1 = 1, unsigned int size_dim2 = 1, unsigned int size_dim3 = 1 );  //default constructor
 	~array3D();
     
     void copy( const array3D& src );
@@ -184,9 +201,11 @@ public:
 
 
 
-
-//*********************************************************************************
-//helpers. they do Fourier transform
+//=================================================================================
+//
+// FourierTransformer. helper class. it does the Fourier transform
+//
+//=================================================================================
 class FourierTransformer{
 
 private:
@@ -201,32 +220,17 @@ private:
 	void destroyPlans();	
 	
 public:
-//    FourierTransformer();
-    FourierTransformer( array1D *real, array1D *imag );
-//    FourierTransformer(int n=32);
-//	FourierTransformer(fftw_plan forwardplan, fftw_plan backwardplan, int n );	// initialize with two plans (created somewhere else)
+    FourierTransformer( const array1D *real, const array1D *imag );	//initialize with data
     ~FourierTransformer();	
 
     //wrapper for the FFTW discrete Fourier Transform
-    //the two arrays 'real' and 'imag' are overwritten by
-    //resulting arrays for the real and imaginary parts
     int transform( int direction=1 );
 	int transformWithNewPlans( int direction=1 );
-//	int transform( array1D *real, array1D *imag, int direction=1 );
 
-
-	void getData( array1D **real, array1D **imag );
-	array1D getReal();
-	array1D getImag();
-		
-//	int n() const;
-//	void setN( int size );
-	
-	//	fftw_plan getForwardPlan() const;
-//	void setForwardPlan(fftw_plan plan);
-//	fftw_plan getBackwardPlan() const;
-//	void setBackwardPlan(fftw_plan plan);
-
+	//after the transform, use these functions to ask for the transformed data
+	void getData( array1D *&real, array1D *&imag ) const;		// return within passed arguments
+	array1D getReal() const;									// return by copy (may be slower)
+	array1D getImag() const;									// return by copy (may be slower)
 };
 
 
