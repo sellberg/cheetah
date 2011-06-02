@@ -79,7 +79,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		
 	//--------------------------------------------------------------------------------------------alg2
 	} else if (global->useCorrelation == 2) {					
-		DEBUGL1_ONLY cout << "XCCA fast" << endl;
+		DEBUGL2_ONLY cout << "XCCA fast" << endl;
 
         array2D *polar = new array2D;
         array2D *corr = new array2D;
@@ -95,36 +95,42 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
         double start_phi = global->fastCorrelationStartPhi;
         double stop_phi = global->fastCorrelationStopPhi;
         int number_phi = global->fastCorrelationNumPhi;
-		DEBUGL1_ONLY cout << "q from " << start_q << " to " <<  stop_q << " in " << number_q << ", "
-						<< "phi from " << start_phi << " to " <<  stop_phi << " in " << number_phi << "" << endl;
-						cout << "delta_q = " << cc->deltaq() << endl;
 		
-		//calculate polar coordinates: returns an array2D in the first polar argument
-        int polar_fail = cc->calculatePolarCoordinates_FAST(&polar, number_q, start_q, stop_q, number_phi, start_phi, stop_phi);
-		if (polar_fail){
-			cout << "ERROR in correlate! Could not calculate polar coordinates!" << endl;
-		}
-		
-		cout << "thread #" << threadInfo->threadNum << " locking mutex" << endl;
+		//cout << "thread #" << threadInfo->threadNum << " locking mutex" << endl;
 		pthread_mutex_lock(&global->correlation_mutex);	
+		
+		try{
+			//calculate polar coordinates: returns an array2D in the first polar argument
+			int polar_fail = cc->calculatePolarCoordinates_FAST(polar, number_q, start_q, stop_q, number_phi, start_phi, stop_phi);
+			if (polar_fail){
+				cout << "ERROR in correlate! Could not calculate polar coordinates!" << endl;
+			}
 
-		//perform the correlation
-		int XCCA_fail = cc->calculateXCCA_FAST( &polar, &corr );
-		if (XCCA_fail){
-			cout << "ERROR in correlate! Could not calculate XCCA!" << endl;
+			//perform the correlation
+			int XCCA_fail = cc->calculateXCCA_FAST( polar, corr );
+			if (XCCA_fail){
+				cout << "ERROR in correlate! Could not calculate XCCA!" << endl;
+			}
+			
+			//write output
+			writeXCCA(threadInfo, global, cc, threadInfo->eventname);        
+		} catch(...) {
+			cerr << "Exception caught in correlate! Thread #" << threadInfo->threadNum << endl;
+			cerr << "Aborting..." << endl;
+			delete polar;
+			delete corr;
+			delete cc;
+			exit(1);
 		}
-		
-		//write output
-		writeXCCA(threadInfo, global, cc, threadInfo->eventname);        
-		
-		cout << "thread #" << threadInfo->threadNum << " unlocking mutex" << endl;
+				
+		//cout << "thread #" << threadInfo->threadNum << " unlocking mutex" << endl;
 		pthread_mutex_unlock(&global->correlation_mutex);
 		
 		//clean up
         delete polar;
         delete corr;
 		
-		DEBUGL1_ONLY cout << "XCCA done." << endl;
+		DEBUGL2_ONLY cout << "XCCA done." << endl;
 
 	//--------------------------------------------------------------------------------------------default case
 	} else {

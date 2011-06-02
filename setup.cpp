@@ -908,8 +908,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 			y0 = pixelCenterY;
 		}
 		if (debugLevel >= 1) {
-			cout << "\tCorrected center in x: " << x0 << endl;
-			cout << "\tCorrected center in y: " << y0 << endl;
+			cout << "\tCorrected center (x,y): (" << x0 << ", " << y0 << ")" << endl;
 		}
 		for (int i=0; i<nn; i++) {
 			pix_x[i] -= x0;
@@ -1252,38 +1251,35 @@ void cGlobal::createLookupTable(){
 	}
 	fastCorrelationLUT = new int[lutSize];
 	
-	//find max and min of the q-calibration arrays
-	float	xmax = -HUGE_VAL;
-	float	xmin =  HUGE_VAL;
-	float	ymax = -HUGE_VAL;
-	float	ymin =  HUGE_VAL;
-	for(long i=0;i<pix_nn;i++){
-		if (pix_x[i] > xmax) xmax = pix_x[i];
-		if (pix_x[i] < xmin) xmin = pix_x[i];
-		if (pix_y[i] > ymax) ymax = pix_y[i];
-		if (pix_y[i] < ymin) ymin = pix_y[i];
+	//initialize to zero!
+	for (int i=0; i<lutSize; i++) {
+  		fastCorrelationLUT[i] = 0;
 	}
-	double qx_range = fabs(xmax - xmin);
-    double qx_stepsize = qx_range/(lutNx-1);
-	double qy_range = fabs(ymax - ymin);
-    double qy_stepsize = qy_range/(lutNy-1);
-	cout << "\tLUT qx-values: min=" << xmin << ", max=" << xmax << ", range=" << qx_range << ", stepsize=" << qx_stepsize << endl;
-	cout << "\tLUT qy-values: min=" << ymin << ", max=" << ymax << ", range=" << qy_range << ", stepsize=" << qy_stepsize << endl;
+	
+	//find max and min of the q-calibration arrays
+	double qx_range = fabs(pix_xmax - pix_xmin);
+    double qx_stepsize = qx_range/(double)(lutNx-1);
+	double qy_range = fabs(pix_ymax - pix_ymin);
+    double qy_stepsize = qy_range/(double)(lutNy-1);
+	cout << "\tLUT qx-values: min=" << pix_xmin << ", max=" << pix_xmax << ", range=" << qx_range << ", stepsize=" << qx_stepsize << endl;
+	cout << "\tLUT qy-values: min=" << pix_ymin << ", max=" << pix_ymax << ", range=" << qy_range << ", stepsize=" << qy_stepsize << endl;
 	
 	int lutFailCount = 0;
-	for (int i = 0; i < pix_nn; i++){           //go through all the q-calibration array
+	for (int i = 0; i < pix_nn; i++){           //go through the whole the q-calibration array
 												//get q-values from qx and qy arrays
 												//and determine at what index (ix, iy) to put them in the lookup table
-		double ix = (pix_x[i]-xmin) / qx_stepsize;
-		double iy = (pix_y[i]-ymin) / qy_stepsize;
+		const double ix = (pix_x[i]-pix_xmin) / qx_stepsize;
+		const double iy = (pix_y[i]-pix_ymin) / qy_stepsize;
 		
 		//fill table at the found coordinates with the data index
 		//overwriting whatever value it had before
 	    //(the add-one-half->floor trick is to achieve reasonable rounded integers)
 		int lutindex = (int) ( floor(ix+0.5) + lutNx*floor(iy+0.5) );
+		//int lutindex = (int) ( floor(ix) + lutNx*floor(iy) );
+
 		if (lutindex < 0 || lutindex >= lutSize) {
 			cerr << endl;
-  			cerr << "Error in cGlobal::readDetectorGeometry! lookup table index out of bounds" << endl;
+  			cerr << "Error in cGlobal::createLookupTable! lookup table index out of bounds" << endl;
 			cerr << "\t (was trying to set fastCorrelationLUT[" << lutindex << "] = " << i << ")" << endl;
 			cerr << "\tLUT: pix_x, pix_y = (" << pix_x[i] << ", " << pix_y[i] << ") --> ix, iy = (" << ix << ", " << iy << ")" << endl;
 			lutFailCount++;
@@ -1302,19 +1298,23 @@ void cGlobal::createLookupTable(){
 		//    a vector of all applicable indices)
 		/////////////////////////////////////////////////////////////////////////////////////////
 		
-		if(debugLevel>2 && !(i%100)){
+		if(debugLevel>2 && (i<=100 || pix_nn-i<=200) ){	//print the first and the last  entries to check
 			cout << "setting fastCorrelationLUT[" << lutindex << "] = " << i << "";
 			cout << "   LUT: pix_x, pix_y = (" << pix_x[i] << ", " << pix_y[i] << ") --> ix, iy = (" << ix << ", " << iy << ")" << endl;
 		}
 	}//for
+	//after all is done, set the zero element to zero 
+	//to make sure a failure of lookup() doesn't result in an acutal value
+	fastCorrelationLUT[0] = 0;		
+	
 	cout << "\tLUT created ";
 	cout << "(info: LUT assignment failed in " << lutFailCount << " of " << lutSize << " cases)" << endl;
 	
 	
 	//explicit output to test...
-	if (debugLevel>2) {
+	if (debugLevel>1) {
 		std::ostringstream osst;
-		osst << "-------------------LUT begin---------------------------------";
+		osst << "-------------------LUT begin---------------------------------" << endl;
 			for (int j = 0; j<lutNy; j++){
 			osst << " [";
 			for (int i = 0; i<lutNx; i++) {
@@ -1322,7 +1322,7 @@ void cGlobal::createLookupTable(){
 			}
 			osst << "]" << endl;
 		}
-		osst << "------------------LUT end----------------------------------";		
+		osst << "------------------LUT end----------------------------------" << endl;		
 		cout << osst.str() << endl;
 	}//if	
 }
