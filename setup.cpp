@@ -279,13 +279,15 @@ void cGlobal::setup() {
 	pthread_mutex_init(&selfdark_mutex, NULL);
 	pthread_mutex_init(&powdersumraw_mutex, NULL);
 	pthread_mutex_init(&powdersumassembled_mutex, NULL);
-	pthread_mutex_init(&correlation_mutex, NULL);
-    pthread_mutex_init(&nhits_mutex, NULL);
-	pthread_mutex_init(&framefp_mutex, NULL);
 	pthread_mutex_init(&icesumraw_mutex, NULL);
 	pthread_mutex_init(&icesumassembled_mutex, NULL);
 	pthread_mutex_init(&watersumraw_mutex, NULL);
 	pthread_mutex_init(&watersumassembled_mutex, NULL);
+	pthread_mutex_init(&correlation_mutex, NULL);
+	pthread_mutex_init(&pixelcenter_mutex, NULL);
+	pthread_mutex_init(&image_mutex, NULL);
+    pthread_mutex_init(&nhits_mutex, NULL);
+	pthread_mutex_init(&framefp_mutex, NULL);
 
 	threadID = (pthread_t*) calloc(nThreads, sizeof(pthread_t));
 
@@ -900,11 +902,15 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	// Center correct the array w.r.t the square hole created by the quads (assume beam is centered)
 	if (useCenterCorrection && !calculateCenterCorrectionPowder && !calculateCenterCorrectionHit) {
 		float x0 = pixelCenter(pix_x);
-		if (pixelCenterX) x0 = pixelCenterX;
-		if (debugLevel >= 1) cout << "\tCorrected center in x: " << x0 << endl;
 		float y0 = pixelCenter(pix_y);
-		if (pixelCenterY) y0 = pixelCenterY;
-		if (debugLevel >= 1) cout << "\tCorrected center in y: " << y0 << endl;
+		if (pixelCenterX || pixelCenterY) {
+			x0 = pixelCenterX;
+			y0 = pixelCenterY;
+		}
+		if (debugLevel >= 1) {
+			cout << "\tCorrected center in x: " << x0 << endl;
+			cout << "\tCorrected center in y: " << y0 << endl;
+		}
 		for (int i=0; i<nn; i++) {
 			pix_x[i] -= x0;
 			pix_y[i] -= y0;

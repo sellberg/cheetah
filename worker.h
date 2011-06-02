@@ -97,6 +97,9 @@ typedef struct {
 	
 	double		attenuation;		// 1/transmission taken from last succesful readout of the Si filters
 	
+	float		pixelCenterX;
+	float		pixelCenterY;
+	
 	// Thread management
 	int		threadID;
 	
@@ -149,9 +152,13 @@ void writeHDF5(tThreadInfo*, cGlobal*,char*, FILE*);
 void writeSimpleHDF5(const char*, const void*, int, int, int);
 void saveRunningSums(cGlobal*);
 void calculatePowderSAXS(cGlobal *global);
-void calculateCenterCorrection(cGlobal *global);
+void calculateCenterCorrection(cGlobal *global, double *intensities, double normalization);
+void calculateCenterCorrection(tThreadInfo *info, cGlobal *global, float *intensities, float normalization);
 void updatePixelArrays(cGlobal *global);
+void updatePixelArrays(tThreadInfo *info, cGlobal *global);
 void updateImageArrays(cGlobal *global);
+void updateImageArrays(cGlobal *global, cHit *hit);
+void updateSAXSArrays(cGlobal *global);
 
 
 #endif

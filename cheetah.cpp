@@ -153,7 +153,7 @@ void beginjob() {
 	global.readIcemask(global.icefinder.peaksearchFile);
 	global.readWatermask(global.waterfinder.peaksearchFile);
 	global.readBackgroundmask(global.backgroundfinder.peaksearchFile);
-	global.readAttenuations(global.attenuationFile);
+	if (global.useAttenuationCorrection >= 0) global.readAttenuations(global.attenuationFile);
 	global.createLookupTable();	// <-- important that this is done after detector geometry is determined
 }
 
@@ -451,10 +451,13 @@ void event() {
 	
 	threadInfo->detectorPosition = global.detectorZ;
 	
+	threadInfo->pixelCenterX = global.pixelCenterX;
+	threadInfo->pixelCenterY = global.pixelCenterY;
+	
 	if (global.useAttenuationCorrection >= 0) {
 		threadInfo->attenuation = global.attenuations[global.nAttenuations-1];	// 1/transmission taken from last successful readout of the Si filters
 	} else {
-		threadInfo->attenuation = NULL;
+		threadInfo->attenuation = 0;
 	}
 	
 	threadInfo->pGlobal = &global;
@@ -587,11 +590,16 @@ void endjob()
 		printf("Waiting for %i worker threads to terminate\n", (int)global.nActiveThreads);
 		usleep(100000);
 	}
-
+	
 	
 	// Calculate center correction from powder pattern
-	if (global.hitfinder.use && global.powdersum && global.calculateCenterCorrection) {
+	if (global.hitfinder.use && global.powdersum && global.calculateCenterCorrectionPowder) {
 		calculateCenterCorrection(&global, global.powderRaw, global.npowder);
+		if (global.useCenterCorrection) {
+			updatePixelArrays(&global);
+			updateImageArrays(&global);
+			updateSAXSArrays(&global);
+		}
 	}
 	
 	
@@ -649,15 +657,17 @@ void endjob()
 	pthread_mutex_destroy(&global.nActiveThreads_mutex);
 	pthread_mutex_destroy(&global.powdersumraw_mutex);
 	pthread_mutex_destroy(&global.powdersumassembled_mutex);
-	pthread_mutex_destroy(&global.correlation_mutex);
-    pthread_mutex_destroy(&global.selfdark_mutex);
-	pthread_mutex_destroy(&global.hotpixel_mutex);
-	pthread_mutex_destroy(&global.nhits_mutex);
-	pthread_mutex_destroy(&global.framefp_mutex);
 	pthread_mutex_destroy(&global.icesumraw_mutex);
 	pthread_mutex_destroy(&global.icesumassembled_mutex);
 	pthread_mutex_destroy(&global.watersumraw_mutex);
 	pthread_mutex_destroy(&global.watersumassembled_mutex);
+	pthread_mutex_destroy(&global.correlation_mutex);
+	pthread_mutex_destroy(&global.pixelcenter_mutex);
+	pthread_mutex_destroy(&global.image_mutex);	
+    pthread_mutex_destroy(&global.selfdark_mutex);
+	pthread_mutex_destroy(&global.hotpixel_mutex);
+	pthread_mutex_destroy(&global.nhits_mutex);
+	pthread_mutex_destroy(&global.framefp_mutex);
 	
 	printf("Done!\n");
 }

@@ -178,13 +178,15 @@ public:
 	pthread_mutex_t	selfdark_mutex;
 	pthread_mutex_t	powdersumraw_mutex;
 	pthread_mutex_t	powdersumassembled_mutex;
-	pthread_mutex_t correlation_mutex;
-    pthread_mutex_t	nhits_mutex;
-	pthread_mutex_t	framefp_mutex;
 	pthread_mutex_t	watersumassembled_mutex;
 	pthread_mutex_t	watersumraw_mutex;
 	pthread_mutex_t	icesumassembled_mutex;
 	pthread_mutex_t	icesumraw_mutex;	
+	pthread_mutex_t correlation_mutex;
+	pthread_mutex_t pixelcenter_mutex;
+	pthread_mutex_t image_mutex;
+    pthread_mutex_t	nhits_mutex;
+	pthread_mutex_t	framefp_mutex;
 	
 	
 	// Detector geometry
