@@ -48,16 +48,6 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     
     DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 	
-	/* OLD FUNCTIONALITY MOVED TO setup.cpp
-    //jas: calculate center of CArray and shift qx, qy accordingly
-	double x0 = centerX(global->pix_x);
-    double y0 = centerY(global->pix_y);
-    for (int i=0; i<RAW_DATA_LENGTH; i++) {                 //previously function shiftCenter() in crosscorrelator
-        global->pix_x[i] = global->pix_x[i] - x0;
-        global->pix_y[i] = global->pix_y[i] - y0;
-    }
-    */
-	
     //create cross correlator object that takes care of the computations
 	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH );
 
@@ -73,8 +63,8 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		cc->calculateSAXS();
 		cc->calculateXCCA();	
 		
-		//writeSAXS(threadInfo, global, cc, threadInfo->eventname);
-		writeXCCA(threadInfo, global, cc, threadInfo->eventname);
+		//writeSAXS(threadInfo, global, cc, threadInfo->eventname); // writes SAXS only to binary
+		writeXCCA(threadInfo, global, cc, threadInfo->eventname); // writes XCCA+SAXS to binary
 		
 		
 	//--------------------------------------------------------------------------------------------alg2
