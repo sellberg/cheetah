@@ -192,9 +192,11 @@ void *worker(void *threadarg) {
 	if (global->calculateCenterCorrectionHit && (hit.standard || hit.water || hit.ice)) {
 		calculateCenterCorrection(threadInfo, global, threadInfo->corrected_data, 1);
 		if (global->useCenterCorrection) {
-			// NEED TO UPDATE SIZE OF POWDER ARRAYS IN updateImageArrays BEFORE THIS WORKS
-			//updatePixelArrays(threadInfo, global);
-			//updateImageArrays(global, &hit);
+			// DOES NOT WORK PROPERLY!!!
+			// SCREWS UP THE CENTER CALCULATION (THREADED & NONTHREADED)
+			// NEED TO MAKE SURE THREADS DO NOT READ UPDATED VARIABLES VALUES FROM OTHER THREADS WHILE UPDATING ARRAYS/ASSEMBLY/POWDERADD/POWDERSSAVE
+			updatePixelArrays(threadInfo, global);
+			updateImageArrays(global, &hit); // IS NOT THREADSAFE IF POWDERS ARE SAVED
 		}
 	}
 	
@@ -451,15 +453,9 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
  */
 void assemble2Dimage(tThreadInfo *threadInfo, cGlobal *global){
 	
-	
 	// Allocate temporary arrays for pixel interpolation (needs to be floating point)
 	float	*data = (float*) calloc(global->image_nn,sizeof(float));
-	float	*weight = (float*) calloc(global->image_nn,sizeof(float));
-	for(long i=0; i<global->image_nn; i++){
-		data[i] = 0;
-		weight[i]= 0;
-	}
-	
+	float	*weight = (float*) calloc(global->image_nn,sizeof(float));	
 	
 	// Loop through all pixels and interpolate onto regular grid
 	float	x, y;
@@ -1226,7 +1222,7 @@ void updatePixelArrays(tThreadInfo *info, cGlobal *global) {
 	// update pixel arrays
 	
 	pthread_mutex_lock(&global->pixelcenter_mutex);
-	float deltaX = info->pixelCenterX - global->pixelCenterX; //JAS: need to make deltaX/Y threadInfo to use the in updateImageArray to get addToPowder to work?
+	float deltaX = info->pixelCenterX - global->pixelCenterX;
 	float deltaY = info->pixelCenterY - global->pixelCenterY;	
 	for (int i=0; i<global->pix_nn; i++) {
 		global->pix_x[i] -= deltaX;
