@@ -49,7 +49,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 	
     //create cross correlator object that takes care of the computations
-	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH );
+	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->fastCorrelationNumQ, global->fastCorrelationNumPhi );
 
     DEBUGL1_ONLY cc->setDebug(1);                           //turn on debug level inside the CrossCorrelator, if needed
     DEBUGL2_ONLY cc->setDebug(2);                           //turn on debug level inside the CrossCorrelator, if needed
@@ -59,7 +59,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		
 		DEBUGL1_ONLY cout << "XCCA regular" << endl;
 		
-		cc->calculatePolarCoordinates();
+		cc->calculatePolarCoordinates(global->fastCorrelationStartQ, global->fastCorrelationStopQ);
 		cc->calculateSAXS();
 		cc->calculateXCCA();	
 		

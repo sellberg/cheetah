@@ -18,9 +18,11 @@ class CrossCorrelator {
 
 private:
 	int p_arraySize;
-	double p_qmax;
 	double p_qmin;
+	double p_qmax;
 	double p_deltaq;		// step size (bin length) in q-direction
+	double p_phimin;
+	double p_phimax;
 	double p_deltaphi;		// step size (bin length) in phi direction
 	int p_samplingLength;
 	int p_samplingAngle;
@@ -55,6 +57,7 @@ public:
 	CrossCorrelator( float *dataCArray, int arraylength );                                        //init with actual data
     CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength );      //init with actual data + centered(!) q calibration
 	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, double qMax, double qMin );
+	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, int nq, int nphi );
 	
 	~CrossCorrelator();
 	
@@ -68,6 +71,7 @@ public:
 	
 	//---------------------------------------------calculations (Jonas's way)
 	void calculatePolarCoordinates();
+	void calculatePolarCoordinates( double start_q, double stop_q ); // for cheetah.ini control
 	void calculateSAXS();
 	void calculateXCCA();
 	
@@ -121,7 +125,11 @@ public:
 	double qmax() const;
 	void setQmax( double qmax_val );
 	double qmin() const;
-	void setQmin( double qmax_val );
+	void setQmin( double qmin_val );
+	double phimin() const;
+	void setPhimin( double phimin_val );
+	double phimax() const;
+	void setPhimax( double phimax_val );
 	
 	// jas: qmaxCArray() could easily be rewritten to use array1D qx, qy instead of CArrays if preferable
 	double qmax2CArray( float *qxCArray, float *qyCArray, int arraylength ); // calculates qmax from 2 CArrays
@@ -137,7 +145,9 @@ public:
 	double deltaq() const;
 	double deltaphi() const;
 	int samplingLength() const;
+	void setSamplingLength( int samplingLength_val );	//jas: new setter for cheetah.ini control
 	int samplingAngle() const;
+	void setSamplingAngle( int samplingAngle_val );		//jas: new setter for cheetah.ini control
 	int samplingLag() const;
 	
 	//---------------------------------------------getters for calculated arrays
