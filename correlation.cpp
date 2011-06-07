@@ -103,7 +103,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 			}
 			
 			//write output
-			writeXCCA(threadInfo, global, cc, threadInfo->eventname);        
+			//writeXCCA(threadInfo, global, cc, threadInfo->eventname);        //jas: writeXCCA doesn't currently work for alg 2 because it does not use array3D *crossCorrelation to store data.
 		} catch(...) {
 			cerr << "Exception caught in correlate! Thread #" << threadInfo->threadNum << endl;
 			cerr << "Aborting..." << endl;
