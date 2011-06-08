@@ -171,6 +171,7 @@ void cGlobal::defaultConfiguration(void) {
     
 	// Correlation analysis
 	useCorrelation = 0;
+	sumCorrelation = 0;
 	autoCorrelationOnly = 1;
     fastCorrelationStartQ = 100;
     fastCorrelationStopQ = 600;
@@ -178,6 +179,7 @@ void cGlobal::defaultConfiguration(void) {
     fastCorrelationStartPhi = 0;
     fastCorrelationStopPhi = 360;
     fastCorrelationNumPhi = 256;
+	correlationNumDelta = 0;
 	fastCorrelationLUTdim1 = 100;
 	fastCorrelationLUTdim2 = 100;
 	
@@ -268,6 +270,28 @@ void cGlobal::setup() {
 		waterAverage = NULL;
 	}
 	
+	if (useCorrelation && sumCorrelation) {
+		
+		if (!correlationNumDelta) correlationNumDelta = (int) ceil(fastCorrelationNumPhi/2.0+1);
+		if (autoCorrelationOnly) {
+			correlation_nn = fastCorrelationNumQ*correlationNumDelta;
+		} else {
+			correlation_nn = fastCorrelationNumQ*fastCorrelationNumQ*correlationNumDelta;
+		}
+		
+		if (hitfinder.use) powderCorrelation = (double*) calloc(correlation_nn, sizeof(double));
+		else powderCorrelation = NULL;
+		if (icefinder.use) iceCorrelation = (double*) calloc(correlation_nn, sizeof(double));
+		else iceCorrelation = NULL;
+		if (waterfinder.use) waterCorrelation = (double*) calloc(correlation_nn, sizeof(double));
+		else waterCorrelation = NULL;		
+	
+	} else {
+		correlation_nn = 0;
+		powderCorrelation = NULL;
+		iceCorrelation = NULL;
+		waterCorrelation = NULL;
+	}
 	
 	/*
 	 *	Set up thread management
@@ -279,10 +303,13 @@ void cGlobal::setup() {
 	pthread_mutex_init(&selfdark_mutex, NULL);
 	pthread_mutex_init(&powdersumraw_mutex, NULL);
 	pthread_mutex_init(&powdersumassembled_mutex, NULL);
+	pthread_mutex_init(&powdersumcorrelation_mutex, NULL);
 	pthread_mutex_init(&icesumraw_mutex, NULL);
 	pthread_mutex_init(&icesumassembled_mutex, NULL);
+	pthread_mutex_init(&icesumcorrelation_mutex, NULL);
 	pthread_mutex_init(&watersumraw_mutex, NULL);
 	pthread_mutex_init(&watersumassembled_mutex, NULL);
+	pthread_mutex_init(&watersumcorrelation_mutex, NULL);
 	pthread_mutex_init(&correlation_mutex, NULL);
 	pthread_mutex_init(&pixelcenter_mutex, NULL);
 	pthread_mutex_init(&image_mutex, NULL);
@@ -584,6 +611,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "usecorrelation")) {
 		useCorrelation = atoi(value);
 	}
+	else if (!strcmp(tag, "sumcorrelation")) {
+		sumCorrelation = atoi(value);
+	}
 	else if (!strcmp(tag, "autocorrelationonly")) {
 		autoCorrelationOnly = atoi(value);
 	}
@@ -604,6 +634,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
     else if (!strcmp(tag, "fastcorrelationnumphi")) {
 		fastCorrelationNumPhi = atoi(value);
+	}
+    else if (!strcmp(tag, "correlationnumdelta")) {
+		correlationNumDelta = atoi(value);
 	}
     else if (!strcmp(tag, "fastcorrelationlutdim1")) {
 		fastCorrelationLUTdim1 = atoi(value);

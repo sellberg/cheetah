@@ -59,6 +59,7 @@ typedef struct {
 	uint16_t	*raw_data;
 	float		*corrected_data;
 	float		*image;
+	double		*correlation;
 	int			nPeaks;
 	int			nHot;
 	
@@ -146,10 +147,12 @@ void applyBadPixelMask(tThreadInfo*, cGlobal*);
 void killHotpixels(tThreadInfo*, cGlobal*);
 void applyAttenuationCorrection(tThreadInfo*, cGlobal*);
 void addToPowder(tThreadInfo*, cGlobal*, cHit*);
+void addToCorrelation(tThreadInfo *threadInfo, cGlobal *global, cHit *hit);
 void assemble2Dimage(tThreadInfo*, cGlobal*);
 void nameEvent(tThreadInfo*, cGlobal*);
-void writeHDF5(tThreadInfo*, cGlobal*,char*, FILE*);
+void writeHDF5(tThreadInfo*, cGlobal*, char*, FILE*);
 void writeSimpleHDF5(const char*, const void*, int, int, int);
+void writeSimpleHDF5(const char *filename, const void *data, int width, int height, int depth, int type);
 void saveRunningSums(cGlobal*);
 void calculatePowderSAXS(cGlobal *global);
 void calculateCenterCorrection(cGlobal *global, double *intensities, double normalization);

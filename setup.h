@@ -130,7 +130,8 @@ public:
 	double		deltaqSAXS;			// binning of angular averages, DeltaQ currently determines step size in pixels
     
     // Correlation analysis
-    int         useCorrelation;     // set to nonzero to turn on angular cross correlation module, also controls what correlation algorithm to be used, 1: regular, 2: fast
+    int         useCorrelation;     // set to nonzero to turn on angular cross-correlation module, also controls what correlation algorithm to be used, 1: regular, 2: fast
+	int			sumCorrelation;		// set to nonzero to sum cross-correlation patterns for different hits
 	int			autoCorrelationOnly;		// set to nonzero to only calculate autocorrelation (q1=q2)
     double 		fastCorrelationStartQ;		// customize the _FAST correlation algorithm (#2)
     double 		fastCorrelationStopQ;		// startQ/stopQ are in units of detector pixels
@@ -138,6 +139,7 @@ public:
     double 		fastCorrelationStartPhi;	// start angle in degrees, default: 0
     double 		fastCorrelationStopPhi;		// stop angle in degrees, default: 360
     int 		fastCorrelationNumPhi;		// number of angular steps, default: 256 (attention: if possible, use powers of 2, that makes FFT especially fast)
+    int 		correlationNumDelta;	// number of angular lag steps, default: 0 (it then calculates suitable number from correlationNumPhi with the same step length)
 	int		 	*fastCorrelationLUT;		// lookup table (LUT) needed for the fast correlation
 	int			fastCorrelationLUTdim1;		// dim1 of LUT
 	int			fastCorrelationLUTdim2;		// dim2 of LUT
@@ -178,10 +180,13 @@ public:
 	pthread_mutex_t	selfdark_mutex;
 	pthread_mutex_t	powdersumraw_mutex;
 	pthread_mutex_t	powdersumassembled_mutex;
+	pthread_mutex_t	powdersumcorrelation_mutex;
 	pthread_mutex_t	watersumassembled_mutex;
 	pthread_mutex_t	watersumraw_mutex;
+	pthread_mutex_t	watersumcorrelation_mutex;
 	pthread_mutex_t	icesumassembled_mutex;
-	pthread_mutex_t	icesumraw_mutex;	
+	pthread_mutex_t	icesumraw_mutex;
+	pthread_mutex_t	icesumcorrelation_mutex;
 	pthread_mutex_t correlation_mutex;
 	pthread_mutex_t pixelcenter_mutex;
 	pthread_mutex_t image_mutex;
@@ -224,27 +229,31 @@ public:
 	
 	
 	// Common variables
-	int32_t			*darkcal;		//stores darkcal from the file darkcalFile
-	double			*powderRaw;		//stores powder pattern in raw format
-	double			*powderAssembled;	//stores the assembled powder pattern
+	int32_t			*darkcal;		// stores darkcal from the file darkcalFile
+	double			*powderRaw;		// stores powder pattern in raw format
+	double			*powderAssembled;	// stores the assembled powder pattern
 	double			*powderAverage;		// stores angular average of powder pattern
 	double			*powderQ;	// stores q-values for angular average of powder pattern
-	double			*waterRaw;		//stores powder pattern of water hits in raw format
-	double			*waterAssembled;	//stores the assembled powder pattern of water hits
+	double			*powderCorrelation;	// stores correlation sum of regular hits
+	double			*waterRaw;		// stores powder pattern of water hits in raw format
+	double			*waterAssembled;	// stores the assembled powder pattern of water hits
 	double			*waterAverage;		// stores angular average of powder pattern of water hits
-	double			*iceRaw;		//stores powder pattern of ice hits in raw format
-	double			*iceAssembled;		//stores the assembled powder pattern of ice hits
+	double			*waterCorrelation;	// stores correlation sum of water hits
+	double			*iceRaw;		// stores powder pattern of ice hits in raw format
+	double			*iceAssembled;		// stores the assembled powder pattern of ice hits
 	double			*iceAverage;		// stores angular average of powder pattern	of ice hits
-	int16_t			*badpixelmask;		//stores the bad pixel mask from the file badpixelmaskFile
-	float			*hotpixelmask;		//stores the hot pixel mask calculated by the auto hot pixel finder
-	float			*selfdark;		//stores the background calculated by the running (persistant) background subtraction
-	float			*gaincal;		//stores the gain map read from the gaincalFile
+	double			*iceCorrelation;	// stores correlation sum of ice hits
+	int16_t			*badpixelmask;		// stores the bad pixel mask from the file badpixelmaskFile
+	float			*hotpixelmask;		// stores the hot pixel mask calculated by the auto hot pixel finder
+	float			*selfdark;		// stores the background calculated by the running (persistant) background subtraction
+	float			*gaincal;		// stores the gain map read from the gaincalFile
 	float			avgGMD;			// what is this?
 	long			npowder;		// number of frames in the powder
 	long			nwater;		// number of frames in the water powder
 	long			nice;		// number of frames in the ice powder
 	long			nprocessedframes;	// number of frames that have been processed by the worker program
 	long			nhits;			// number of hits that have been found
+	long			correlation_nn;	// length of global cross-correlation arrays
 	double			detectorZ;		// position (mm) of the detector along the beam direction
 	
 	clock_t			lastclock;		// variables for keeping track of time the program has been running

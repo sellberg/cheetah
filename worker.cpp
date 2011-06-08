@@ -230,6 +230,12 @@ void *worker(void *threadarg) {
 	 *	Add to powder if it's a hit or if we wish to generateDarkcal(member data of global)
 	 */
 	addToPowder(threadInfo, global, &hit);
+
+	
+	/*
+	 *	Add to correlation sum if it's a hit and if correlation sum is activated
+	 */
+	addToCorrelation(threadInfo, global, &hit);
 	
 	
 	/*
@@ -442,6 +448,43 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 				if(threadInfo->image[i] > global->powderthresh)
 					global->waterAssembled[i] += threadInfo->image[i];
 			pthread_mutex_unlock(&global->watersumassembled_mutex);			
+		}
+	}
+}
+
+
+/*
+ *	Maintain running correlation sum
+ */
+void addToCorrelation(tThreadInfo *threadInfo, cGlobal *global, cHit *hit) {
+
+	if (global->useCorrelation && global->sumCorrelation) {
+		
+		if (hit->standard) {
+			// Sum correlation data
+			pthread_mutex_lock(&global->powdersumcorrelation_mutex);
+			if (!global->powdersum) global->npowder += 1;
+			for(long i=0; i<global->correlation_nn; i++)
+				global->powderCorrelation[i] += threadInfo->correlation[i];
+			pthread_mutex_unlock(&global->powdersumcorrelation_mutex);
+		}
+		
+		if (hit->ice) {
+			// Sum correlation data 	: ice
+			pthread_mutex_lock(&global->icesumcorrelation_mutex);
+			if (!global->powdersum) global->nice += 1;
+			for(long i=0; i<global->correlation_nn; i++)
+				global->iceCorrelation[i] += threadInfo->correlation[i];
+			pthread_mutex_unlock(&global->icesumcorrelation_mutex);
+		}
+		
+		if (hit->water) {
+			// Sum correlation data  : water
+			pthread_mutex_lock(&global->watersumcorrelation_mutex);
+			if (!global->powdersum) global->nwater += 1;
+			for(long i=0; i<global->correlation_nn; i++)
+				global->waterCorrelation[i] += threadInfo->correlation[i];
+			pthread_mutex_unlock(&global->watersumcorrelation_mutex);
 		}
 	}
 }
@@ -880,6 +923,55 @@ void writeSimpleHDF5(const char *filename, const void *data, int width, int heig
 	H5Fclose(fh);
 }
 
+void writeSimpleHDF5(const char *filename, const void *data, int width, int height, int depth, int type) 
+{
+	hid_t fh, gh, sh, dh;	/* File, group, dataspace and data handles */
+	herr_t r;
+	hsize_t size[3];
+	hsize_t max_size[3];
+	
+	fh = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+	if ( fh < 0 ) {
+		ERROR("Couldn't create file: %s\n", filename);
+	}
+	
+	gh = H5Gcreate(fh, "data", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	if ( gh < 0 ) {
+		ERROR("Couldn't create group\n");
+		H5Fclose(fh);
+	}
+	
+	size[0] = height;
+	size[1] = width;
+	size[2] = depth;
+	max_size[0] = height;
+	max_size[1] = width;
+	max_size[2] = depth;
+	sh = H5Screate_simple(3, size, max_size);
+	
+	dh = H5Dcreate(gh, "data", type, sh,
+	               H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	if ( dh < 0 ) {
+		ERROR("Couldn't create dataset\n");
+		H5Fclose(fh);
+	}
+	
+	/* Muppet check */
+	H5Sget_simple_extent_dims(sh, size, max_size);
+	
+	r = H5Dwrite(dh, type, H5S_ALL,
+	             H5S_ALL, H5P_DEFAULT, data);
+	if ( r < 0 ) {
+		ERROR("Couldn't write data\n");
+		H5Dclose(dh);
+		H5Fclose(fh);
+	}
+	
+	H5Gclose(gh);
+	H5Dclose(dh);
+	H5Fclose(fh);
+}
+
 
 void saveRunningSums(cGlobal *global) {
 	char	filename[1024];
@@ -937,6 +1029,24 @@ void saveRunningSums(cGlobal *global) {
 				writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 				free(buffer1);
 				
+			}			
+			
+			if (global->useCorrelation && global->sumCorrelation) {
+				
+				/*
+				 *	Save correlation sum
+				 */
+				printf("Saving correlation sum data to file\n");
+				sprintf(filename,"r%04u-CorrelationSum.h5",global->runNumber);
+				float *buffer8 = (float*) calloc(global->correlation_nn, sizeof(float));
+				pthread_mutex_lock(&global->powdersumcorrelation_mutex);
+				for(long i=0; i<global->correlation_nn; i++)
+					buffer8[i] = (float) global->powderCorrelation[i]/global->npowder;
+				pthread_mutex_unlock(&global->powdersumcorrelation_mutex);
+				if (global->autoCorrelationOnly) writeSimpleHDF5(filename, buffer8, global->fastCorrelationNumQ, global->correlationNumDelta, H5T_NATIVE_FLOAT);
+				else writeSimpleHDF5(filename, buffer8, global->fastCorrelationNumQ, global->fastCorrelationNumQ, global->correlationNumDelta, H5T_NATIVE_FLOAT);
+				free(buffer8);
+				
 			}
 		}
 			
@@ -978,6 +1088,24 @@ void saveRunningSums(cGlobal *global) {
 				free(buffer5);
 				
 			}
+			
+			if (global->useCorrelation && global->sumCorrelation) {
+				
+				/*
+				 *	Save correlation sum : ice
+				 */
+				printf("Saving correlation sum data of ice to file\n");
+				sprintf(filename,"r%04u-CorrelationSum_ice.h5",global->runNumber);
+				float *buffer9 = (float*) calloc(global->correlation_nn, sizeof(float));
+				pthread_mutex_lock(&global->icesumcorrelation_mutex);
+				for(long i=0; i<global->correlation_nn; i++)
+					buffer9[i] = (float) global->iceCorrelation[i]/global->nice;
+				pthread_mutex_unlock(&global->icesumcorrelation_mutex);
+				if (global->autoCorrelationOnly) writeSimpleHDF5(filename, buffer9, global->fastCorrelationNumQ, global->correlationNumDelta, H5T_NATIVE_FLOAT);
+				else writeSimpleHDF5(filename, buffer9, global->fastCorrelationNumQ, global->fastCorrelationNumQ, global->correlationNumDelta, H5T_NATIVE_FLOAT);
+				free(buffer9);
+				
+			}			
 		}		
 
 		
@@ -1017,6 +1145,24 @@ void saveRunningSums(cGlobal *global) {
 				free(buffer7);				
 				
 			}
+			
+			if (global->useCorrelation && global->sumCorrelation) {
+				
+				/*
+				 *	Save correlation sum : water
+				 */
+				printf("Saving correlation sum data of water to file\n");
+				sprintf(filename,"r%04u-CorrelationSum_water.h5",global->runNumber);
+				float *buffer10 = (float*) calloc(global->correlation_nn, sizeof(float));
+				pthread_mutex_lock(&global->watersumcorrelation_mutex);
+				for(long i=0; i<global->correlation_nn; i++)
+					buffer10[i] = (float) global->waterCorrelation[i]/global->nice;
+				pthread_mutex_unlock(&global->watersumcorrelation_mutex);
+				if (global->autoCorrelationOnly) writeSimpleHDF5(filename, buffer10, global->fastCorrelationNumQ, global->correlationNumDelta, H5T_NATIVE_FLOAT);
+				else writeSimpleHDF5(filename, buffer10, global->fastCorrelationNumQ, global->fastCorrelationNumQ, global->correlationNumDelta, H5T_NATIVE_FLOAT);
+				free(buffer10);
+				
+			}			
 		}
 		
 		

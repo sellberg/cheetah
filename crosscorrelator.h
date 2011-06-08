@@ -145,9 +145,7 @@ public:
 	double deltaq() const;
 	double deltaphi() const;
 	int samplingLength() const;
-	void setSamplingLength( int samplingLength_val );	//jas: new setter for cheetah.ini control
 	int samplingAngle() const;
-	void setSamplingAngle( int samplingAngle_val );		//jas: new setter for cheetah.ini control
 	int samplingLag() const;
 	
 	//---------------------------------------------getters for calculated arrays

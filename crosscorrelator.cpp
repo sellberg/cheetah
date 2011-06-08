@@ -164,10 +164,11 @@ CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCA
 	
     initPrivateVariables();
     
-    //set basic properties, just like the default case
+    //set basic properties for the size of the arrays
     setArraySize(arraylength);
-	setSamplingLength(nq);
-	setSamplingAngle(nphi);
+	p_samplingLength = nq;
+	p_samplingAngle = nphi;
+	p_samplingLag = (int) ceil(p_samplingAngle/2.0+1);
 	
     //special feature: copy data from array over to internal data structure
     data = new array1D(dataCArray, arraySize());
@@ -800,21 +801,12 @@ double CrossCorrelator::deltaphi() const{						//getter only, dependent variable
 	return p_deltaphi;
 }
 
-int CrossCorrelator::samplingLength() const{
+int CrossCorrelator::samplingLength() const{						//getter only, dependent variable
 	return p_samplingLength;
 }
 
-void CrossCorrelator::setSamplingLength( int samplingLength_val ) {			//new setter for cheetah.ini control
-	p_samplingLength = samplingLength_val;
-}
-
-int CrossCorrelator::samplingAngle() const{
+int CrossCorrelator::samplingAngle() const{						//getter only, dependent variable
 	return p_samplingAngle;
-}
-
-void CrossCorrelator::setSamplingAngle( int samplingAngle_val ) {			//new setter for cheetah.ini control
-	p_samplingAngle = samplingAngle_val;
-	p_samplingLag = (int) ceil(p_samplingAngle/2.0+1);
 }
 
 int CrossCorrelator::samplingLag() const{					//getter only, dependent variable
@@ -1167,7 +1159,7 @@ int CrossCorrelator::autocorrelateFFT( array1D *f ){
     f->multiplyByFactor( 1/((double)f->size()) ); 
     
     delete f_imag;
-    return retval;	   
+    return retval;
 }
 
 

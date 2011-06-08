@@ -184,6 +184,7 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	double samplingAngleD = (double) cc->samplingAngle();
 	double *buffer;
 	buffer = (double*) calloc(cc->samplingLength()*cc->samplingLength()*cc->samplingLag(), sizeof(double));
+	info->correlation = (double*) calloc(global->correlation_nn, sizeof(double));
 	
 	if (global->autoCorrelationOnly)
 		sprintf(outfile,"%s-xaca.bin",eventname);
@@ -217,16 +218,16 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	
 	// cross-correlation
 	if (global->autoCorrelationOnly) {
-		
+
 		// autocorrelation only (q1=q2)
 		for (int i=0; i<cc->samplingLength(); i++) {
 			for (int k=0; k<cc->samplingLag(); k++) {
-				buffer[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,i,k);
+				info->correlation[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,i,k);
+				
 			}
 		}
 		fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
 		fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
-		fwrite(&buffer[0],sizeof(double),cc->samplingLength()*cc->samplingLag(),filePointerWrite);
 		
 	} else {
 		
@@ -234,16 +235,16 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 		for (int i=0; i<cc->samplingLength(); i++) {
 			for (int j=0; j<cc->samplingLength(); j++) {
 				for (int k=0; k<cc->samplingLag(); k++) {
-					buffer[i*cc->samplingLength()*cc->samplingLag()+j*cc->samplingLag()+k] = cc->getCrossCorrelation(i,j,k);
+					info->correlation[i*cc->samplingLength()*cc->samplingLag()+j*cc->samplingLag()+k] = cc->getCrossCorrelation(i,j,k);
 				}
 			}
 		}
 		fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
 		fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
 		fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
-		fwrite(&buffer[0],sizeof(double),cc->samplingLength()*cc->samplingLength()*cc->samplingLag(),filePointerWrite);
 		
 	}
+	fwrite(&info->correlation[0],sizeof(double),global->correlation_nn,filePointerWrite);
 	
 	fclose(filePointerWrite);
 	free(buffer);
