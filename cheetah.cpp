@@ -652,7 +652,7 @@ void endjob()
 	delete[] global.attenuations;
 	delete[] global.changedAttenuationEvents;
 	delete[] global.totalThicknesses;
-	delete[] global.fastCorrelationLUT;
+	delete[] global.correlationLUT;
 	
 	pthread_mutex_destroy(&global.nActiveThreads_mutex);
 	pthread_mutex_destroy(&global.powdersumraw_mutex);

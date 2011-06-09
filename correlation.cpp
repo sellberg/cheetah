@@ -49,7 +49,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 	
     //create cross correlator object that takes care of the computations
-	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->fastCorrelationNumQ, global->fastCorrelationNumPhi );
+	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
 
     DEBUGL1_ONLY cc->setDebug(1);                           //turn on debug level inside the CrossCorrelator, if needed
     DEBUGL2_ONLY cc->setDebug(2);                           //turn on debug level inside the CrossCorrelator, if needed
@@ -59,7 +59,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		
 		DEBUGL1_ONLY cout << "XCCA regular" << endl;
 		
-		cc->calculatePolarCoordinates(global->fastCorrelationStartQ, global->fastCorrelationStopQ);
+		cc->calculatePolarCoordinates(global->correlationStartQ, global->correlationStopQ);
 		cc->calculateSAXS();
 		cc->calculateXCCA();	
 		
@@ -75,16 +75,16 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
         array2D *corr = new array2D;
         
         //cc->createLookupTable( 100, 100 );		// lookup table should in general not be created here (i.e., shot-by-shot)
-		cc->setLookupTable( global->fastCorrelationLUT, global->fastCorrelationLUTdim1, global->fastCorrelationLUTdim2 );
+		cc->setLookupTable( global->correlationLUT, global->correlationLUTdim1, global->correlationLUTdim2 );
 
 		//transform data to polar coordinates as determined by the cheetah ini file	(in detector pixels)
 		//to the q-calibrated values the cross-correlator expects
-        double start_q = global->fastCorrelationStartQ;
-        double stop_q = global->fastCorrelationStopQ;
-        int number_q = global->fastCorrelationNumQ;
-        double start_phi = global->fastCorrelationStartPhi;
-        double stop_phi = global->fastCorrelationStopPhi;
-        int number_phi = global->fastCorrelationNumPhi;
+        double start_q = global->correlationStartQ;
+        double stop_q = global->correlationStopQ;
+        int number_q = global->correlationNumQ;
+        double start_phi = global->correlationStartPhi;
+        double stop_phi = global->correlationStopPhi;
+        int number_phi = global->correlationNumPhi;
 		
 		//cout << "thread #" << threadInfo->threadNum << " locking mutex" << endl;
 		pthread_mutex_lock(&global->correlation_mutex);	

@@ -195,8 +195,9 @@ void *worker(void *threadarg) {
 			// DOES NOT WORK PROPERLY!!!
 			// SCREWS UP THE CENTER CALCULATION (THREADED & NONTHREADED)
 			// NEED TO MAKE SURE THREADS DO NOT READ UPDATED VARIABLES VALUES FROM OTHER THREADS WHILE UPDATING ARRAYS/ASSEMBLY/POWDERADD/POWDERSSAVE
-			updatePixelArrays(threadInfo, global);
-			updateImageArrays(global, &hit); // IS NOT THREADSAFE IF POWDERS ARE SAVED
+			//updatePixelArrays(threadInfo, global);
+			//updateImageArrays(global, &hit); // IS NOT THREADSAFE IF POWDERS ARE SAVED
+			cout << "\tuseCenterCorrection is currently disabled for hits" << endl;
 		}
 	}
 	
@@ -1043,8 +1044,8 @@ void saveRunningSums(cGlobal *global) {
 				for(long i=0; i<global->correlation_nn; i++)
 					buffer8[i] = (float) global->powderCorrelation[i]/global->npowder;
 				pthread_mutex_unlock(&global->powdersumcorrelation_mutex);
-				if (global->autoCorrelationOnly) writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->fastCorrelationNumQ, H5T_NATIVE_FLOAT);
-				else writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->fastCorrelationNumQ, global->fastCorrelationNumQ, H5T_NATIVE_FLOAT);
+				if (global->autoCorrelationOnly) writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
+				else writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				free(buffer8);
 				
 			}
@@ -1101,8 +1102,8 @@ void saveRunningSums(cGlobal *global) {
 				for(long i=0; i<global->correlation_nn; i++)
 					buffer9[i] = (float) global->iceCorrelation[i]/global->nice;
 				pthread_mutex_unlock(&global->icesumcorrelation_mutex);
-				if (global->autoCorrelationOnly) writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->fastCorrelationNumQ, H5T_NATIVE_FLOAT);
-				else writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->fastCorrelationNumQ, global->fastCorrelationNumQ, H5T_NATIVE_FLOAT);
+				if (global->autoCorrelationOnly) writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
+				else writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				free(buffer9);
 				
 			}
@@ -1158,8 +1159,8 @@ void saveRunningSums(cGlobal *global) {
 				for(long i=0; i<global->correlation_nn; i++)
 					buffer10[i] = (float) global->waterCorrelation[i]/global->nice;
 				pthread_mutex_unlock(&global->watersumcorrelation_mutex);
-				if (global->autoCorrelationOnly) writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->fastCorrelationNumQ, H5T_NATIVE_FLOAT);
-				else writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->fastCorrelationNumQ, global->fastCorrelationNumQ, H5T_NATIVE_FLOAT);
+				if (global->autoCorrelationOnly) writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
+				else writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				free(buffer10);
 				
 			}
