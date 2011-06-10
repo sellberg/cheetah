@@ -652,15 +652,18 @@ void endjob()
 	delete[] global.attenuations;
 	delete[] global.changedAttenuationEvents;
 	delete[] global.totalThicknesses;
-	delete[] global.fastCorrelationLUT;
+	delete[] global.correlationLUT;
 	
 	pthread_mutex_destroy(&global.nActiveThreads_mutex);
 	pthread_mutex_destroy(&global.powdersumraw_mutex);
 	pthread_mutex_destroy(&global.powdersumassembled_mutex);
+	pthread_mutex_destroy(&global.powdersumcorrelation_mutex);
 	pthread_mutex_destroy(&global.icesumraw_mutex);
 	pthread_mutex_destroy(&global.icesumassembled_mutex);
+	pthread_mutex_destroy(&global.icesumcorrelation_mutex);
 	pthread_mutex_destroy(&global.watersumraw_mutex);
 	pthread_mutex_destroy(&global.watersumassembled_mutex);
+	pthread_mutex_destroy(&global.watersumcorrelation_mutex);
 	pthread_mutex_destroy(&global.correlation_mutex);
 	pthread_mutex_destroy(&global.pixelcenter_mutex);
 	pthread_mutex_destroy(&global.image_mutex);	

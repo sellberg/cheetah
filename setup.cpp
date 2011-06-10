@@ -171,15 +171,17 @@ void cGlobal::defaultConfiguration(void) {
     
 	// Correlation analysis
 	useCorrelation = 0;
+	sumCorrelation = 0;
 	autoCorrelationOnly = 1;
-    fastCorrelationStartQ = 100;
-    fastCorrelationStopQ = 600;
-    fastCorrelationNumQ = 50;
-    fastCorrelationStartPhi = 0;
-    fastCorrelationStopPhi = 360;
-    fastCorrelationNumPhi = 256;
-	fastCorrelationLUTdim1 = 100;
-	fastCorrelationLUTdim2 = 100;
+    correlationStartQ = 100;
+    correlationStopQ = 600;
+    correlationNumQ = 51;
+    correlationStartPhi = 0;
+    correlationStopPhi = 360;
+    correlationNumPhi = 256;
+	correlationNumDelta = 0;
+	correlationLUTdim1 = 100;
+	correlationLUTdim2 = 100;
 	
 	// Saving options
 	saveRaw = 0;
@@ -223,7 +225,10 @@ void cGlobal::setup() {
 	waterRaw = NULL;
 	waterAssembled = NULL;		
 	waterAverage = NULL;
-	
+	correlation_nn = 0;
+	powderCorrelation = NULL;
+	iceCorrelation = NULL;
+	waterCorrelation = NULL;
 	
 	selfdark = (float*) calloc(pix_nn, sizeof(float));
 	
@@ -255,7 +260,17 @@ void cGlobal::setup() {
 			if (waterfinder.use) 
 				waterAverage = (double*) calloc(powder_nn, sizeof(double));
 		}
+		
+		if (!correlationNumDelta) 
+			correlationNumDelta = (int) ceil(correlationNumPhi/2.0+1);
+		if (autoCorrelationOnly) {
+			correlation_nn = correlationNumQ*correlationNumDelta;
+		} else {
+			correlation_nn = correlationNumQ*correlationNumQ*correlationNumDelta;
+		}
 	}//powdersum end
+
+
 	
 	/*
 	 *	Set up thread management
@@ -267,10 +282,13 @@ void cGlobal::setup() {
 	pthread_mutex_init(&selfdark_mutex, NULL);
 	pthread_mutex_init(&powdersumraw_mutex, NULL);
 	pthread_mutex_init(&powdersumassembled_mutex, NULL);
+	pthread_mutex_init(&powdersumcorrelation_mutex, NULL);
 	pthread_mutex_init(&icesumraw_mutex, NULL);
 	pthread_mutex_init(&icesumassembled_mutex, NULL);
+	pthread_mutex_init(&icesumcorrelation_mutex, NULL);
 	pthread_mutex_init(&watersumraw_mutex, NULL);
 	pthread_mutex_init(&watersumassembled_mutex, NULL);
+	pthread_mutex_init(&watersumcorrelation_mutex, NULL);
 	pthread_mutex_init(&correlation_mutex, NULL);
 	pthread_mutex_init(&pixelcenter_mutex, NULL);
 	pthread_mutex_init(&image_mutex, NULL);
@@ -366,7 +384,7 @@ void cGlobal::setup() {
 	/*
 	 *	Setup global cross correlation variables
 	 */
-	fastCorrelationLUT = new int[fastCorrelationLUTdim1*fastCorrelationLUTdim2];
+	correlationLUT = new int[correlationLUTdim1*correlationLUTdim2];
 	
 	// Make sure to use SLAC timezone!
 	setenv("TZ","US/Pacific",1);
@@ -572,32 +590,38 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "usecorrelation")) {
 		useCorrelation = atoi(value);
 	}
+	else if (!strcmp(tag, "sumcorrelation")) {
+		sumCorrelation = atoi(value);
+	}
 	else if (!strcmp(tag, "autocorrelationonly")) {
 		autoCorrelationOnly = atoi(value);
 	}
-    else if (!strcmp(tag, "fastcorrelationstartq")) {
-		fastCorrelationStartQ = atof(value);
+    else if (!strcmp(tag, "correlationstartq")) {
+		correlationStartQ = atof(value);
 	}
-    else if (!strcmp(tag, "fastcorrelationstopq")) {
-		fastCorrelationStopQ = atof(value);
+    else if (!strcmp(tag, "correlationstopq")) {
+		correlationStopQ = atof(value);
 	}
-    else if (!strcmp(tag, "fastcorrelationnumq")) {
-		fastCorrelationNumQ = atoi(value);
+    else if (!strcmp(tag, "correlationnumq")) {
+		correlationNumQ = atoi(value);
 	}
-    else if (!strcmp(tag, "fastcorrelationstartphi")) {
-		fastCorrelationStartPhi = atof(value);
+    else if (!strcmp(tag, "correlationstartphi")) {
+		correlationStartPhi = atof(value);
 	}
-    else if (!strcmp(tag, "fastcorrelationstopphi")) {
-		fastCorrelationStopPhi = atof(value);
+    else if (!strcmp(tag, "correlationstopphi")) {
+		correlationStopPhi = atof(value);
 	}
-    else if (!strcmp(tag, "fastcorrelationnumphi")) {
-		fastCorrelationNumPhi = atoi(value);
+    else if (!strcmp(tag, "correlationnumphi")) {
+		correlationNumPhi = atoi(value);
 	}
-    else if (!strcmp(tag, "fastcorrelationlutdim1")) {
-		fastCorrelationLUTdim1 = atoi(value);
+    else if (!strcmp(tag, "correlationnumdelta")) {
+		correlationNumDelta = atoi(value);
 	}
-    else if (!strcmp(tag, "fastcorrelationlutdim2")) {
-		fastCorrelationLUTdim2 = atoi(value);
+    else if (!strcmp(tag, "correlationlutdim1")) {
+		correlationLUTdim1 = atoi(value);
+	}
+    else if (!strcmp(tag, "correlationlutdim2")) {
+		correlationLUTdim2 = atoi(value);
 	}
 	else if (!strcmp(tag, "saveraw")) {
 		saveRaw = atoi(value);
@@ -1230,18 +1254,18 @@ void cGlobal::expandAttenuationCapacity() {
 void cGlobal::createLookupTable(){	
 	//write lookup table for fast cross-correlation
 	//debugLevel = 2;
-	int lutNx = fastCorrelationLUTdim1;
-	int lutNy = fastCorrelationLUTdim2;
+	int lutNx = correlationLUTdim1;
+	int lutNy = correlationLUTdim2;
 	int lutSize = lutNx*lutNy;
 	cout << "Creating lookup table (LUT) of size " << lutNx << " x " << lutNy << " (" << lutSize << " entries)" << endl;
-	if (fastCorrelationLUT) {		// free memory of old LUT first, if necessary
-  		delete[] fastCorrelationLUT;
+	if (correlationLUT) {		// free memory of old LUT first, if necessary
+  		delete[] correlationLUT;
 	}
-	fastCorrelationLUT = new int[lutSize];
+	correlationLUT = new int[lutSize];
 	
 	//initialize to zero!
 	for (int i=0; i<lutSize; i++) {
-  		fastCorrelationLUT[i] = 0;
+  		correlationLUT[i] = 0;
 	}
 	
 	//find max and min of the q-calibration arrays
@@ -1268,11 +1292,11 @@ void cGlobal::createLookupTable(){
 		if (lutindex < 0 || lutindex >= lutSize) {
 			cerr << endl;
   			cerr << "Error in cGlobal::createLookupTable! lookup table index out of bounds" << endl;
-			cerr << "\t (was trying to set fastCorrelationLUT[" << lutindex << "] = " << i << ")" << endl;
+			cerr << "\t (was trying to set correlationLUT[" << lutindex << "] = " << i << ")" << endl;
 			cerr << "\tLUT: pix_x, pix_y = (" << pix_x[i] << ", " << pix_y[i] << ") --> ix, iy = (" << ix << ", " << iy << ")" << endl;
 			lutFailCount++;
 		} else {
-			fastCorrelationLUT[lutindex] = i;
+			correlationLUT[lutindex] = i;
 		}
 			
 		/////////////////////////////////////////////////////////////////////////////////////////
@@ -1287,13 +1311,13 @@ void cGlobal::createLookupTable(){
 		/////////////////////////////////////////////////////////////////////////////////////////
 		
 		if(debugLevel>2 && (i<=100 || pix_nn-i<=200) ){	//print the first and the last  entries to check
-			cout << "setting fastCorrelationLUT[" << lutindex << "] = " << i << "";
+			cout << "setting correlationLUT[" << lutindex << "] = " << i << "";
 			cout << "   LUT: pix_x, pix_y = (" << pix_x[i] << ", " << pix_y[i] << ") --> ix, iy = (" << ix << ", " << iy << ")" << endl;
 		}
 	}//for
 	//after all is done, set the zero element to zero 
 	//to make sure a failure of lookup() doesn't result in an acutal value
-	fastCorrelationLUT[0] = 0;		
+	correlationLUT[0] = 0;		
 	
 	cout << "\tLUT created ";
 	cout << "(info: LUT assignment failed in " << lutFailCount << " of " << lutSize << " cases)" << endl;
@@ -1306,7 +1330,7 @@ void cGlobal::createLookupTable(){
 			for (int j = 0; j<lutNy; j++){
 			osst << " [";
 			for (int i = 0; i<lutNx; i++) {
-				osst << " " << fastCorrelationLUT[i+lutNx*j];
+				osst << " " << correlationLUT[i+lutNx*j];
 			}
 			osst << "]" << endl;
 		}

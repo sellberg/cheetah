@@ -48,18 +48,8 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     
     DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 	
-	/* OLD FUNCTIONALITY MOVED TO setup.cpp
-    //jas: calculate center of CArray and shift qx, qy accordingly
-	double x0 = centerX(global->pix_x);
-    double y0 = centerY(global->pix_y);
-    for (int i=0; i<RAW_DATA_LENGTH; i++) {                 //previously function shiftCenter() in crosscorrelator
-        global->pix_x[i] = global->pix_x[i] - x0;
-        global->pix_y[i] = global->pix_y[i] - y0;
-    }
-    */
-	
     //create cross correlator object that takes care of the computations
-	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH );
+	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
 
     DEBUGL1_ONLY cc->setDebug(1);                           //turn on debug level inside the CrossCorrelator, if needed
     DEBUGL2_ONLY cc->setDebug(2);                           //turn on debug level inside the CrossCorrelator, if needed
@@ -69,12 +59,12 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		
 		DEBUGL1_ONLY cout << "XCCA regular" << endl;
 		
-		cc->calculatePolarCoordinates();
+		cc->calculatePolarCoordinates(global->correlationStartQ, global->correlationStopQ);
 		cc->calculateSAXS();
 		cc->calculateXCCA();	
 		
-		//writeSAXS(threadInfo, global, cc, threadInfo->eventname);
-		writeXCCA(threadInfo, global, cc, threadInfo->eventname);
+		//writeSAXS(threadInfo, global, cc, threadInfo->eventname); // writes SAXS only to binary
+		writeXCCA(threadInfo, global, cc, threadInfo->eventname); // writes XCCA+SAXS to binary
 		
 		
 	//--------------------------------------------------------------------------------------------alg2
@@ -85,17 +75,20 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
         array2D *corr = new array2D;
         
         //cc->createLookupTable( 100, 100 );		// lookup table should in general not be created here (i.e., shot-by-shot)
-		cc->setLookupTable( global->fastCorrelationLUT, global->fastCorrelationLUTdim1, global->fastCorrelationLUTdim2 );
+		cc->setLookupTable( global->correlationLUT, global->correlationLUTdim1, global->correlationLUTdim2 );
 
 		//transform data to polar coordinates as determined by the cheetah ini file	(in detector pixels)
 		//to the q-calibrated values the cross-correlator expects
-        double start_q = global->fastCorrelationStartQ;
-        double stop_q = global->fastCorrelationStopQ;
-        int number_q = global->fastCorrelationNumQ;
-        double start_phi = global->fastCorrelationStartPhi;
-        double stop_phi = global->fastCorrelationStopPhi;
-        int number_phi = global->fastCorrelationNumPhi;
-				
+        double start_q = global->correlationStartQ;
+        double stop_q = global->correlationStopQ;
+        int number_q = global->correlationNumQ;
+        double start_phi = global->correlationStartPhi;
+        double stop_phi = global->correlationStopPhi;
+        int number_phi = global->correlationNumPhi;
+		
+		//cout << "thread #" << threadInfo->threadNum << " locking mutex" << endl;
+		pthread_mutex_lock(&global->correlation_mutex);	
+		
 		try{
 			//calculate polar coordinates: returns an array2D in the first polar argument
 			int polar_fail = cc->calculatePolarCoordinates_FAST(polar, number_q, start_q, stop_q, number_phi, start_phi, stop_phi);
@@ -113,9 +106,9 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 			
 			//write output
 			pthread_mutex_lock(&global->correlation_mutex);
-			writeXCCA(threadInfo, global, cc, threadInfo->eventname);        
+			//writeXCCA(threadInfo, global, cc, threadInfo->eventname);        //jas: writeXCCA doesn't currently work for alg 2 because it does not use array3D *crossCorrelation to store data.
 			pthread_mutex_unlock(&global->correlation_mutex);
-	
+
 		} catch(...) {
 			cerr << "EXCEPTION CAUGHT! ( in correlate(), thread #" << threadInfo->threadNum << " )" << endl;
 			cerr << "Aborting..." << endl;
@@ -193,6 +186,7 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	double samplingAngleD = (double) cc->samplingAngle();
 	double *buffer;
 	buffer = (double*) calloc(cc->samplingLength()*cc->samplingLength()*cc->samplingLag(), sizeof(double));
+	info->correlation = (double*) calloc(global->correlation_nn, sizeof(double));
 	
 	if (global->autoCorrelationOnly)
 		sprintf(outfile,"%s-xaca.bin",eventname);
@@ -226,16 +220,16 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	
 	// cross-correlation
 	if (global->autoCorrelationOnly) {
-		
+
 		// autocorrelation only (q1=q2)
 		for (int i=0; i<cc->samplingLength(); i++) {
 			for (int k=0; k<cc->samplingLag(); k++) {
-				buffer[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,i,k);
+				info->correlation[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,i,k);
+				
 			}
 		}
 		fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
 		fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
-		fwrite(&buffer[0],sizeof(double),cc->samplingLength()*cc->samplingLag(),filePointerWrite);
 		
 	} else {
 		
@@ -243,16 +237,16 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 		for (int i=0; i<cc->samplingLength(); i++) {
 			for (int j=0; j<cc->samplingLength(); j++) {
 				for (int k=0; k<cc->samplingLag(); k++) {
-					buffer[i*cc->samplingLength()*cc->samplingLag()+j*cc->samplingLag()+k] = cc->getCrossCorrelation(i,j,k);
+					info->correlation[i*cc->samplingLength()*cc->samplingLag()+j*cc->samplingLag()+k] = cc->getCrossCorrelation(i,j,k);
 				}
 			}
 		}
 		fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
 		fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
 		fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
-		fwrite(&buffer[0],sizeof(double),cc->samplingLength()*cc->samplingLength()*cc->samplingLag(),filePointerWrite);
 		
 	}
+	fwrite(&info->correlation[0],sizeof(double),global->correlation_nn,filePointerWrite);
 	
 	fclose(filePointerWrite);
 	free(buffer);
