@@ -183,6 +183,7 @@ public:
 	pthread_mutex_t	icesumassembled_mutex;
 	pthread_mutex_t	icesumraw_mutex;	
 	pthread_mutex_t correlation_mutex;
+	pthread_mutex_t correlationFFT_mutex;
 	pthread_mutex_t pixelcenter_mutex;
 	pthread_mutex_t image_mutex;
     pthread_mutex_t	nhits_mutex;
@@ -229,12 +230,12 @@ public:
 	double			*powderAssembled;	//stores the assembled powder pattern
 	double			*powderAverage;		// stores angular average of powder pattern
 	double			*powderQ;	// stores q-values for angular average of powder pattern
-	double			*waterRaw;		//stores powder pattern of water hits in raw format
-	double			*waterAssembled;	//stores the assembled powder pattern of water hits
-	double			*waterAverage;		// stores angular average of powder pattern of water hits
 	double			*iceRaw;		//stores powder pattern of ice hits in raw format
 	double			*iceAssembled;		//stores the assembled powder pattern of ice hits
 	double			*iceAverage;		// stores angular average of powder pattern	of ice hits
+	double			*waterRaw;		//stores powder pattern of water hits in raw format
+	double			*waterAssembled;	//stores the assembled powder pattern of water hits
+	double			*waterAverage;		// stores angular average of powder pattern of water hits
 	int16_t			*badpixelmask;		//stores the bad pixel mask from the file badpixelmaskFile
 	float			*hotpixelmask;		//stores the hot pixel mask calculated by the auto hot pixel finder
 	float			*selfdark;		//stores the background calculated by the running (persistant) background subtraction

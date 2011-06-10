@@ -382,7 +382,7 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 		pthread_mutex_unlock(&global->powdersumassembled_mutex);
 	}
 
-    
+    //standard hit
 	if (hit->standard){
 		// Sum raw format data
 		if (global->powdersum && global->saveRaw) {
@@ -403,6 +403,7 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 		}
 	}
 
+	//ice hit
 	if (hit->ice){
 		// Sum raw format data 	: ice
 		if (global->powdersum && global->saveRaw) {
@@ -422,7 +423,8 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 			pthread_mutex_unlock(&global->icesumassembled_mutex);			
 		}
 	}
-
+	
+	//water hit
 	if (hit->water){
 		// Sum raw format data  : water
 		if (global->powdersum && global->saveRaw) {
@@ -439,7 +441,7 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 			for(long i=0; i<global->image_nn; i++)
 				if(threadInfo->image[i] > global->powderthresh)
 					global->waterAssembled[i] += threadInfo->image[i];
-			pthread_mutex_unlock(&global->watersumassembled_mutex);			
+			pthread_mutex_unlock(&global->watersumassembled_mutex);
 		}
 	}
 }

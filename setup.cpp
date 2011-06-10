@@ -211,63 +211,51 @@ void cGlobal::setup() {
 	/*
 	 *	Set up arrays for remembering powder data, background, etc.
 	 */
+	
+	//initially, set everything to NULL, allocate only those that are actually needed below
+	powderRaw = NULL;
+	powderAssembled = NULL;
+	powderAverage = NULL;
+	powderQ = NULL;
+	iceRaw = NULL;
+	iceAssembled = NULL;
+	iceAverage = NULL;
+	waterRaw = NULL;
+	waterAssembled = NULL;		
+	waterAverage = NULL;
+	
+	
 	selfdark = (float*) calloc(pix_nn, sizeof(float));
 	
-	if (useAutoHotpixel) hotpixelmask = (float*) calloc(pix_nn, sizeof(float));
-	else hotpixelmask = NULL;
+	if (useAutoHotpixel) 
+		hotpixelmask = (float*) calloc(pix_nn, sizeof(float));
 	
 	if (powdersum) {
-		
-		if (hitfinder.use) powderAssembled = (double*) calloc(image_nn, sizeof(double));
-		else powderAssembled = NULL;
-		if (icefinder.use) iceAssembled = (double*) calloc(image_nn, sizeof(double));
-		else iceAssembled = NULL;
-		if (waterfinder.use) waterAssembled = (double*) calloc(image_nn, sizeof(double));
-		else waterAssembled = NULL;
-
+		if (hitfinder.use) 
+			powderAssembled = (double*) calloc(image_nn, sizeof(double));
+		if (icefinder.use) 
+			iceAssembled = (double*) calloc(image_nn, sizeof(double));
+		if (waterfinder.use) 
+			waterAssembled = (double*) calloc(image_nn, sizeof(double));
+	
 		if (saveRaw) {
-			
-			if (hitfinder.use) powderRaw = (double*) calloc(pix_nn, sizeof(double));
-			else powderRaw = NULL;
-			if (icefinder.use) iceRaw = (double*) calloc(pix_nn, sizeof(double));
-			else iceRaw = NULL;
-			if (waterfinder.use) waterRaw = (double*) calloc(pix_nn, sizeof(double));
-			else waterRaw = NULL;
-			
-		} else {
-			powderRaw = NULL;
-			iceRaw = NULL;
-			waterRaw = NULL;
+			if (hitfinder.use) 
+				powderRaw = (double*) calloc(pix_nn, sizeof(double));
+			if (icefinder.use) 
+				iceRaw = (double*) calloc(pix_nn, sizeof(double));
+			if (waterfinder.use) 
+				waterRaw = (double*) calloc(pix_nn, sizeof(double));
 		}
 		if (powderSAXS) {
-			
 			powderQ = (double*) calloc(powder_nn, sizeof(double));
-			if (hitfinder.use) powderAverage = (double*) calloc(powder_nn, sizeof(double));
-			else powderAverage = NULL;
-			if (icefinder.use) iceAverage = (double*) calloc(powder_nn, sizeof(double));
-			else iceAverage = NULL;
-			if (waterfinder.use) waterAverage = (double*) calloc(powder_nn, sizeof(double));
-			else waterAverage = NULL;
-			
-		} else {
-			powderQ = NULL;
-			powderAverage = NULL;
-			iceAverage = NULL;		
-			waterAverage = NULL;
+			if (hitfinder.use) 
+				powderAverage = (double*) calloc(powder_nn, sizeof(double));
+			if (icefinder.use) 
+				iceAverage = (double*) calloc(powder_nn, sizeof(double));
+			if (waterfinder.use) 
+				waterAverage = (double*) calloc(powder_nn, sizeof(double));
 		}
-	} else {
-		powderRaw = NULL;
-		powderAssembled = NULL;
-		powderAverage = NULL;
-		powderQ = NULL;
-		iceRaw = NULL;
-		iceAssembled = NULL;
-		iceAverage = NULL;
-		waterRaw = NULL;
-		waterAssembled = NULL;		
-		waterAverage = NULL;
-	}
-	
+	}//powdersum end
 	
 	/*
 	 *	Set up thread management
