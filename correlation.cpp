@@ -95,27 +95,29 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
         double start_phi = global->fastCorrelationStartPhi;
         double stop_phi = global->fastCorrelationStopPhi;
         int number_phi = global->fastCorrelationNumPhi;
-		
-		//cout << "thread #" << threadInfo->threadNum << " locking mutex" << endl;
-		pthread_mutex_lock(&global->correlation_mutex);	
-		
+				
 		try{
 			//calculate polar coordinates: returns an array2D in the first polar argument
 			int polar_fail = cc->calculatePolarCoordinates_FAST(polar, number_q, start_q, stop_q, number_phi, start_phi, stop_phi);
 			if (polar_fail){
 				cout << "ERROR in correlate! Could not calculate polar coordinates!" << endl;
 			}
-
+	
 			//perform the correlation
+			pthread_mutex_lock(&global->correlationFFT_mutex);			// need to protect the FFTW at the core, not thread-safe!!
 			int XCCA_fail = cc->calculateXCCA_FAST( polar, corr );
 			if (XCCA_fail){
 				cout << "ERROR in correlate! Could not calculate XCCA!" << endl;
 			}
+			pthread_mutex_unlock(&global->correlationFFT_mutex);
 			
 			//write output
+			pthread_mutex_lock(&global->correlation_mutex);
 			writeXCCA(threadInfo, global, cc, threadInfo->eventname);        
+			pthread_mutex_unlock(&global->correlation_mutex);
+	
 		} catch(...) {
-			cerr << "Exception caught in correlate! Thread #" << threadInfo->threadNum << endl;
+			cerr << "EXCEPTION CAUGHT! ( in correlate(), thread #" << threadInfo->threadNum << " )" << endl;
 			cerr << "Aborting..." << endl;
 			delete polar;
 			delete corr;
@@ -123,9 +125,6 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 			exit(1);
 		}
 				
-		//cout << "thread #" << threadInfo->threadNum << " unlocking mutex" << endl;
-		pthread_mutex_unlock(&global->correlation_mutex);
-		
 		//clean up
         delete polar;
         delete corr;
