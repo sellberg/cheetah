@@ -29,7 +29,7 @@
 /*
  *	A basic hitfinder
  */
-int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder *hitf){
+int hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder *hitf) {
 
 	long	nat;
     long    lastnat;
@@ -42,11 +42,11 @@ int  hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder *hitf){
 	nat = 0;
 	counter = 0;
 
-		/*
+	/*
 	 *	Use a data buffer so we can zero out pixels already counted
 	 */
-	int16_t *temp = (int16_t*) calloc(global->pix_nn, sizeof(int16_t));
-	memcpy(temp, threadInfo->corrected_data, global->pix_nn*sizeof(int16_t));
+	float *temp = (float*) calloc(global->pix_nn, sizeof(float));
+	memcpy(temp, threadInfo->corrected_data, global->pix_nn*sizeof(float));
 	
 	
 	/*
