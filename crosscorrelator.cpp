@@ -893,6 +893,7 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *&polar, array2D *&corr ){
 		
 		//perform autocorrelation --> compute via FFT
 		if (debug()) { cout << q_ct << " " << std::flush; }
+		
 		int fail = autocorrelateFFT( f );          // should yield the same result as correlateFFT( f, f );
 		if (fail){
 			cerr << "Error in CrossCorrelator::calculateXCCA_FAST. Could calculate correlation. Aborting." << endl;
@@ -1086,7 +1087,7 @@ double CrossCorrelator::lookup( double xcoord, double ycoord ) {
     //we assume the data to be centered!
     //(the add-one-half->floor trick is to achieve reasonable rounded integers)
 	double deltaLUT = deltaq();
-	double deltaLUT2 = 1;
+	//double deltaLUT2 = 1;
 	double qmin = -qmax();
     double xc = (xcoord-qmin) / deltaLUT;
     double yc = (ycoord-qmin) / deltaLUT;
