@@ -30,7 +30,7 @@ parser.add_option("-r", "--run", action="store", type="string", dest="runNumber"
 # Be careful of the trailing "/"; 
 # ensure you have the necessary read/write permissions.
 ########################################################
-source_dir = "/reg/d/psdm/cxi/cxi25410/scratch/cleaned_hdf5/"
+source_dir = "/reg/neh/home/feldkamp/cheetah_output/"
 write_dir = ""
 
 if(options.runNumber is not ""):
@@ -46,7 +46,7 @@ h5pattern = re.compile(searchstring)
 h5files = [h5pattern.findall(x) for x in os.listdir(source_dir+runtag)]
 h5files = [items for sublists in h5files for items in sublists]
 
-colmax = 1000
+colmax = 20000
 colmin = 0
 
 ########################################################

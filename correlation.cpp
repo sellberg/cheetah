@@ -30,6 +30,8 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
+#include <sstream>
+
 #include <cmath>
 
 #include "setup.h"
@@ -86,26 +88,33 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
         double stop_phi = global->correlationStopPhi;
         int number_phi = global->correlationNumPhi;
 		
-		//cout << "thread #" << threadInfo->threadNum << " locking mutex" << endl;
-		pthread_mutex_lock(&global->correlation_mutex);	
-		
 		try{
 			//calculate polar coordinates: returns an array2D in the first polar argument
 			int polar_fail = cc->calculatePolarCoordinates_FAST(polar, number_q, start_q, stop_q, number_phi, start_phi, stop_phi);
 			if (polar_fail){
 				cout << "ERROR in correlate! Could not calculate polar coordinates!" << endl;
 			}
-
+	
 			//perform the correlation
+			pthread_mutex_lock(&global->correlationFFT_mutex);			// need to protect the FFTW at the core, not thread-safe!!
 			int XCCA_fail = cc->calculateXCCA_FAST( polar, corr );
 			if (XCCA_fail){
 				cout << "ERROR in correlate! Could not calculate XCCA!" << endl;
 			}
+			pthread_mutex_unlock(&global->correlationFFT_mutex);
 			
 			//write output
-			//writeXCCA(threadInfo, global, cc, threadInfo->eventname);        //jas: writeXCCA doesn't currently work for alg 2 because it does not use array3D *crossCorrelation to store data.
+			pthread_mutex_lock(&global->correlation_mutex);
+			writeXCCA(threadInfo, global, cc, threadInfo->eventname); // writes XCCA+SAXS to binary
+			pthread_mutex_unlock(&global->correlation_mutex);
+			
+			//writing Tiff is not explicitly thread-safe... is this a problem for the cheetah?
+			std::ostringstream name_osst;
+			name_osst << threadInfo->eventname << "-xaca.tif";
+			corr->writeToTiff( name_osst.str(), 1 );            //dump scaled output from correlation
+
 		} catch(...) {
-			cerr << "Exception caught in correlate! Thread #" << threadInfo->threadNum << endl;
+			cerr << "EXCEPTION CAUGHT! ( in correlate(), thread #" << threadInfo->threadNum << " )" << endl;
 			cerr << "Aborting..." << endl;
 			delete polar;
 			delete corr;
@@ -113,9 +122,6 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 			exit(1);
 		}
 				
-		//cout << "thread #" << threadInfo->threadNum << " unlocking mutex" << endl;
-		pthread_mutex_unlock(&global->correlation_mutex);
-		
 		//clean up
         delete polar;
         delete corr;
@@ -137,7 +143,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 //-------------------------------------------------------------------------------------
 void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname) {	
 	
-	DEBUGL1_ONLY printf("writing SAXS to file...\n");
+	DEBUGL1_ONLY cout << "writing SAXS to file..." << std::flush;
 	FILE *filePointerWrite;
 	char outfile[1024];
 	double samplingLengthD = (double) cc->samplingLength(); // save everything as doubles
@@ -176,7 +182,7 @@ void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 //-------------------------------------------------------------------------------------
 void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname) {
 	
-	DEBUGL1_ONLY cout << "writing XCCA to file..." << endl;
+	DEBUGL1_ONLY cout << "writing XCCA to file..." << std::flush;
 	FILE *filePointerWrite;
 	char outfile[1024];
 	double samplingLengthD = (double) cc->samplingLength(); // save everything as doubles
@@ -186,9 +192,9 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	buffer = (double*) calloc(cc->samplingLength()*cc->samplingLength()*cc->samplingLag(), sizeof(double));
 	info->correlation = (double*) calloc(global->correlation_nn, sizeof(double));
 	
-	if (global->autoCorrelationOnly)
+	if (global->autoCorrelationOnly){
 		sprintf(outfile,"%s-xaca.bin",eventname);
-	else {
+	} else {
 		sprintf(outfile,"%s-xcca.bin",eventname);
 	}
 	printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)global->runNumber, (int)info->threadNum, global->datarate, outfile);
@@ -217,34 +223,33 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	fwrite(&buffer[0],sizeof(double),cc->samplingAngle(),filePointerWrite);
 	
 	// cross-correlation
-	if (global->autoCorrelationOnly) {
-
-		// autocorrelation only (q1=q2)
-		for (int i=0; i<cc->samplingLength(); i++) {
-			for (int k=0; k<cc->samplingLag(); k++) {
-				info->correlation[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,i,k);
-				
-			}
-		}
-		fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-		fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
-		
-	} else {
-		
-		// full version
-		for (int i=0; i<cc->samplingLength(); i++) {
-			for (int j=0; j<cc->samplingLength(); j++) {
+	if (global->useCorrelation && global->sumCorrelation){
+		if (global->autoCorrelationOnly) {
+			// autocorrelation only (q1=q2)
+			for (int i=0; i<cc->samplingLength(); i++) {
 				for (int k=0; k<cc->samplingLag(); k++) {
-					info->correlation[i*cc->samplingLength()*cc->samplingLag()+j*cc->samplingLag()+k] = cc->getCrossCorrelation(i,j,k);
+					info->correlation[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,i,k);			
 				}
 			}
+			fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+			fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
+			
+		} else {
+			// full version
+			for (int i=0; i<cc->samplingLength(); i++) {
+				for (int j=0; j<cc->samplingLength(); j++) {
+					for (int k=0; k<cc->samplingLag(); k++) {
+						info->correlation[i*cc->samplingLength()*cc->samplingLag()+j*cc->samplingLag()+k] = cc->getCrossCorrelation(i,j,k);
+					}
+				}
+			}
+			fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+			fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
+			fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
+			
 		}
-		fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-		fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-		fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
-		
+		fwrite(&info->correlation[0],sizeof(double),global->correlation_nn,filePointerWrite);
 	}
-	fwrite(&info->correlation[0],sizeof(double),global->correlation_nn,filePointerWrite);
 	
 	fclose(filePointerWrite);
 	free(buffer);

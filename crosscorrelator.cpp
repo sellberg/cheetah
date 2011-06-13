@@ -792,6 +792,7 @@ int CrossCorrelator::debug(){
 void CrossCorrelator::setDebug( int debuglevel ){
     p_debug = debuglevel;
 }
+
     
 double CrossCorrelator::deltaq() const{						//getter only, dependent variable
 	return p_deltaq;
@@ -942,7 +943,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D *&polar,
 
 
 //----------------------------------------------------------------------------calculate XCCA
-int CrossCorrelator::calculateXCCA_FAST( array2D *&polar, array2D *&corr ){
+int CrossCorrelator::calculateXCCA_FAST( array2D *&polar, array2D *&corr, int writeToInternalDataStructure ){
 	if(debug()>1){ 
 		cout << "CrossCorrelator::calculateXCCA_FAST ("<< polar->dim1() << ", " << polar->dim2() << ")" << endl; 
 	}
@@ -964,7 +965,7 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *&polar, array2D *&corr ){
 		cerr << "Error in CrossCorrelator::calculateXCCA_FAST. Output 'corr' could not be allocated. Aborting." << endl;
 		return 3;
 	}
-
+	
 	//calculate the auto-correlation for all rings
 	for(int q_ct=0; q_ct < polar->dim2(); q_ct++){
 
@@ -984,6 +985,7 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *&polar, array2D *&corr ){
 		
 		//perform autocorrelation --> compute via FFT
 		if (debug()) { cout << q_ct << " " << std::flush; }
+		
 		int fail = autocorrelateFFT( f );          // should yield the same result as correlateFFT( f, f );
 		if (fail){
 			cerr << "Error in CrossCorrelator::calculateXCCA_FAST. Could calculate correlation. Aborting." << endl;
@@ -1001,11 +1003,22 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *&polar, array2D *&corr ){
 		f = NULL;
 	}//for
 	
-	//writing Tiff not explicitly thread-safe... is this a problem for the cheetah?
-	//corr->writeToTiff(outputdir()+"corr_scaled.tif", 1);            //dump scaled output from correlation
 	
-	if(debug()){ cout << "CrossCorrelator::calculateXCCA_FAST done." << endl; }
-			
+
+	if(debug()){
+		cout << "Translating to internal data structure";
+		cout << " (" << samplingLength() << ", " << samplingLength() << ", " << samplingLag() << ")" << endl;
+	}
+	if (writeToInternalDataStructure){
+		for (int i=0; i<samplingLength(); i++) { // q1=q2 index (only doing autocorrelation at this point)
+			for (int k=0; k<samplingLag(); k++) { // phi lag => phi2 index = (l+k)%samplingAngle
+				crossCorrelation->set(i,i,k, corr->get(k, i) );
+			}
+		}
+		cout << endl;
+	}
+	
+	if(debug()){ cout << "CrossCorrelator::calculateXCCA_FAST done." << endl; }			
     return 0;
 }
 
@@ -1177,7 +1190,7 @@ double CrossCorrelator::lookup( double xcoord, double ycoord ) {
     //we assume the data to be centered!
     //(the add-one-half->floor trick is to achieve reasonable rounded integers)
 	double deltaLUT = deltaq();
-	double deltaLUT2 = 1;
+	//double deltaLUT2 = 1;
 	double qmin = -qmax();
     double xc = (xcoord-qmin) / deltaLUT;
     double yc = (ycoord-qmin) / deltaLUT;
@@ -1259,7 +1272,7 @@ void CrossCorrelator::calcLUTvariables( int lutNx, int lutNy, double &qx_min, do
     p_deltaq = (qx_stepsize<=qy_stepsize) ? qx_stepsize : qy_stepsize;         
     p_qmax = (qx_max<=qy_max) ? qx_max : qy_max;
 	
-	if (debug()) {
+	if (debug()>1) {
 		cout << "qx: min=" << qx_min << ", max=" << qx_max << ", range=" << qx_range << ", step size=" << qx_stepsize << endl;  
 		cout << "qy: min=" << qy_min << ", max=" << qy_max << ", range=" << qy_range << ", step size=" << qy_stepsize << endl;                    
 		cout << "deltaq=" << deltaq() << ", qmax=" << qmax() << endl;
@@ -1319,7 +1332,7 @@ int CrossCorrelator::createLookupTable( int lutNx, int lutNy ){
     }//if
 
 		
-	if (debug()){ cout << "table = " << myTable->getASCIIdata() << endl; }
+	if (debug()>2){ cout << "table = " << myTable->getASCIIdata() << endl; }
     if (debug()){ cout << "CrossCorrelator::createLookupTable() done." << endl; }
 	
 	//replace table

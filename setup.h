@@ -188,6 +188,7 @@ public:
 	pthread_mutex_t	icesumraw_mutex;
 	pthread_mutex_t	icesumcorrelation_mutex;
 	pthread_mutex_t correlation_mutex;
+	pthread_mutex_t correlationFFT_mutex;
 	pthread_mutex_t pixelcenter_mutex;
 	pthread_mutex_t image_mutex;
     pthread_mutex_t	nhits_mutex;
