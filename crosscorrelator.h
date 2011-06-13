@@ -80,17 +80,13 @@ public:
     // (for lack of a better name and in the hope that they may be fast. We'll see...)
     
     // 'calculatePolarCoordinates' returns a 2D pattern in polar coordinates (r vs. phi)
-//    int calculatePolarCoordinates_FAST(array2D **polar, int number_q=20, int number_phi=128); 
-//    int calculatePolarCoordinates_FAST(array2D **polar, int number_q, double start_q, double stop_q,
-//                                                        int number_phi=128, double start_phi=0, double stop_phi=360 );
     int calculatePolarCoordinates_FAST(array2D *&polar, int number_q=20, int number_phi=128); 
     int calculatePolarCoordinates_FAST(array2D *&polar, int number_q, double start_q, double stop_q,
                                                         int number_phi=128, double start_phi=0, double stop_phi=360 );
 
     
     // 'calculateXCCA' returns the autocorrelation function (r = const.)          
-//    int calculateXCCA_FAST( array2D **polar, array2D **corr );
-    int calculateXCCA_FAST( array2D *&polar, array2D *&corr );
+    int calculateXCCA_FAST( array2D *&polar, array2D *&corr, int writeToInternalDataStructure=1 );
     
     // looks up the value closest to xcoord, ycoord in the data
     double lookup( double xcoord, double ycoord );
