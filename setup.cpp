@@ -940,9 +940,9 @@ void cGlobal::readDetectorGeometry(char* filename) {
 			x0 = pixelCenterX;
 			y0 = pixelCenterY;
 		}
-		if (debugLevel >= 1) {
-			cout << "\tCorrected center (x,y): (" << x0 << ", " << y0 << ")" << endl;
-		}
+		
+		cout << "\tCorrected center (x,y): (" << x0 << ", " << y0 << ")" << endl;
+		
 		for (int i=0; i<nn; i++) {
 			pix_x[i] -= x0;
 			pix_y[i] -= y0;
