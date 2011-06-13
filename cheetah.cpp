@@ -665,6 +665,7 @@ void endjob()
 	pthread_mutex_destroy(&global.watersumassembled_mutex);
 	pthread_mutex_destroy(&global.watersumcorrelation_mutex);
 	pthread_mutex_destroy(&global.correlation_mutex);
+	pthread_mutex_destroy(&global.correlationFFT_mutex);
 	pthread_mutex_destroy(&global.pixelcenter_mutex);
 	pthread_mutex_destroy(&global.image_mutex);	
     pthread_mutex_destroy(&global.selfdark_mutex);
