@@ -260,7 +260,10 @@ void cGlobal::setup() {
 			if (waterfinder.use) 
 				waterAverage = (double*) calloc(powder_nn, sizeof(double));
 		}
+	}//powdersum end
+
 		
+	if (useCorrelation && sumCorrelation) {
 		if (!correlationNumDelta) 
 			correlationNumDelta = (int) ceil(correlationNumPhi/2.0+1);
 		if (autoCorrelationOnly) {
@@ -268,7 +271,16 @@ void cGlobal::setup() {
 		} else {
 			correlation_nn = correlationNumQ*correlationNumQ*correlationNumDelta;
 		}
-	}//powdersum end
+				
+		if (hitfinder.use) 
+			powderCorrelation = (double*) calloc(correlation_nn, sizeof(double));
+		if (icefinder.use) 
+			iceCorrelation = (double*) calloc(correlation_nn, sizeof(double));
+		if (waterfinder.use) 
+			waterCorrelation = (double*) calloc(correlation_nn, sizeof(double));
+	}// useCorrelation&&sumCorrelation end
+	
+	
 
 
 	
@@ -290,6 +302,7 @@ void cGlobal::setup() {
 	pthread_mutex_init(&watersumassembled_mutex, NULL);
 	pthread_mutex_init(&watersumcorrelation_mutex, NULL);
 	pthread_mutex_init(&correlation_mutex, NULL);
+	pthread_mutex_init(&correlationFFT_mutex, NULL);
 	pthread_mutex_init(&pixelcenter_mutex, NULL);
 	pthread_mutex_init(&image_mutex, NULL);
     pthread_mutex_init(&nhits_mutex, NULL);
