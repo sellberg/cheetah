@@ -1373,7 +1373,7 @@ void cGlobal::writeInitialLog(void){
 	
 	
 	// Logfile name
-	printf("Writing log file: %s\n", logfile);
+	printf("Writing initial log file: %s\n", logfile);
 
 	fp = fopen (logfile,"w");
 	fprintf(fp, "start time: %s\n",timestr);
@@ -1434,7 +1434,7 @@ void cGlobal::updateLogfile(void){
 	
 	
 	// Update logfile
-	printf("Writing log file: %s\n", logfile);
+	printf("Updating log file: %s\n", logfile);
 	fp = fopen (logfile,"a");
 	fprintf(fp, "nFrames: %i,  nHits: %i (%2.2f%%), wallTime: %ihr %imin %isec (%2.1f fps)\n", 
 		(int)nprocessedframes, (int)nhits, hitrate, hrs, mins, secs, fps);
@@ -1466,7 +1466,7 @@ void cGlobal::writeFinalLog(void){
 	FILE *fp;
 	
 	// Logfile name
-	printf("Writing log file: %s\n", logfile);
+	printf("Writing final log file: %s\n", logfile);
 	fp = fopen (logfile,"a");
 
 	
