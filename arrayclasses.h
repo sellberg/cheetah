@@ -153,7 +153,7 @@ public:
             
 	void readFromHDF5( std::string filename );
 	
-	int writeToTiff( std::string filename, int scaleFlag = 0 ) const;     //needs libtiff
+	int writeToTiff( std::string filename, int scaleFlag = 0, int verbose = 0 ) const;     //needs libtiff
 	int writeToHDF5( std::string filename ) const;
     
     std::string getASCIIdata() const;

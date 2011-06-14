@@ -665,7 +665,7 @@ std::string array2D::getASCIIdata() const{
 // implementation borrowed following matrixdata::tiff16out 
 // of the tomo/matlib package (see http://xray-lens.de )
 //--------------------------------------------------------------------------
-int array2D::writeToTiff( std::string filename, int scaleFlag ) const{
+int array2D::writeToTiff( std::string filename, int scaleFlag, int verbose ) const{
 
     if (size() == 0) {
         cerr << "Error in writeToTiff! Array size is zero." << endl;
@@ -745,7 +745,9 @@ int array2D::writeToTiff( std::string filename, int scaleFlag ) const{
 		}
 		
 		
-		cout << "'" << filename << "' written to disc!" << endl;
+		if (verbose){
+			cout << "Tiff image '" << filename << "' written to disc!" << endl;
+		}
 		
 		delete[] tifdata;
 		TIFFClose(out);
