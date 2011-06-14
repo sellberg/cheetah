@@ -64,6 +64,8 @@ public:
 
 	double calcMin() const;
 	double calcMax() const;
+	double calcSum() const;
+	double calcAvg() const;
 	
     std::string getASCIIdataAsRow() const;                         //can/should be overridden by subclasses
     std::string getASCIIdataAsColumn() const;

@@ -212,6 +212,19 @@ double arraydata::calcMax() const{
 	return tempmax;
 }
 
+//--------------------------------------------------------------------
+double arraydata::calcSum() const{
+	double sum = 0.;
+	for (int i = 0; i < size(); i++) {
+		sum += get_atAbsoluteIndex(i);
+	}	
+	return sum;
+}
+
+double arraydata::calcAvg() const{
+	double avg = this->calcSum() / size();
+	return avg;
+}
 
 //------------------------------------------------------------- getASCIIdata
 string arraydata::getASCIIdataAsRow() const{
