@@ -545,7 +545,11 @@ void CrossCorrelator::calculateXCCA(){
 		for (int j=0; j<samplingLength(); j++) {
 			for (int k=0; k<samplingLag(); k++) {
 				if (normalization->get(i,j,k) != 0) {
-					crossCorrelation->set(i, j, k, crossCorrelation->get(i,j,k) / (normalization->get(i,j,k)*iave->get(i)*iave->get(j)) );
+					crossCorrelation->set(i, j, k, crossCorrelation->get(i,j,k) / ( normalization->get(i,j,k)*iave->get(i)*iave->get(j)) );
+				}else{
+					// jf: what happens here, if the normalization is indeed == 0 ?
+					// shouldn't this case be something like
+					// crossCorrelation->set(i, j, k, 0);
 				}
 			}
 		}
@@ -991,7 +995,11 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *&polar, array2D *&corr, int wr
 		}
 		
 		//normalize
-		f->multiplyByFactor(1/avg);
+		if (avg != 0){
+			f->multiplyByFactor(1/avg);
+		} else {
+			f->zero();		// if avg equals zero, set whole correlation to zero to avoid zero division
+		}
 		
 		//feed result into corr
 		corr->setRow( q_ct, f );
@@ -1094,7 +1102,7 @@ int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
     f->copy( *FG_real );
     g->copy( *FG_imag );
     
-    //normalize
+    //normalize to length of the transform
     f->multiplyByFactor( 1/((double)f->size()) );
     g->multiplyByFactor( 1/((double)f->size()) );
 
@@ -1164,7 +1172,7 @@ int CrossCorrelator::autocorrelateFFT( array1D *f ){
         retval++;
     }
     
-	//normalize
+	//normalize to length of the transform
     f->multiplyByFactor( 1/((double)f->size()) ); 
     
     delete f_imag;
