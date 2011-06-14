@@ -151,7 +151,7 @@ void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	buffer = (double*) calloc(cc->samplingLength(), sizeof(double));
 	
 	sprintf(outfile,"%s-saxs.bin",eventname);
-	printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)global->runNumber, (int)info->threadNum, global->datarate, outfile);
+	DEBUGL1_ONLY printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)global->runNumber, (int)info->threadNum, global->datarate, outfile);
 	
 	filePointerWrite = fopen(outfile,"w+");
 
@@ -197,7 +197,7 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	} else {
 		sprintf(outfile,"%s-xcca.bin",eventname);
 	}
-	printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)global->runNumber, (int)info->threadNum, global->datarate, outfile);
+	DEBUGL1_ONLY printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)global->runNumber, (int)info->threadNum, global->datarate, outfile);
 	
 	filePointerWrite = fopen(outfile,"w+");
 	
