@@ -82,7 +82,12 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 			DEBUGL2_ONLY printf("Median of module (%i,%i) = %i\n",mi,mj,median);
 			DEBUGL2_ONLY printf("Minimum of module (%i,%i) = %f\n",mi,mj,negmin);
 			DEBUGL2_ONLY printf("Negative pixels of module (%i,%i) = %i\n",mi,mj,negcount);
-
+			
+			// Ignore common mode for ASICs without wires
+			if ((mi == 1 && mj == 6) || (mi == 2 && mj == 5) || (mi == 3 && mj == 5) || (mi == 4 && mj == 5) || (mi == 4 && mj == 6)) {
+				median = 0;
+			}
+			
 			// Subtract median value
 			for(long i=0; i<ROWS; i++){
 				for(long j=0; j<COLS; j++){

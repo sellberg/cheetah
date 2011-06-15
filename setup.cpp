@@ -263,7 +263,7 @@ void cGlobal::setup() {
 	}//powdersum end
 
 		
-	if (useCorrelation && sumCorrelation) {
+	if (useCorrelation) {
 		if (!correlationNumDelta) 
 			correlationNumDelta = (int) ceil(correlationNumPhi/2.0+1);
 		if (autoCorrelationOnly) {
@@ -271,14 +271,15 @@ void cGlobal::setup() {
 		} else {
 			correlation_nn = correlationNumQ*correlationNumQ*correlationNumDelta;
 		}
-				
-		if (hitfinder.use) 
-			powderCorrelation = (double*) calloc(correlation_nn, sizeof(double));
-		if (icefinder.use) 
-			iceCorrelation = (double*) calloc(correlation_nn, sizeof(double));
-		if (waterfinder.use) 
-			waterCorrelation = (double*) calloc(correlation_nn, sizeof(double));
-	}// useCorrelation&&sumCorrelation end
+		if (sumCorrelation) {
+			if (hitfinder.use) 
+				powderCorrelation = (double*) calloc(correlation_nn, sizeof(double));
+			if (icefinder.use) 
+				iceCorrelation = (double*) calloc(correlation_nn, sizeof(double));
+			if (waterfinder.use) 
+				waterCorrelation = (double*) calloc(correlation_nn, sizeof(double));
+		}
+	}// useCorrelation end
 	
 	
 
