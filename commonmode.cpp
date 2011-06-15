@@ -39,7 +39,9 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	long		e;
 	long		counter;
 //	uint16_t	value;
-	uint16_t	median;
+	long		median;
+	float		negmin;
+	int			negcount;
 	
 	// Create histogram array
 	int			nhist = 65535;
@@ -52,14 +54,19 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 
 			// Zero histogram
 			memset(histogram, 0, nhist*sizeof(uint16_t));
-			
+			negmin = 0;
+			negcount = 0;
 			
 			// Loop over pixels within a module
 			for(long i=0; i<ROWS; i++){
 				for(long j=0; j<COLS; j++){
 					e = (j + mj*COLS) * (8*ROWS);
 					e += i + mi*ROWS;
-					histogram[int(round(threadInfo->corrected_data[e]))] += 1;
+					if (round(threadInfo->corrected_data[e]) < 0) {
+						if (threadInfo->corrected_data[e] < negmin) negmin = threadInfo->corrected_data[e];
+						negcount++;
+					}
+					else histogram[int(round(threadInfo->corrected_data[e]))] += 1;
 				}
 			}
 			
@@ -73,6 +80,8 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 				}
 			}
 			DEBUGL2_ONLY printf("Median of module (%i,%i) = %i\n",mi,mj,median);
+			DEBUGL2_ONLY printf("Minimum of module (%i,%i) = %f\n",mi,mj,negmin);
+			DEBUGL2_ONLY printf("Negative pixels of module (%i,%i) = %i\n",mi,mj,negcount);
 
 			// Subtract median value
 			for(long i=0; i<ROWS; i++){

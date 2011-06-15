@@ -454,7 +454,7 @@ void event() {
 	threadInfo->pixelCenterX = global.pixelCenterX;
 	threadInfo->pixelCenterY = global.pixelCenterY;
 	
-	if (global.useAttenuationCorrection >= 0) {
+	if (global.useAttenuationCorrection >= 0 && global.nAttenuations >= 1) {
 		threadInfo->attenuation = global.attenuations[global.nAttenuations-1];	// 1/transmission taken from last successful readout of the Si filters
 	} else {
 		threadInfo->attenuation = 0;

@@ -1545,11 +1545,13 @@ int main(int argc, char *argv[])
     makeoutfilename(xtcname, outfile);
   if (filelist)
     makeoutfilename(filelist, outfile);
-
+  
+/*
   printf("Opening output file %s\n", outfile);
-/*  TFile *out;
+  TFile *out;
   out = new TFile(outfile, "RECREATE");
 */
+  
   if (caliblist) {
     printf("Opening caliblist %s\n", caliblist);
     FILE *flist = fopen(caliblist, "r");
