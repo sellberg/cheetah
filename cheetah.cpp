@@ -149,7 +149,6 @@ void beginjob() {
 	global.readGaincal(global.gaincalFile);
 	global.readPeakmask(global.hitfinder.peaksearchFile);
 	global.readBadpixelMask(global.badpixelFile);
-	global.writeInitialLog();
 	global.readIcemask(global.icefinder.peaksearchFile);
 	global.readWatermask(global.waterfinder.peaksearchFile);
 	global.readBackgroundmask(global.backgroundfinder.peaksearchFile);
@@ -194,6 +193,7 @@ void beginrun()
 	fetchConfig();
 	corrector->loadConstants(getRunNumber());
 	global.runNumber = getRunNumber();
+	global.writeInitialLog();	
 	frameNumber = 0;
 
 }

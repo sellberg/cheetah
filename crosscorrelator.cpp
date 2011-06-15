@@ -880,11 +880,6 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D *&polar,
 			<< "and angle phi from " << start_phi << " to " <<  stop_phi << " in " << number_phi << " steps." << endl;
 	}
     int retval = 0;
-    
-    //write output of the intermediate files? (all zero by default, turn on for debugging or whatever)
-    int output_data_ASCII = 0;
-    int output_polar_ASCII = 0;
-    int output_polar_TIF = 0;
 
     double step_q = (stop_q - start_q)/number_q;
     double step_phi = (stop_phi - start_phi)/number_phi;
@@ -926,17 +921,17 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D *&polar,
 			polar->set(pcounter, qcounter, value * q);
 		}
 	}
-
-    if (output_data_ASCII){ cout << "data: " << data->getASCIIdata() << endl; }
-    if (output_polar_ASCII){ cout << "polar: " << polar->getASCIIdata() << endl; }
-    if (output_polar_TIF){ polar->writeToTiff( outputdir()+"polar.tif" ); }            
     
-	//....some debugging output...
-
     if (debug()) {
 		cout << "polarCoordinates done. dimensions=(" << polar->dim1() << " x " << polar->dim2() << ")" << endl;
-    }
-	
+	    //write output of the intermediate files? (all zero by default, turn on for debugging or whatever)
+		int output_data_ASCII = 0;
+		int output_polar_ASCII = 0;
+		int output_polar_TIF = 0;
+		if (output_data_ASCII){ cout << "data: " << data->getASCIIdata() << endl; }
+		if (output_polar_ASCII){ cout << "polar: " << polar->getASCIIdata() << endl; }
+		if (output_polar_TIF){ polar->writeToTiff( outputdir()+"polar.tif" ); }            
+	}
     return retval;
 }
 
@@ -980,7 +975,10 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *&polar, array2D *&corr, int wr
 		if (f->size() == 0) {
 			cerr << "Error in CrossCorrelator::calculateXCCA_FAST. Could not get single row. Aborting." << endl;
 			return 5;
-		}		
+		}
+		double avg = f->calcAvg();
+		
+		
 		if (debug()>1){ cout << "   #" << q_ct << ", f before FFT: " << f->getASCIIdata() << endl; }
 		
 		//perform autocorrelation --> compute via FFT
@@ -992,18 +990,16 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *&polar, array2D *&corr, int wr
 			return 6;
 		}
 		
-		if (debug()>2) { cout << "   setting row #" << q_ct << ", f=" << f << ", *f->data()=" << *f->data() << endl; }
+		//normalize
+		f->multiplyByFactor(1/avg);
+		
 		//feed result into corr
 		corr->setRow( q_ct, f );
-		
-		if (debug()>2) { cout << "   done #" << q_ct << ", f=" << f << ", *f->data()=" << *f->data() << endl; }
 		
 		if (debug()>1){ cout << "   #" << q_ct << ", f after FFT: " << f->getASCIIdata() << endl; }
 		delete f;
 		f = NULL;
 	}//for
-	
-	
 
 	if(debug()){
 		cout << "Translating to internal data structure";
