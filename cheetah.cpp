@@ -606,6 +606,7 @@ void endjob()
 	// Calculate angular average of powder pattern
 	if (global.powdersum && global.powderSAXS) {
 		calculatePowderSAXS(&global);
+		savePowderSAXS(&global);
 	}
 	
 	

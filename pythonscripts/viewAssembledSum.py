@@ -50,8 +50,8 @@ d *= (d < options.max_value)
 
 f.close()
 
-vx = N.arange(-862,862)
-vy = N.arange(-862,862)
+vx = N.arange(-880,880)
+vy = N.arange(-880,880)
 X,Y = N.meshgrid(vx,vx)
 arr = (N.sqrt(X*X + Y*Y)).astype(int)
 
@@ -62,13 +62,13 @@ avg_var = N.zeros(lenOfAvg)
 
 intensMask = (d.flatten()>0.)
 
-blockMask=N.zeros((1724,1724))
-blockMask[:950,950:1300]=1.
-blockMask[:750,700:950]=1.
-blockMask[:375,375:700]=1.
-#blockMask[1180:,600:970]=1.
-#blockMask[1036:,855:1252]=1.
-intensMask *= blockMask.flatten()
+#blockMask=N.zeros((1760,1760))
+#blockMask[:950,950:1300]=1.
+#blockMask[:750,700:950]=1.
+#blockMask[:375,375:700]=1.
+##blockMask[1180:,600:970]=1.
+##blockMask[1036:,855:1252]=1.
+#intensMask *= blockMask.flatten()
 
 
 ########################################################
@@ -145,8 +145,12 @@ if (options.ang_average is True):
 			avg_vals[i] /= avg_count[i]
 			avg_var[i] /= avg_count[i]
 
-	P.figure()
+	fig = P.figure()
 	P.plot(avg_vals)
+	canvas = fig.add_subplot(111)
+	canvas.set_title(runtag + "_avg")
+	P.xlabel("Q")
+	P.ylabel("I(Q)")
 	P.draw()
 	#avg_vals.tofile(write_dir + runtag + "_ang_avg.dat", sep="\n",format="%e")
 

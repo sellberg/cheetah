@@ -155,6 +155,7 @@ void writeSimpleHDF5(const char*, const void*, int, int, int);
 void writeSimpleHDF5(const char *filename, const void *data, int width, int height, int depth, int type);
 void saveRunningSums(cGlobal*);
 void calculatePowderSAXS(cGlobal *global);
+void savePowderSAXS(cGlobal *global);
 void calculateCenterCorrection(cGlobal *global, double *intensities, double normalization);
 void calculateCenterCorrection(tThreadInfo *info, cGlobal *global, float *intensities, float normalization);
 void updatePixelArrays(cGlobal *global);

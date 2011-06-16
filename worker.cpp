@@ -1229,6 +1229,56 @@ void calculatePowderSAXS(cGlobal *global) {
 	
 }
 
+
+void savePowderSAXS(cGlobal *global) {
+	
+	if (global->powdersum && global->powderSAXS) {
+		
+		char	filename[1024];		
+		float *buffer = (float*) calloc(2*global->powder_nn, sizeof(float));
+		for(long i=0; i<global->powder_nn; i++)
+			buffer[i] = (float) global->powderQ[i];
+		
+		/*
+		 *	Save powder SAXS pattern
+		 */
+		if (global->hitfinder.use) {
+			printf("Saving powder SAXS data to file\n");
+			sprintf(filename,"r%04u-SAXS.h5",global->runNumber);
+			for(long i=0; i<global->powder_nn; i++)
+				buffer[global->powder_nn+i] = (float) global->powderAverage[i]/global->npowder;
+			writeSimpleHDF5(filename, buffer, global->powder_nn, 2, H5T_NATIVE_FLOAT);
+		}
+		
+		/*
+		 *	Save ice SAXS pattern
+		 */
+		if (global->icefinder.use) {
+			printf("Saving ice SAXS data to file\n");
+			sprintf(filename,"r%04u-SAXS_ice.h5",global->runNumber);
+			for(long i=0; i<global->powder_nn; i++)
+				buffer[global->powder_nn+i] = (float) global->iceAverage[i]/global->nice;
+			writeSimpleHDF5(filename, buffer, global->powder_nn, 2, H5T_NATIVE_FLOAT);
+		}
+		
+		/*
+		 *	Save water SAXS pattern
+		 */
+		if (global->waterfinder.use) {
+			printf("Saving water SAXS data to file\n");
+			sprintf(filename,"r%04u-SAXS_water.h5",global->runNumber);
+			for(long i=0; i<global->powder_nn; i++)
+				buffer[global->powder_nn+i] = (float) global->waterAverage[i]/global->nwater;
+			writeSimpleHDF5(filename, buffer, global->powder_nn, 2, H5T_NATIVE_FLOAT);
+		}
+		
+		free(buffer);
+		
+	}			
+
+}
+
+
 void calculateCenterCorrection(cGlobal *global, double *intensities, double normalization) {
 	
 	// calculating center correction from an array of doubles with intensities in raw format (index number matches pix_x and pix_y)

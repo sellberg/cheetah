@@ -2,9 +2,9 @@
 
 # Usage:
 # In this directory, type:
-#    ./viewCorrelationSum.py -rxxxx -m 10000
+#    ./viewSAXS.py -rxxxx -m 400 (optional) -x 800 (optional)
 # For details, type 
-#	 python viewCorrelationSum --help
+#	 python viewSAXS --help
 # where rxxxx is the run number of hits and nonhits found using the hitfinder executable. 
 # By default, this script looks into the h5 files that are in the appropriate rxxxx directory
 #
@@ -18,9 +18,10 @@ from optparse import OptionParser
 parser = OptionParser()
 parser.add_option("-r", "--run", action="store", type="string", dest="runNumber", 
 					help="run number you wish to view", metavar="rxxxx", default="")
-parser.add_option("-m", "--max", action="store", type="float", dest="max_value", 
-					help="Mask out pixels above this value", metavar="max_value", default="10000000")
-					
+parser.add_option("-m", "--min", action="store", type="float", dest="min_value", 
+					help="ignore intensities below this q-value", metavar="min_value", default="0")
+parser.add_option("-x", "--max", action="store", type="float", dest="max_value", 
+					help="ignore intensities above this q-value", default="100000")
 
 (options, args) = parser.parse_args()
 
@@ -41,11 +42,20 @@ source_dir = "/reg/d/psdm/cxi/cxi25410/scratch/cleaned_hdf5/"
 write_dir = ""
 
 runtag = "r%s"%(options.runNumber)
-print source_dir+runtag+"/"+runtag+"-CorrelationSum.h5"
-f = H.File(source_dir+runtag+"/"+runtag+"-CorrelationSum.h5","r")
+print source_dir+runtag+"/"+runtag+"-SAXS.h5"
+f = H.File(source_dir+runtag+"/"+runtag+"-SAXS.h5","r")
 d = N.array(f['/data/data'])
-d *= (d < options.max_value)
+q = d[0]
+saxs = d[1]
 f.close()
+q[N.isnan(saxs)] = 0
+saxs[N.isnan(saxs)] = 0
+saxs *= (q > options.min_value)
+q *= (q > options.min_value)
+saxs *= (q < options.max_value)
+q *= (q < options.max_value)
+q = q[q != 0]
+saxs = saxs[saxs != 0]
 
 
 ########################################################
@@ -53,7 +63,7 @@ f.close()
 ########################################################
 class img_class (object):
 	def __init__(self, inarr, filename):
-		self.inarr = inarr
+		self.inarr = inarr*(inarr>0)
 		self.filename = filename
 		self.cmax = 0.1*self.inarr.max()
 		self.cmin = self.inarr.min()
@@ -96,21 +106,19 @@ class img_class (object):
 		cid2 = fig.canvas.mpl_connect('button_press_event', self.on_click)
 		canvas = fig.add_subplot(111)
 		canvas.set_title(self.filename)
-		P.xlabel("delta")
-		P.ylabel("Q")
 		self.axes = P.imshow(self.inarr, vmax = self.cmax)
 		self.colbar = P.colorbar(self.axes, pad=0.01)
 		self.orglims = self.axes.get_clim()
 		P.show() 
 
-print "Right-click on colorbar to set maximum scale."
-print "Left-click on colorbar to set minimum scale."
-print "Center-click on colorbar (or press 'r') to reset color scale."
+
 print "Interactive controls for zooming at the bottom of figure screen (zooming..etc)."
-print "Press 'p' to save PNG of image (with the current colorscales) in the appropriately named folder."
 print "Hit Ctl-\ or close all windows (Alt-F4) to terminate viewing program."
 
-currImg = img_class(d, runtag + "_xaca")
-currImg.draw_img()
-
+fig = P.figure()
+P.plot(q, saxs)
+canvas = fig.add_subplot(111)
+canvas.set_title(runtag + "_SAXS")
+P.xlabel("Q")
+P.ylabel("I(Q)")
 P.show()
