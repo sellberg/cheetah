@@ -412,6 +412,16 @@ void event() {
 	
 	
 	/*
+	 *	Energy calibration
+	 */
+	if (global.useEnergyCalibration) {
+		if (global.nEnergies >= global.energyCapacity) global.expandEnergyCapacity();
+		global.energies[global.nEnergies] = photonEnergyeV;
+		global.wavelengths[global.nEnergies++] = wavelengthA;
+	}
+		
+	
+	/*
 	 *	Create a new threadInfo structure in which to place all information
 	 */
 	tThreadInfo	*threadInfo;
@@ -612,6 +622,14 @@ void endjob()
 	
 	// Save powder patterns
 	saveRunningSums(&global);
+	
+	
+	// Save energy calibration
+	if (global.useEnergyCalibration) {
+		saveEnergies(&global);
+	}
+	
+	
 	global.writeFinalLog();
 	
 	
@@ -653,6 +671,8 @@ void endjob()
 	delete[] global.attenuations;
 	delete[] global.changedAttenuationEvents;
 	delete[] global.totalThicknesses;
+	delete[] global.energies;
+	delete[] global.wavelengths;
 	delete[] global.correlationLUT;
 	
 	pthread_mutex_destroy(&global.nActiveThreads_mutex);

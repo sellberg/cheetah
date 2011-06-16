@@ -1279,6 +1279,26 @@ void savePowderSAXS(cGlobal *global) {
 }
 
 
+void saveEnergies(cGlobal *global) {
+	
+	if (global->useEnergyCalibration) {
+		
+		char	filename[1024];
+		float *buffer = (float*) calloc(2*global->nEnergies, sizeof(float));
+		printf("Saving energies and wavelengths to file\n");
+		sprintf(filename,"r%04u-energies.h5",global->runNumber);
+		for(long i=0; i<global->nEnergies; i++)
+			buffer[i] = (float) global->energies[i];
+		for(long i=0; i<global->nEnergies; i++)
+			buffer[global->nEnergies+i] = (float) global->wavelengths[i];
+		writeSimpleHDF5(filename, buffer, global->nEnergies, 2, H5T_NATIVE_FLOAT);
+		free(buffer);
+		
+	}
+	
+}
+
+
 void calculateCenterCorrection(cGlobal *global, double *intensities, double normalization) {
 	
 	// calculating center correction from an array of doubles with intensities in raw format (index number matches pix_x and pix_y)

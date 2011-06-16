@@ -111,6 +111,9 @@ void cGlobal::defaultConfiguration(void) {
 	useAttenuationCorrection = 0;
 	strcpy(attenuationFile, "attenuations.dat");
 	
+	// Energy calibration
+	useEnergyCalibration = 0;
+	
 	// Hitfinding
 	
 	hitfinder.use = 0;
@@ -338,6 +341,7 @@ void cGlobal::setup() {
 		calculateCenterCorrectionPowder = 0;
 		calculateCenterCorrectionHit = 0;
 		useAttenuationCorrection = -1;
+		useEnergyCalibration = 0;
 		useCorrelation = 0;
 	}
 	
@@ -375,7 +379,7 @@ void cGlobal::setup() {
 			possibleThicknesses[i] = 20*i;
 		}
 		possibleAttenuations = new double[nThicknesses]; // Array of all possible attenuations obtained from possibleThicknesses
-		attenuationCapacity = 100; // Starting capacity of dynamic array
+		attenuationCapacity = 100; // Starting capacity of dynamic arrays
 		attenuations = new double[attenuationCapacity]; // Dynamic array of all calculated attenuations during the run
 		changedAttenuationEvents = new unsigned[attenuationCapacity]; // Dynamic array of all events where the attenuation changed during the run
 		totalThicknesses = new unsigned[attenuationCapacity]; // Dynamic array of all total thicknesses from used Si filters during the run
@@ -393,6 +397,21 @@ void cGlobal::setup() {
 		attenuationCapacity = 0;
 		nAttenuations = 0;
 		attenuationOffset = 0;
+	}
+	
+	/*
+	 *	Setup global energy calibration variables
+	 */
+	if (useEnergyCalibration) {
+		energyCapacity = 1000; // Starting capacity of dynamic arrays
+		energies = new double[energyCapacity]; // Histogram of all photon energies (eV)
+		wavelengths = new double[energyCapacity]; // Histogram of all wavelengths (Å)
+		nEnergies = 0;
+	} else {
+		energies = NULL;
+		wavelengths = NULL;
+		energyCapacity = 0;
+		nEnergies = 0;		
 	}
 	
 	/*
@@ -657,6 +676,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "useattenuationcorrection")) {
 		useAttenuationCorrection = atoi(value);
+	}
+	else if (!strcmp(tag, "useenergycalibration")) {
+		useEnergyCalibration = atoi(value);
 	}
 	
 	// Power user settings
@@ -1259,7 +1281,22 @@ void cGlobal::expandAttenuationCapacity() {
 }
 
 
-
+/*
+ *	Expand capacity of dynamic attenuation arrays
+ */
+void cGlobal::expandEnergyCapacity() {
+	energyCapacity *= 2;
+	double *oldEnergies = energies;
+	energies = new double[energyCapacity];
+	double *oldWavelengths = wavelengths;
+	wavelengths = new double[energyCapacity];
+	for (int i=0; i<nEnergies; i++) {
+		energies[i] = oldEnergies[i];
+		wavelengths[i] = oldWavelengths[i];
+	}
+	delete[] oldEnergies;
+	delete[] oldWavelengths;
+}
 
 
 /*
