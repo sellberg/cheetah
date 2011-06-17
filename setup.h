@@ -233,10 +233,10 @@ public:
 	
 	
 	// Energy calibration variables
-	double			*energies;	// Histogram of all photon energies (eV)
-	double			*wavelengths;	// Histogram of all wavelengths (Å)
+	double			*energies;	// Dynamic array of photon energies (eV) for all events
+	double			*wavelengths;	// Dynamic array of wavelengths (Å) for all events
 	unsigned		energyCapacity;	// Starting capacity of dynamic arrays
-	unsigned		nEnergies;	// Number of energies saved in histogram
+	unsigned		nEnergies;	// Number of energies saved in dynamic array
 	
 	
 	// Common variables

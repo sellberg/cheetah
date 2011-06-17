@@ -404,8 +404,8 @@ void cGlobal::setup() {
 	 */
 	if (useEnergyCalibration) {
 		energyCapacity = 1000; // Starting capacity of dynamic arrays
-		energies = new double[energyCapacity]; // Histogram of all photon energies (eV)
-		wavelengths = new double[energyCapacity]; // Histogram of all wavelengths (Å)
+		energies = new double[energyCapacity]; // Dynamics array of all photon energies (eV)
+		wavelengths = new double[energyCapacity]; // Dynamics array of all wavelengths (Å)
 		nEnergies = 0;
 	} else {
 		energies = NULL;
