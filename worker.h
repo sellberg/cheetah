@@ -157,6 +157,7 @@ void saveRunningSums(cGlobal*);
 void calculatePowderSAXS(cGlobal *global);
 void savePowderSAXS(cGlobal *global);
 void saveEnergies(cGlobal *global);
+void makeEnergyHistograms(cGlobal *global);
 void calculateCenterCorrection(cGlobal *global, double *intensities, double normalization);
 void calculateCenterCorrection(tThreadInfo *info, cGlobal *global, float *intensities, float normalization);
 void updatePixelArrays(cGlobal *global);

@@ -203,6 +203,12 @@ void *worker(void *threadarg) {
 	
 	
 	/*
+	 *	Calculate Q calibration
+	 */
+	
+	
+	
+	/*
 	 *	Apply attenuation correction
 	 */
 	if (global->useAttenuationCorrection > 0) {
@@ -1295,6 +1301,40 @@ void saveEnergies(cGlobal *global) {
 		free(buffer);
 		
 	}
+	
+}
+
+
+void makeEnergyHistograms(cGlobal *global) {
+
+	double deltaE = 1; // 1 eV steps
+	//double deltaL = 14e-6; // Equivalence of 1 eV steps at 9385 eV
+	unsigned Ebins = (unsigned) ceil((global->Emax-global->Emin)/deltaE)+1;
+	double deltaL = (global->Lmax-global->Lmin)/(Ebins-1);
+	
+	if (Ebins > 1) {
+		global->Ehist = (unsigned*) calloc(Ebins, sizeof(float));
+		global->Lhist = (unsigned*) calloc(Ebins, sizeof(float));
+		for (int i=0; i<global->nEnergies; i++) {
+			global->Ehist[int(round((global->energies[i]-global->Emin)/deltaE))]++;
+			global->Lhist[int(round((global->wavelengths[i]-global->Lmin)/deltaL))]++;
+		}
+		char	filename[1024];
+		float *buffer = (float*) calloc(4*Ebins, sizeof(float));
+		printf("Saving histograms of energies and wavelengths to file\n");
+		sprintf(filename,"r%04u-energy_histograms.h5",global->runNumber);
+		for(int i=0; i<Ebins; i++) {
+			buffer[i] = (float) global->Ehist[i];
+			buffer[Ebins+i] = (float) global->Emin+i*deltaE;
+			buffer[2*Ebins+i] = (float) global->Lhist[i];
+			buffer[3*Ebins+i] = (float) global->Lmin+i*deltaL;
+		}
+		
+		writeSimpleHDF5(filename, buffer, Ebins, 4, H5T_NATIVE_FLOAT);
+		free(buffer);
+		free(global->Ehist);
+		free(global->Lhist);
+	}		
 	
 }
 

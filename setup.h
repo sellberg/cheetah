@@ -237,6 +237,12 @@ public:
 	double			*wavelengths;	// Dynamic array of wavelengths (Å) for all events
 	unsigned		energyCapacity;	// Starting capacity of dynamic arrays
 	unsigned		nEnergies;	// Number of energies saved in dynamic array
+	double			Emin;	// Lowest photon energy
+	double			Emax;	// Highest photon energy
+	double			Lmin;	// Lowest wavelength
+	double			Lmax;	// Highest wavelength
+	unsigned		*Ehist;	// Histogram of energies
+	unsigned		*Lhist;	// Histogram of wavelengths
 	
 	
 	// Common variables

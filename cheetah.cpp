@@ -418,6 +418,10 @@ void event() {
 		if (global.nEnergies >= global.energyCapacity) global.expandEnergyCapacity();
 		global.energies[global.nEnergies] = photonEnergyeV;
 		global.wavelengths[global.nEnergies++] = wavelengthA;
+		if (photonEnergyeV > global.Emax) global.Emax = photonEnergyeV;
+		if (photonEnergyeV < global.Emin) global.Emin = photonEnergyeV;
+		if (wavelengthA > global.Lmax) global.Lmax = wavelengthA;
+		if (wavelengthA < global.Lmin) global.Lmin = wavelengthA;
 	}
 		
 	
@@ -626,6 +630,7 @@ void endjob()
 	
 	// Save energy calibration
 	if (global.useEnergyCalibration) {
+		makeEnergyHistograms(&global);
 		saveEnergies(&global);
 	}
 	

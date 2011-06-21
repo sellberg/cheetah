@@ -407,11 +407,23 @@ void cGlobal::setup() {
 		energies = new double[energyCapacity]; // Dynamics array of all photon energies (eV)
 		wavelengths = new double[energyCapacity]; // Dynamics array of all wavelengths (Å)
 		nEnergies = 0;
+		Emin = 100000;	// Lowest photon energy
+		Emax = 0;	// Highest photon energy
+		Lmin = 100000;	// Lowest wavelength
+		Lmax = 0;	// Highest wavelength
+		Ehist = NULL;	// Histograms are allocated in makeEnergyHistograms()
+		Lhist = NULL;	// Histograms are allocated in makeEnergyHistograms()
 	} else {
 		energies = NULL;
 		wavelengths = NULL;
+		Ehist = NULL;
+		Lhist = NULL;
 		energyCapacity = 0;
-		nEnergies = 0;		
+		nEnergies = 0;
+		Emin = 100000;
+		Emax = 0;
+		Lmin = 100000;
+		Lmax = 0;
 	}
 	
 	/*
