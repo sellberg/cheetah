@@ -617,6 +617,13 @@ void endjob()
 	}
 	
 	
+	// Refine metrology by translating/rotating quads w.r.t each other
+	if (global.powdersum && global.refineMetrology) {
+		translateQuads(&global);
+		rotateQuads(&global);
+	}
+	
+	
 	// Calculate angular average of powder pattern
 	if (global.powdersum && global.powderSAXS) {
 		calculatePowderSAXS(&global);

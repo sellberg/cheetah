@@ -165,6 +165,8 @@ void updatePixelArrays(tThreadInfo *info, cGlobal *global);
 void updateImageArrays(cGlobal *global);
 void updateImageArrays(cGlobal *global, cHit *hit);
 void updateSAXSArrays(cGlobal *global);
+void translateQuads(cGlobal *global);
+void rotateQuads(cGlobal *global);
 
 
 #endif

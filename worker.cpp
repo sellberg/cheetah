@@ -1191,7 +1191,7 @@ void calculatePowderSAXS(cGlobal *global) {
 	
 	// calculate |q| for each pixel and bin lengths with correct resolution
 	for (int i=0; i<global->pix_nn; i++) {
-		pix_r[i] = (double) round( sqrt(((double) global->pix_x[i])*global->pix_x[i] + ((double) global->pix_y[i])*global->pix_y[i]) / global->deltaqSAXS) * global->deltaqSAXS;
+		pix_r[i] = (double) round( (sqrt(((double) global->pix_x[i])*global->pix_x[i] + ((double) global->pix_y[i])*global->pix_y[i]) - global->powderStartQ) / global->deltaqSAXS ) * global->deltaqSAXS + global->powderStartQ;
 	}
 	
 	// angular average for each |q|
@@ -1199,7 +1199,7 @@ void calculatePowderSAXS(cGlobal *global) {
 	DEBUGL2_ONLY printf("average SAXS intensity:\n");
 	
 	for (int i=0; i<global->powder_nn; i++) {
-		global->powderQ[i] = i*global->deltaqSAXS;
+		global->powderQ[i] = global->powderStartQ + i*global->deltaqSAXS;
 		int counterp = 0; // reset counter
 		int counteri = 0; // reset counter
 		int counterw = 0; // reset counter
@@ -1789,7 +1789,11 @@ void updateSAXSArrays(cGlobal *global) {
 	// update size of SAXS arrays before they are filled
 	
 	if (global->powdersum && global->powderSAXS) {
-		global->powder_nn = (unsigned) round(global->pix_rmax/global->deltaqSAXS)+1;
+		if (global->powderStopQ == 0 || global->powderStopQ < global->powderStartQ) {
+			global->powder_nn = (unsigned) round(global->pix_rmax/global->deltaqSAXS)+1;
+		} else {
+			global->powder_nn = (unsigned) round((global->powderStopQ-global->powderStartQ)/global->deltaqSAXS)+1;
+		}
 		free(global->powderQ);
 		global->powderQ = (double*) calloc(global->powder_nn, sizeof(double));
 		if (global->hitfinder.use) {
@@ -1807,3 +1811,11 @@ void updateSAXSArrays(cGlobal *global) {
 	}
 }
 
+
+void translateQuads(cGlobal *global) {
+	cout << "translateQuads" << endl;
+}
+
+void rotateQuads(cGlobal *global) {
+	cout << "rotateQuads" << endl;
+}

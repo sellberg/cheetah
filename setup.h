@@ -75,6 +75,7 @@ public:
 	double		centerCorrectionDeltaR;	// step length in pixels for the radius
 	double		centerCorrectionMaxC;	// maximum value in pixels of the shift in center that the hough transform will be performed for, the true center should lie inside +/- this value.
 	double		centerCorrectionDeltaC;	// step length in pixels for the center
+	int			refineMetrology;	// refine metrology by translating/rotating quads w.r.t. each other
 		
 	// Bad pixel masks
 	int			useBadPixelMask;	// to specify pixels that you know are bad
@@ -129,14 +130,16 @@ public:
 	int			saveInterval;			 // powder pattern is repeatedly saved according to this interval
     
 	// Angular averages
-	int			powderSAXS;		// set to nonzero to calculate angular averages of the powder patterns
+	int			powderSAXS;			// set to nonzero to calculate angular averages of the powder patterns
+	double		powderStartQ;		// start position for SAXS pattern calculated in pixel from the center
+	double		powderStopQ;			// end position for SAXS pattern calculated in pixel from the center
 	double		deltaqSAXS;			// binning of angular averages, DeltaQ currently determines step size in pixels
     
     // Correlation analysis
     int         useCorrelation;     // set to nonzero to turn on angular cross-correlation module, also controls what correlation algorithm to be used, 1: regular, 2: fast
 	int			sumCorrelation;		// set to nonzero to sum cross-correlation patterns for different hits
 	int			autoCorrelationOnly;		// set to nonzero to only calculate autocorrelation (q1=q2)
-    double 		correlationStartQ;		// customize the _FAST correlation algorithm (#2)
+    double 		correlationStartQ;		// customize the range of the correlation algorithms
     double 		correlationStopQ;		// startQ/stopQ are in units of detector pixels
     int 		correlationNumQ;		// number of q values between start and stop
     double 		correlationStartPhi;	// start angle in degrees, default: 0

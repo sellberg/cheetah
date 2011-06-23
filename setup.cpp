@@ -74,6 +74,7 @@ void cGlobal::defaultConfiguration(void) {
 	centerCorrectionDeltaR = 1;
 	centerCorrectionMaxC = 50;
 	centerCorrectionDeltaC = 1;
+	refineMetrology = 0;
 	
 	// Bad pixel mask
 	strcpy(badpixelFile, "badpixels.h5");
@@ -170,6 +171,8 @@ void cGlobal::defaultConfiguration(void) {
 	
 	// Angular averages of powder patterns
 	powderSAXS = 0;
+	powderStartQ = 0;
+	powderStopQ = 0;
 	deltaqSAXS = 1;
     
 	// Correlation analysis
@@ -590,6 +593,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "centercorrectiondeltac")) {
 		centerCorrectionDeltaC = atof(value);
 	}
+	else if (!strcmp(tag, "refinemetrology")) {
+		refineMetrology = atoi(value);
+	}
 	else if (!strcmp(tag, "subtractcmmodule")) {
 		cmModule = atoi(value);
 	}
@@ -628,6 +634,12 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "powdersaxs")) {
 		powderSAXS = atoi(value);
+	}
+	else if (!strcmp(tag, "powderstartq")) {
+		powderStartQ = atof(value);
+	}
+	else if (!strcmp(tag, "powderstopq")) {
+		powderStopQ = atof(value);
 	}
 	else if (!strcmp(tag, "deltaqsaxs")) {
 		deltaqSAXS = atof(value);
@@ -1000,7 +1012,12 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	pix_ymax = ymax;
 	pix_ymin = ymin;
 	pix_rmax = rmax;
-	powder_nn = (unsigned) round(rmax/deltaqSAXS)+1;
+	if (powderStopQ == 0 || powderStopQ < powderStartQ) {
+		powder_nn = (unsigned) round(rmax/deltaqSAXS)+1;
+		powderStartQ = 0;
+	} else {
+		powder_nn = (unsigned) round((powderStopQ-powderStartQ)/deltaqSAXS)+1;
+	}
 	
 	//xmax = ceil(xmax);
 	//xmin = floor(xmin);
