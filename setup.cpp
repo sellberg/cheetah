@@ -961,9 +961,9 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	
 	// Center correct the array w.r.t the square hole created by the quads (assume beam is centered)
 	if (useCenterCorrection && !calculateCenterCorrectionPowder && !calculateCenterCorrectionHit) {
-		if (debugLevel >= 1) cout << "X VALUES:" << endl;
+		if (debugLevel >= 1) cout << "\tX values:" << endl;
 		float x0 = pixelCenter(pix_x);
-		if (debugLevel >= 1) cout << "Y VALUES:" << endl;
+		if (debugLevel >= 1) cout << "\tY values:" << endl;
 		float y0 = pixelCenter(pix_y);
 		if (pixelCenterX || pixelCenterY) {
 			x0 = pixelCenterX;
@@ -1038,15 +1038,16 @@ float cGlobal::pixelCenter( float *pixel_array ) {
 	float dq2 = 0;
 	// Loop over quads and pick out closest pixel to center
 	for (int i=0; i<quads; i++) {
-		if (debugLevel >= 1) cout << "Q" << i << ": " << pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS] << endl;
+		if (debugLevel >= 2) cout << "\tQ" << i << ",S1: " << pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS] << endl;
+		if (debugLevel >= 2) cout << "\tQ" << i << ",S2: " << pixel_array[8*ROWS*2*COLS+i*2*ROWS] << endl;
 		center += pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
 		if (i == 0) dq1 += pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
 		else if (i == 1) dq2 += pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
 		else if (i == 2) dq1 -= pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
 		else dq2 -= pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
 	}
-	if (debugLevel >= 1) cout << "GAP(Q0-Q2) = " << dq1 << endl;
-	if (debugLevel >= 1) cout << "GAP(Q1-Q3) = " << dq2 << endl;
+	if (debugLevel >= 1) cout << "\tGap(Q0-Q2) = " << dq1 << endl;
+	if (debugLevel >= 1) cout << "\tGap(Q1-Q3) = " << dq2 << endl;
 	return center/quads;
 }
 
