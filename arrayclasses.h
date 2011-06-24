@@ -74,7 +74,10 @@ public:
 	void writeToRawBinary( std::string filename );
     
     //perform some basic math on array
+    int addValue( double val );
     int multiplyByFactor( double factor );
+ 
+	int addArrayElementwise( const arraydata *secondArray );
     int multiplyByArrayElementwise( const arraydata *secondFactor );
 
 //	int verbose() const;
