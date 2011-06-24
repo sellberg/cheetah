@@ -48,8 +48,8 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	uint16_t	*histogram;
 	histogram = (uint16_t*) calloc(nhist, sizeof(uint16_t));
 	
-	// Loop over modules (8x8 array)
-	for(long mi=0; mi<8; mi++){
+	// Loop over 2x1 modules (4x8 array)
+	for(long mi=0; mi<4; mi++){ //for(long mi=0; mi<8; mi++){
 		for(long mj=0; mj<8; mj++){
 
 			// Zero histogram
@@ -58,10 +58,10 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 			negcount = 0;
 			
 			// Loop over pixels within a module
-			for(long i=0; i<ROWS; i++){
+			for(long i=0; i<2*ROWS; i++){ //for(long i=0; i<ROWS; i++){
 				for(long j=0; j<COLS; j++){
 					e = (j + mj*COLS) * (8*ROWS);
-					e += i + mi*ROWS;
+					e += i + mi*2*ROWS; //e += i + mi*ROWS;
 					if (round(threadInfo->corrected_data[e]) < 0) {
 						if (threadInfo->corrected_data[e] < negmin) negmin = threadInfo->corrected_data[e];
 						negcount++;
@@ -74,7 +74,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 			counter = 0;
 			for(long i=0; i<nhist; i++){
 				counter += histogram[i];
-				if(counter > (global->cmFloor*ROWS*COLS)) {
+				if(counter > (global->cmFloor*2*ROWS*COLS)) { //if(counter > (global->cmFloor*ROWS*COLS)) {
 					median = i;
 					break;
 				}
@@ -84,16 +84,16 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 			DEBUGL2_ONLY printf("Minimum of module (%ld,%ld) = %f\n",mi,mj,negmin);
 			DEBUGL2_ONLY printf("Negative pixels of module (%ld,%ld) = %i\n",mi,mj,negcount);
 			
-			// Ignore common mode for ASICs without wires
-			if ((mi == 1 && mj == 6) || (mi == 2 && mj == 5) || (mi == 3 && mj == 5) || (mi == 4 && mj == 5) || (mi == 4 && mj == 6)) {
-				median = 0;
-			}
+			// Ignore common mode for ASICs without wires (only Feb run)
+//			if ((mi == 1 && mj == 6) || (mi == 2 && mj == 5) || (mi == 3 && mj == 5) || (mi == 4 && mj == 5) || (mi == 4 && mj == 6)) {
+//				median = 0;
+//			}
 			
 			// Subtract median value
-			for(long i=0; i<ROWS; i++){
+			for(long i=0; i<2*ROWS; i++){
 				for(long j=0; j<COLS; j++){
 					e = (j + mj*COLS) * (8*ROWS);
-					e += i + mi*ROWS;
+					e += i + mi*2*ROWS; //e += i + mi*ROWS;
 					threadInfo->corrected_data[e] -= median;
 
 					// Zero checking only needed if corrected data is uint16
