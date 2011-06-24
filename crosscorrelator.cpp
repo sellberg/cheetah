@@ -884,10 +884,17 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D *&polar,
 			<< "and angle phi from " << start_phi << " to " <<  stop_phi << " in " << number_phi << " steps." << endl;
 	}
     int retval = 0;
-
-    double step_q = (stop_q - start_q)/number_q;
-    double step_phi = (stop_phi - start_phi)/number_phi;
+	
+	//Jan's old way
+//    double step_q = (stop_q - start_q)/number_q;
+//    double step_phi = (stop_phi - start_phi)/number_phi;
     
+	//in line with Jonas' convention:
+	//leave out the upper boundary, e.g. 200 <= q < 400, 0 <= phi < 360
+	double step_q = (stop_q - start_q)/(number_q-1);
+    double step_phi = (stop_phi - start_phi)/(number_phi-1);
+    
+	
     if (step_q < 0)
         cerr << "Error in CrossCorrelator::calculatePolarCoordinates_FAST -- step_r value " 
             << step_q << " is smaller than zero." << endl;
@@ -896,7 +903,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D *&polar,
             << step_phi << " is smaller than zero." << endl;
     
 	delete polar;
-    polar = new array2D( (int) floor(number_phi+0.5), (int) floor(number_q+0.5) );
+    polar = new array2D( number_phi, number_q );
 	if (!polar){
 		cerr << "Error in CrossCorrelator::calculatePolarCoordinates_FAST. polar couldn't be allocated." << endl;
 		return 1;
@@ -921,8 +928,9 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D *&polar,
             //lookup that value in original scattering data
             value = lookup( xcoord, ycoord );
             
-			//assign the new values (note the functional determinant q to account for bins growing as q grows)
-			polar->set(pcounter, qcounter, value * q);
+			//assign the new values 
+			//polar->set(pcounter, qcounter, value * q);	//(functional determinant q to account for bins growing as q grows)
+			polar->set(pcounter, qcounter, value);
 		}
 	}
     
@@ -942,6 +950,12 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D *&polar,
 
 
 //----------------------------------------------------------------------------calculate XCCA
+//
+//normalize, according to eq. (3) in Altarelli, et al., PRB, 82, 104207 (2010)
+// general, eq. (3):  C = ( <I(q1, phi) * I(q2, phi+deltaphi)> - <I(q1)>*<I(q2)> ) / ( <I(q1)>*<I(q2)> )
+// autocorr, eq. (1): C =    <I(q, phi) * I(q, phi+deltaphi)>  /  ( <I(q)>^2 )  -  1
+//
+//----------------------------------------------------------------------------
 int CrossCorrelator::calculateXCCA_FAST( array2D *&polar, array2D *&corr, int writeToInternalDataStructure ){
 	if(debug()>1){ 
 		cout << "CrossCorrelator::calculateXCCA_FAST ("<< polar->dim1() << ", " << polar->dim2() << ")" << endl; 
@@ -980,23 +994,24 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *&polar, array2D *&corr, int wr
 			cerr << "Error in CrossCorrelator::calculateXCCA_FAST. Could not get single row. Aborting." << endl;
 			return 5;
 		}
+		
+		//subtract average (SAXS intensity)
 		double avg = f->calcAvg();
+		f->addValue(-avg);
 		
 		
 		if (debug()>1){ cout << "   #" << q_ct << ", f before FFT: " << f->getASCIIdata() << endl; }
-		
-		//perform autocorrelation --> compute via FFT
 		if (debug()) { cout << q_ct << " " << std::flush; }
 		
+		//perform autocorrelation --> compute via FFT
 		int fail = autocorrelateFFT( f );          // should yield the same result as correlateFFT( f, f );
 		if (fail){
 			cerr << "Error in CrossCorrelator::calculateXCCA_FAST. Could calculate correlation. Aborting." << endl;
 			return 6;
 		}
 		
-		//normalize
 		if (avg != 0){
-			f->multiplyByFactor(1/avg);
+			f->multiplyByFactor(1/avg/avg);
 		} else {
 			f->zero();		// if avg equals zero, set whole correlation to zero to avoid zero division
 		}
@@ -1019,10 +1034,9 @@ int CrossCorrelator::calculateXCCA_FAST( array2D *&polar, array2D *&corr, int wr
 				crossCorrelation->set(i,i,k, corr->get(k, i) );
 			}
 		}
-		cout << endl;
 	}
 	
-	if(debug()){ cout << "CrossCorrelator::calculateXCCA_FAST done." << endl; }			
+	if(debug()){ cout << endl << "CrossCorrelator::calculateXCCA_FAST done." << endl; }			
     return 0;
 }
 
@@ -1052,6 +1066,8 @@ int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
     //-------------------------------------------------------------------------
     
     FourierTransformer *ft = NULL;
+	
+	double scale = 1.0/f->size();
         
     // transform f -> F
     array1D *f_real = new array1D( *f );
@@ -1082,8 +1098,8 @@ int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
     array1D *FG_real = new array1D( g_real->size() );
     array1D *FG_imag = new array1D( g_real->size() );
     for (int i=0; i<f_real->size(); i++) {
-        FG_real->set( i,   f_real->get(i)*g_real->get(i) + f_imag->get(i)*g_imag->get(i)   );   // ac + bd
-        FG_imag->set( i,   f_imag->get(i)*g_real->get(i) - f_real->get(i)*g_imag->get(i)   );   // i(bc - ad)
+        FG_real->set( i,   ( f_real->get(i)*g_real->get(i) + f_imag->get(i)*g_imag->get(i) ) * scale   );   // ac + bd
+        FG_imag->set( i,   ( f_imag->get(i)*g_real->get(i) - f_real->get(i)*g_imag->get(i) ) * scale   );   // i(bc - ad)
     }
     
     // transform the result back to find the correlation
@@ -1103,8 +1119,8 @@ int CrossCorrelator::correlateFFT( array1D *f, array1D *g ){
     g->copy( *FG_imag );
     
     //normalize to length of the transform
-    f->multiplyByFactor( 1/((double)f->size()) );
-    g->multiplyByFactor( 1/((double)f->size()) );
+ //   f->multiplyByFactor( 1.0/f->size() );
+ //   g->multiplyByFactor( 1.0/f->size() );
 
     
     delete f_real;
@@ -1142,6 +1158,8 @@ int CrossCorrelator::autocorrelateFFT( array1D *f ){
     
     FourierTransformer *ft = NULL;
 	
+	double scale = 1.0/f->size();
+	
     //transform forward
     array1D *f_imag = new array1D(f->size());							// initialized to zeros --> f is real
 	
@@ -1157,7 +1175,7 @@ int CrossCorrelator::autocorrelateFFT( array1D *f ){
     //calculate the magnitude squared
     // if F = a+ib, then |F|^2 = a^2 + b^2
     for (int i=0; i < f->size(); i++) {
-        f->set( i,   f->get(i)*f->get(i) + f_imag->get(i)*f_imag->get(i)   );
+        f->set( i,   ( f->get(i)*f->get(i) + f_imag->get(i)*f_imag->get(i) ) * scale   );
     }    
     f_imag->zero();                 //set to zero for back transform
 
@@ -1173,7 +1191,7 @@ int CrossCorrelator::autocorrelateFFT( array1D *f ){
     }
     
 	//normalize to length of the transform
-    f->multiplyByFactor( 1/((double)f->size()) ); 
+//    f->multiplyByFactor( 1.0/f->size() ); 
     
     delete f_imag;
     return retval;
