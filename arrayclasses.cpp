@@ -222,7 +222,7 @@ double arraydata::calcSum() const{
 }
 
 double arraydata::calcAvg() const{
-	double avg = this->calcSum() / size();
+	double avg = this->calcSum() / (double)size();
 	return avg;
 }
 
@@ -311,14 +311,36 @@ void arraydata::readFromRawBinary( std::string filename ){
 //--------------------------------------------------------------------array math
 
 //multiply each element by a numerical factor
-int arraydata::multiplyByFactor( double factor ){                       
+int arraydata::multiplyByFactor( double factor ){
     for (int i = 0; i<this->size(); i++) {
-        set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)*factor);
+        this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)*factor);
     }
     return 0;
 }
 
-//multiply each element by an element from a second vector
+//multiply each element by a numerical factor
+int arraydata::addValue( double val ){
+    for (int i = 0; i<this->size(); i++) {
+        this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)+val);
+    }
+    return 0;
+}
+
+//add each element by an element from a second array
+int arraydata::addArrayElementwise( const arraydata *secondArray ){
+    if (this->size() != secondArray->size()){
+        cerr << "Error in arraydata::addArrayElementwise! Array sizes don't match. ";
+        cerr << "(" << this->size() << " != " << secondArray->size() << "). Operation not performed."<< endl;
+        return 1;
+    }
+    
+    for (int i = 0; i<this->size(); i++) {
+        this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)+secondArray->get_atAbsoluteIndex(i));
+    }
+    return 0;
+}
+
+//multiply each element by an element from a second array
 int arraydata::multiplyByArrayElementwise( const arraydata *secondFactor ){
     if (this->size() != secondFactor->size()){
         cerr << "Error in arraydata::multiplyArrayElementwise! Array sizes don't match. ";
@@ -327,7 +349,7 @@ int arraydata::multiplyByArrayElementwise( const arraydata *secondFactor ){
     }
     
     for (int i = 0; i<this->size(); i++) {
-        set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)*secondFactor->get_atAbsoluteIndex(i));
+        this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)*secondFactor->get_atAbsoluteIndex(i));
     }
     return 0;
 }
@@ -665,7 +687,7 @@ std::string array2D::getASCIIdata() const{
 // implementation borrowed following matrixdata::tiff16out 
 // of the tomo/matlib package (see http://xray-lens.de )
 //--------------------------------------------------------------------------
-int array2D::writeToTiff( std::string filename, int scaleFlag ) const{
+int array2D::writeToTiff( std::string filename, int scaleFlag, int verbose ) const{
 
     if (size() == 0) {
         cerr << "Error in writeToTiff! Array size is zero." << endl;
@@ -745,7 +767,9 @@ int array2D::writeToTiff( std::string filename, int scaleFlag ) const{
 		}
 		
 		
-		cout << "'" << filename << "' written to disc!" << endl;
+		if (verbose){
+			cout << "Tiff image '" << filename << "' written to disc!" << endl;
+		}
 		
 		delete[] tifdata;
 		TIFFClose(out);

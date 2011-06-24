@@ -624,7 +624,7 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 
 	sprintf(outfile,"%s.h5",eventname);
 	//strcpy(outfile, info->eventname);
-	printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)global->runNumber, (int)info->threadNum, global->datarate, outfile);
+	DEBUGL1_ONLY printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)global->runNumber, (int)info->threadNum, global->datarate, outfile);
 
 	pthread_mutex_lock(&global->framefp_mutex);
 	fprintf(hitfp, "r%04u/%s, %i\n", (int)global->runNumber, info->eventname, info->nPeaks);
@@ -1533,7 +1533,7 @@ void updateImageArrays(cGlobal *global) {
 		DEBUGL1_ONLY printf("\tUpdated image output array will be %i x %i\n",(int)image_nx,(int)image_nx);
 		
 		// for the assembled powder, we have to reallocate the already saved image and shift with deltax/deltay
-		int deltanx = image_nx-global->image_nx;
+		long deltanx = image_nx-global->image_nx;
 		double *buffer;
 		DEBUGL2_ONLY cout << "deltanx: " << deltanx << ", image_nx: " << image_nx << ", global->image_nx: " << global->image_nx << ", deltax: " << deltax << ", deltay: " << deltay << endl;
 		
@@ -1715,7 +1715,7 @@ void updateImageArrays(cGlobal *global, cHit *hit) {
 		DEBUGL1_ONLY printf("\tUpdated image output array will be %i x %i\n",(int)image_nx,(int)image_nx);
 		
 		// for the assembled powder, we have to reallocate the already saved image
-		int deltanx = image_nx-global->image_nx;
+		long deltanx = image_nx-global->image_nx;
 		double *buffer;
 		
 		if (global->generateDarkcal) {

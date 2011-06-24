@@ -74,7 +74,10 @@ public:
 	void writeToRawBinary( std::string filename );
     
     //perform some basic math on array
+    int addValue( double val );
     int multiplyByFactor( double factor );
+ 
+	int addArrayElementwise( const arraydata *secondArray );
     int multiplyByArrayElementwise( const arraydata *secondFactor );
 
 //	int verbose() const;
@@ -153,7 +156,7 @@ public:
             
 	void readFromHDF5( std::string filename );
 	
-	int writeToTiff( std::string filename, int scaleFlag = 0 ) const;     //needs libtiff
+	int writeToTiff( std::string filename, int scaleFlag = 0, int verbose = 0 ) const;     //needs libtiff
 	int writeToHDF5( std::string filename ) const;
     
     std::string getASCIIdata() const;

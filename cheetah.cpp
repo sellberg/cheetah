@@ -502,8 +502,7 @@ void event() {
 		printf("getCspadData fail %d (%x)\n",fail,fiducial);
 		threadInfo->cspad_fail = fail;
 		return;
-	}
-	else {
+	} else {
 		nevents++;
 		const Pds::CsPad::ElementHeader* element;
 
@@ -534,7 +533,7 @@ void event() {
 				}
 			}
 		}
-	}
+	}//if (fail)
 	
 	
 	
@@ -667,6 +666,8 @@ void endjob()
 
 	
 	// Cleanup
+	printf("Cheetah ");
+	
 	free(global.darkcal);
 	free(global.powderAssembled);
 	free(global.powderRaw);
@@ -719,5 +720,5 @@ void endjob()
 	pthread_mutex_destroy(&global.nhits_mutex);
 	pthread_mutex_destroy(&global.framefp_mutex);
 	
-	printf("Done!\n");
+	printf("done!\n");
 }
