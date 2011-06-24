@@ -1791,6 +1791,7 @@ void updateSAXSArrays(cGlobal *global) {
 	if (global->powdersum && global->powderSAXS) {
 		if (global->powderStopQ == 0 || global->powderStopQ < global->powderStartQ) {
 			global->powder_nn = (unsigned) round(global->pix_rmax/global->deltaqSAXS)+1;
+			global->powderStartQ == 0;
 		} else {
 			global->powder_nn = (unsigned) round((global->powderStopQ-global->powderStartQ)/global->deltaqSAXS)+1;
 		}
@@ -1813,7 +1814,72 @@ void updateSAXSArrays(cGlobal *global) {
 
 
 void translateQuads(cGlobal *global) {
-	cout << "translateQuads" << endl;
+	
+	float *pix_x = global->pix_x; // let original pix_x be stored through local pointer
+	float *pix_y = global->pix_y; // let original pix_y be stored through local pointer
+	global->pix_x = (float *) calloc(global->pix_nn, sizeof(float));
+	global->pix_y = (float *) calloc(global->pix_nn, sizeof(float));
+	float delta;
+	int refinementNumC = int(2*round(global->refinementMaxC/global->refinementDeltaC) + 1);
+	
+//	for (int c=0; c<refinementNumC; c++) {
+//		
+//		delta = c*global->refinementDeltaC - global-<refinementMaxC;
+//		
+//		
+//		
+//		
+//		for (int quad=0; quad<4; quad++) {
+//			
+//			// for each quad, pix_x
+//			for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
+//				for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
+//					for(int i=0; i<ROWS; i++){
+//						for(int j=0; j<COLS; j++){
+//							long index = (j + mj*COLS) * (8*ROWS);
+//							index += i + mi*ROWS + quad*2*ROWS;
+//							global->pix_x[index] = pix_x[index]+delta;
+//							
+//						}
+//					}
+//				}
+//			}
+//			
+//			// for each quad, pix_y
+//			for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
+//				for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
+//					for(int i=0; i<ROWS; i++){
+//						for(int j=0; j<COLS; j++){
+//							int index = (j + mj*COLS) * (8*ROWS);
+//							index += i + mi*ROWS + quad*2*ROWS;
+//							global->pix_y[index] = pix_y[index]+delta;
+//							
+//						}
+//					}
+//				}
+//			}
+//			
+//			calculatePowderSAXS(global);
+//			
+//		}
+//		
+//	}
+	
+	
+	free(global->pix_x);
+	free(global->pix_y);
+	//SHIFT pix_x and pix_y TO THE CORRECT POSITION
+	for (int quad=0; quad<4; quad++)
+		//shiftQuad(pix_x, quad_dx[quad], pix_y, quad_dy[quad], global->pix_nn);
+	global->pix_x = pix_x;
+	global->pix_y = pix_y;
+}
+
+void shiftQuad(float *xarray, float dx, float *yarray, float dy, long arraylength) {
+	for (long i=0; i<arraylength; i++) {
+		xarray[i] += dx;
+		yarray[i] += dy;
+	}
 }
 
 void rotateQuads(cGlobal *global) {

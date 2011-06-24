@@ -24,6 +24,7 @@
 #include "myana/XtcRun.hh"
 #include "release/pdsdata/cspad/ConfigV1.hh"
 #include "release/pdsdata/cspad/ConfigV2.hh"
+#include "release/pdsdata/cspad/ConfigV3.hh"
 #include "release/pdsdata/cspad/ElementHeader.hh"
 #include "release/pdsdata/cspad/ElementIterator.hh"
 #include "cspad-gjw/CspadTemp.hh"
@@ -75,6 +76,8 @@ void cGlobal::defaultConfiguration(void) {
 	centerCorrectionMaxC = 50;
 	centerCorrectionDeltaC = 1;
 	refineMetrology = 0;
+	refinementMaxC = 20;
+	refinementDeltaC = 1;
 	
 	// Bad pixel mask
 	strcpy(badpixelFile, "badpixels.h5");
@@ -235,6 +238,8 @@ void cGlobal::setup() {
 	powderCorrelation = NULL;
 	iceCorrelation = NULL;
 	waterCorrelation = NULL;
+	quad_dx = NULL;
+	quad_dy = NULL;
 	
 	selfdark = (float*) calloc(pix_nn, sizeof(float));
 	
@@ -267,7 +272,6 @@ void cGlobal::setup() {
 				waterAverage = (double*) calloc(powder_nn, sizeof(double));
 		}
 	}//powdersum end
-
 		
 	if (useCorrelation) {
 		if (!correlationNumDelta) 
@@ -287,9 +291,11 @@ void cGlobal::setup() {
 		}
 	}// useCorrelation end
 	
+	if (refineMetrology) {
+		quad_dx = (float *) calloc(4, sizeof(float));
+		quad_dy = (float *) calloc(4, sizeof(float));
+	}
 	
-
-
 	
 	/*
 	 *	Set up thread management
@@ -595,6 +601,12 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "refinemetrology")) {
 		refineMetrology = atoi(value);
+	}
+	else if (!strcmp(tag, "refinementmaxc")) {
+		refinementMaxC = atof(value);
+	}
+	else if (!strcmp(tag, "refinementdeltac")) {
+		refinementDeltaC = atof(value);
 	}
 	else if (!strcmp(tag, "subtractcmmodule")) {
 		cmModule = atoi(value);

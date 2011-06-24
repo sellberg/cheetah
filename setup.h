@@ -76,6 +76,8 @@ public:
 	double		centerCorrectionMaxC;	// maximum value in pixels of the shift in center that the hough transform will be performed for, the true center should lie inside +/- this value.
 	double		centerCorrectionDeltaC;	// step length in pixels for the center
 	int			refineMetrology;	// refine metrology by translating/rotating quads w.r.t. each other
+	float		refinementMaxC;			// maximum value in pixels of the shift in the quad center that the refinement will be performed for, the true quad center should lie inside +/- this value.
+	float		refinementDeltaC;		// step length in pixels for the quad center
 		
 	// Bad pixel masks
 	int			useBadPixelMask;	// to specify pixels that you know are bad
@@ -219,6 +221,8 @@ public:
 	unsigned		module_cols;
 	long			image_nx;
 	long			image_nn;
+	float			*quad_dx;
+	float			*quad_dy;
 	
 	
 	// Attenuation variables

@@ -24,6 +24,7 @@
 #include "cspad-gjw/CspadCorrector.hh"
 #include "release/pdsdata/cspad/ConfigV1.hh"
 #include "release/pdsdata/cspad/ConfigV2.hh"
+#include "release/pdsdata/cspad/ConfigV3.hh"
 
 #include <stdio.h>
 #include <pthread.h>
@@ -118,6 +119,7 @@ typedef struct {
 static CspadCorrector*      corrector;
 static Pds::CsPad::ConfigV1 configV1;
 static Pds::CsPad::ConfigV2 configV2;
+static Pds::CsPad::ConfigV3 configV3;
 static unsigned             configVsn;
 static unsigned             quadMask;
 static unsigned             asicMask;
@@ -166,6 +168,7 @@ void updateImageArrays(cGlobal *global);
 void updateImageArrays(cGlobal *global, cHit *hit);
 void updateSAXSArrays(cGlobal *global);
 void translateQuads(cGlobal *global);
+void shiftQuad(float *xarray, float dx, float *yarray, float dy, long arraylength);
 void rotateQuads(cGlobal *global);
 
 
