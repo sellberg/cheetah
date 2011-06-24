@@ -32,7 +32,7 @@ INCLUDEDIRS		= -Irelease \
                   -I$(HDF5DIR)/include \
                   -I$(TIFFDIR)/include \
                   -I$(FFTWDIR)/include
-                  
+
 LIBDIRS			= -Lrelease/build/pdsdata/lib/$(ARCH)/ \
                   -L$(HDF5DIR)/lib \
                   -L$(TIFFDIR)/lib \
@@ -101,6 +101,7 @@ $(CSPADDIR)/myana_cspad-gjw: $(MYANADIR)/main.o $(MYANADIR)/XtcRun.o \
 	@echo ""
 	@echo "---Linking myana_cspad-gjw---"
 	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^ $(LIBDIRS) $(LIBRARIES)
+	@echo ""
 
 
 #--------------------------------------------------------------
@@ -159,7 +160,7 @@ correlation.o: correlation.cpp correlation.h \
 crosscorrelator.o: crosscorrelator.cpp crosscorrelator.h \
   arrayclasses.h
 	$(CPP) $(CFLAGS) $<
-	
+
 arrayclasses.o: arrayclasses.cpp arrayclasses.h
 	$(CPP) $(CFLAGS) $<
 
@@ -190,6 +191,7 @@ cheetah: cheetah.o \
     #the order is important: first the objects, then the libraries they need
     #If A uses B, then A must be listed before B in the link command.
 	$(LD) $(CPP_LD_FLAGS) $(LD_FLAGS) -o $@ $^ $(LIBDIRS) $(LIBRARIES)
+	@echo ""
 
 
 clean:

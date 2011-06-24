@@ -111,6 +111,9 @@ public:
 	int			useAttenuationCorrection;		// Whether to correct each event's intensity with the calculated attenuation
 	char		attenuationFile[1024];			// Name of the file containing the attenuation list
 	
+	// Energy calibration
+	int			useEnergyCalibration;		// Save histogram of energies and wavelengths for energy calibration
+	
 	int			startFrames;			 // number of frames to use for forming initial background and hot pixel estimate (no frames outputed; digesting)
 	
 	// Hitfinding
@@ -229,6 +232,19 @@ public:
 	int				attenuationOffset;		// Integer to compensate for the offset of nevents w.r.t. the recorded attenuations
 	
 	
+	// Energy calibration variables
+	double			*energies;	// Dynamic array of photon energies (eV) for all events
+	double			*wavelengths;	// Dynamic array of wavelengths (Å) for all events
+	unsigned		energyCapacity;	// Starting capacity of dynamic arrays
+	unsigned		nEnergies;	// Number of energies saved in dynamic array
+	double			Emin;	// Lowest photon energy
+	double			Emax;	// Highest photon energy
+	double			Lmin;	// Lowest wavelength
+	double			Lmax;	// Highest wavelength
+	unsigned		*Ehist;	// Histogram of energies
+	unsigned		*Lhist;	// Histogram of wavelengths
+	
+	
 	// Common variables
 	int32_t			*darkcal;		// stores darkcal from the file darkcalFile
 	double			*powderRaw;		// stores powder pattern in raw format
@@ -280,6 +296,7 @@ public:
 	void readBackgroundmask(char *);
 	void readAttenuations(char *);
 	void expandAttenuationCapacity();
+	void expandEnergyCapacity();
 	void createLookupTable();			// create lookup table (LUT) needed for the fast correlation algorithm	
 
 	void writeInitialLog(void);			// functions to write the log file

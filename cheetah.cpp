@@ -412,6 +412,20 @@ void event() {
 	
 	
 	/*
+	 *	Energy calibration
+	 */
+	if (global.useEnergyCalibration) {
+		if (global.nEnergies >= global.energyCapacity) global.expandEnergyCapacity();
+		global.energies[global.nEnergies] = photonEnergyeV;
+		global.wavelengths[global.nEnergies++] = wavelengthA;
+		if (photonEnergyeV > global.Emax) global.Emax = photonEnergyeV;
+		if (photonEnergyeV < global.Emin) global.Emin = photonEnergyeV;
+		if (wavelengthA > global.Lmax) global.Lmax = wavelengthA;
+		if (wavelengthA < global.Lmin) global.Lmin = wavelengthA;
+	}
+		
+	
+	/*
 	 *	Create a new threadInfo structure in which to place all information
 	 */
 	tThreadInfo	*threadInfo;
@@ -454,7 +468,7 @@ void event() {
 	threadInfo->pixelCenterX = global.pixelCenterX;
 	threadInfo->pixelCenterY = global.pixelCenterY;
 	
-	if (global.useAttenuationCorrection >= 0) {
+	if (global.useAttenuationCorrection >= 0 && global.nAttenuations >= 1) {
 		threadInfo->attenuation = global.attenuations[global.nAttenuations-1];	// 1/transmission taken from last successful readout of the Si filters
 	} else {
 		threadInfo->attenuation = 0;
@@ -605,11 +619,21 @@ void endjob()
 	// Calculate angular average of powder pattern
 	if (global.powdersum && global.powderSAXS) {
 		calculatePowderSAXS(&global);
+		savePowderSAXS(&global);
 	}
 	
 	
 	// Save powder patterns
 	saveRunningSums(&global);
+	
+	
+	// Save energy calibration
+	if (global.useEnergyCalibration) {
+		makeEnergyHistograms(&global);
+		saveEnergies(&global);
+	}
+	
+	
 	global.writeFinalLog();
 	
 	
@@ -653,6 +677,8 @@ void endjob()
 	delete[] global.attenuations;
 	delete[] global.changedAttenuationEvents;
 	delete[] global.totalThicknesses;
+	delete[] global.energies;
+	delete[] global.wavelengths;
 	delete[] global.correlationLUT;
 	
 	pthread_mutex_destroy(&global.nActiveThreads_mutex);

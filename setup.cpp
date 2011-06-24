@@ -111,6 +111,9 @@ void cGlobal::defaultConfiguration(void) {
 	useAttenuationCorrection = 0;
 	strcpy(attenuationFile, "attenuations.dat");
 	
+	// Energy calibration
+	useEnergyCalibration = 0;
+	
 	// Hitfinding
 	
 	hitfinder.use = 0;
@@ -263,7 +266,7 @@ void cGlobal::setup() {
 	}//powdersum end
 
 		
-	if (useCorrelation && sumCorrelation) {
+	if (useCorrelation) {
 		if (!correlationNumDelta) 
 			correlationNumDelta = (int) ceil(correlationNumPhi/2.0+1);
 		if (autoCorrelationOnly) {
@@ -271,14 +274,15 @@ void cGlobal::setup() {
 		} else {
 			correlation_nn = correlationNumQ*correlationNumQ*correlationNumDelta;
 		}
-				
-		if (hitfinder.use) 
-			powderCorrelation = (double*) calloc(correlation_nn, sizeof(double));
-		if (icefinder.use) 
-			iceCorrelation = (double*) calloc(correlation_nn, sizeof(double));
-		if (waterfinder.use) 
-			waterCorrelation = (double*) calloc(correlation_nn, sizeof(double));
-	}// useCorrelation&&sumCorrelation end
+		if (sumCorrelation) {
+			if (hitfinder.use) 
+				powderCorrelation = (double*) calloc(correlation_nn, sizeof(double));
+			if (icefinder.use) 
+				iceCorrelation = (double*) calloc(correlation_nn, sizeof(double));
+			if (waterfinder.use) 
+				waterCorrelation = (double*) calloc(correlation_nn, sizeof(double));
+		}
+	}// useCorrelation end
 	
 	
 
@@ -337,6 +341,7 @@ void cGlobal::setup() {
 		calculateCenterCorrectionPowder = 0;
 		calculateCenterCorrectionHit = 0;
 		useAttenuationCorrection = -1;
+		useEnergyCalibration = 0;
 		useCorrelation = 0;
 	}
 	
@@ -374,7 +379,7 @@ void cGlobal::setup() {
 			possibleThicknesses[i] = 20*i;
 		}
 		possibleAttenuations = new double[nThicknesses]; // Array of all possible attenuations obtained from possibleThicknesses
-		attenuationCapacity = 100; // Starting capacity of dynamic array
+		attenuationCapacity = 100; // Starting capacity of dynamic arrays
 		attenuations = new double[attenuationCapacity]; // Dynamic array of all calculated attenuations during the run
 		changedAttenuationEvents = new unsigned[attenuationCapacity]; // Dynamic array of all events where the attenuation changed during the run
 		totalThicknesses = new unsigned[attenuationCapacity]; // Dynamic array of all total thicknesses from used Si filters during the run
@@ -392,6 +397,33 @@ void cGlobal::setup() {
 		attenuationCapacity = 0;
 		nAttenuations = 0;
 		attenuationOffset = 0;
+	}
+	
+	/*
+	 *	Setup global energy calibration variables
+	 */
+	if (useEnergyCalibration) {
+		energyCapacity = 1000; // Starting capacity of dynamic arrays
+		energies = new double[energyCapacity]; // Dynamics array of all photon energies (eV)
+		wavelengths = new double[energyCapacity]; // Dynamics array of all wavelengths (Å)
+		nEnergies = 0;
+		Emin = 100000;	// Lowest photon energy
+		Emax = 0;	// Highest photon energy
+		Lmin = 100000;	// Lowest wavelength
+		Lmax = 0;	// Highest wavelength
+		Ehist = NULL;	// Histograms are allocated in makeEnergyHistograms()
+		Lhist = NULL;	// Histograms are allocated in makeEnergyHistograms()
+	} else {
+		energies = NULL;
+		wavelengths = NULL;
+		Ehist = NULL;
+		Lhist = NULL;
+		energyCapacity = 0;
+		nEnergies = 0;
+		Emin = 100000;
+		Emax = 0;
+		Lmin = 100000;
+		Lmax = 0;
 	}
 	
 	/*
@@ -656,6 +688,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "useattenuationcorrection")) {
 		useAttenuationCorrection = atoi(value);
+	}
+	else if (!strcmp(tag, "useenergycalibration")) {
+		useEnergyCalibration = atoi(value);
 	}
 	
 	// Power user settings
@@ -926,15 +961,17 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	
 	// Center correct the array w.r.t the square hole created by the quads (assume beam is centered)
 	if (useCenterCorrection && !calculateCenterCorrectionPowder && !calculateCenterCorrectionHit) {
+		if (debugLevel >= 1) cout << "\tX values:" << endl;
 		float x0 = pixelCenter(pix_x);
+		if (debugLevel >= 1) cout << "\tY values:" << endl;
 		float y0 = pixelCenter(pix_y);
 		if (pixelCenterX || pixelCenterY) {
 			x0 = pixelCenterX;
 			y0 = pixelCenterY;
 		}
-		if (debugLevel >= 1) {
-			cout << "\tCorrected center (x,y): (" << x0 << ", " << y0 << ")" << endl;
-		}
+		
+		cout << "\tCorrected center (x,y): (" << x0 << ", " << y0 << ")" << endl;
+		
 		for (int i=0; i<nn; i++) {
 			pix_x[i] -= x0;
 			pix_y[i] -= y0;
@@ -997,10 +1034,20 @@ void cGlobal::readDetectorGeometry(char* filename) {
 float cGlobal::pixelCenter( float *pixel_array ) {
 	float center = 0;
 	int quads = 4;
+	float dq1 = 0;
+	float dq2 = 0;
 	// Loop over quads and pick out closest pixel to center
 	for (int i=0; i<quads; i++) {
+		if (debugLevel >= 2) cout << "\tQ" << i << ",S1: " << pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS] << endl;
+		if (debugLevel >= 2) cout << "\tQ" << i << ",S2: " << pixel_array[8*ROWS*2*COLS+i*2*ROWS] << endl;
 		center += pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
+		if (i == 0) dq1 += pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
+		else if (i == 1) dq2 += pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
+		else if (i == 2) dq1 -= pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
+		else dq2 -= pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
 	}
+	if (debugLevel >= 1) cout << "\tGap(Q0-Q2) = " << dq1 << endl;
+	if (debugLevel >= 1) cout << "\tGap(Q1-Q3) = " << dq2 << endl;
 	return center/quads;
 }
 
@@ -1258,7 +1305,22 @@ void cGlobal::expandAttenuationCapacity() {
 }
 
 
-
+/*
+ *	Expand capacity of dynamic attenuation arrays
+ */
+void cGlobal::expandEnergyCapacity() {
+	energyCapacity *= 2;
+	double *oldEnergies = energies;
+	energies = new double[energyCapacity];
+	double *oldWavelengths = wavelengths;
+	wavelengths = new double[energyCapacity];
+	for (int i=0; i<nEnergies; i++) {
+		energies[i] = oldEnergies[i];
+		wavelengths[i] = oldWavelengths[i];
+	}
+	delete[] oldEnergies;
+	delete[] oldWavelengths;
+}
 
 
 /*
@@ -1266,7 +1328,6 @@ void cGlobal::expandAttenuationCapacity() {
  */
 void cGlobal::createLookupTable(){	
 	//write lookup table for fast cross-correlation
-	//debugLevel = 2;
 	int lutNx = correlationLUTdim1;
 	int lutNy = correlationLUTdim2;
 	int lutSize = lutNx*lutNy;

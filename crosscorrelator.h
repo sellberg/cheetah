@@ -74,6 +74,7 @@ public:
 	void calculatePolarCoordinates( double start_q, double stop_q ); // for cheetah.ini control
 	void calculateSAXS();
 	void calculateXCCA();
+	void calculateXACA();
 	
     //---------------------------------------------alternative approach (Jan's way)
     // these functions have the byname _FAST to distinguish them from the ones above 

@@ -63,10 +63,14 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		
 		cc->calculatePolarCoordinates(global->correlationStartQ, global->correlationStopQ);
 		cc->calculateSAXS();
-		cc->calculateXCCA();	
+		if (global->autoCorrelationOnly) {
+			cc->calculateXACA();
+		} else {
+			cc->calculateXCCA();
+		}
 		
 		//writeSAXS(threadInfo, global, cc, threadInfo->eventname); // writes SAXS only to binary
-		writeXCCA(threadInfo, global, cc, threadInfo->eventname); // writes XCCA+SAXS to binary
+		writeXCCA(threadInfo, global, cc, threadInfo->eventname); // writes XCCA/XACA+SAXS to binary
 		
 		
 	//--------------------------------------------------------------------------------------------alg2
@@ -214,12 +218,14 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	fwrite(&buffer[0],sizeof(double),cc->samplingAngle(),filePointerWrite);
 	
 	// cross-correlation
-	if (global->useCorrelation && global->sumCorrelation){
+	if (global->useCorrelation){
 		if (global->autoCorrelationOnly) {
 			// autocorrelation only (q1=q2)
 			for (int i=0; i<cc->samplingLength(); i++) {
 				for (int k=0; k<cc->samplingLag(); k++) {
-					info->correlation[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,i,k);			
+					if (global->sumCorrelation)
+						info->correlation[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,i,k);
+					else buffer[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,i,k);
 				}
 			}
 			fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
@@ -230,7 +236,9 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 			for (int i=0; i<cc->samplingLength(); i++) {
 				for (int j=0; j<cc->samplingLength(); j++) {
 					for (int k=0; k<cc->samplingLag(); k++) {
-						info->correlation[i*cc->samplingLength()*cc->samplingLag()+j*cc->samplingLag()+k] = cc->getCrossCorrelation(i,j,k);
+						if (global->sumCorrelation)
+							info->correlation[i*cc->samplingLength()*cc->samplingLag()+j*cc->samplingLag()+k] = cc->getCrossCorrelation(i,j,k);
+						else buffer[i*cc->samplingLength()*cc->samplingLag()+j*cc->samplingLag()+k] = cc->getCrossCorrelation(i,j,k);
 					}
 				}
 			}
@@ -239,7 +247,9 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 			fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
 			
 		}
-		fwrite(&info->correlation[0],sizeof(double),global->correlation_nn,filePointerWrite);
+		if (global->sumCorrelation)
+			fwrite(&info->correlation[0],sizeof(double),global->correlation_nn,filePointerWrite);
+		else fwrite(&buffer[0],sizeof(double),global->correlation_nn,filePointerWrite); 
 	}
 	
 	fclose(filePointerWrite);

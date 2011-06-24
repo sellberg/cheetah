@@ -4,7 +4,7 @@
 # In this directory, type:
 #    ./viewCorrelationSum.py -rxxxx -m 10000
 # For details, type 
-#	 python viewCorrelationSum --help
+#	 python viewCorrelationSum.py --help
 # where rxxxx is the run number of hits and nonhits found using the hitfinder executable. 
 # By default, this script looks into the h5 files that are in the appropriate rxxxx directory
 #
@@ -45,20 +45,7 @@ print source_dir+runtag+"/"+runtag+"-CorrelationSum.h5"
 f = H.File(source_dir+runtag+"/"+runtag+"-CorrelationSum.h5","r")
 d = N.array(f['/data/data'])
 d *= (d < options.max_value)
-
 f.close()
-
-vx = N.arange(0,129)
-vy = N.arange(0,41)
-X,Y = N.meshgrid(vx,vx)
-arr = (N.sqrt(X*X + Y*Y)).astype(int)
-
-lenOfAvg = len(set(arr.flatten()))+5
-avg_count = N.zeros(lenOfAvg)
-avg_vals = N.zeros(lenOfAvg)
-avg_var = N.zeros(lenOfAvg)
-
-intensMask = (d.flatten()>0.)
 
 
 ########################################################
@@ -109,6 +96,8 @@ class img_class (object):
 		cid2 = fig.canvas.mpl_connect('button_press_event', self.on_click)
 		canvas = fig.add_subplot(111)
 		canvas.set_title(self.filename)
+		P.xlabel("delta")
+		P.ylabel("Q")
 		self.axes = P.imshow(self.inarr, vmax = self.cmax)
 		self.colbar = P.colorbar(self.axes, pad=0.01)
 		self.orglims = self.axes.get_clim()

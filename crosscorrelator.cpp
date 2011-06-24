@@ -354,7 +354,7 @@ void CrossCorrelator::initFromFile( std::string filename, int type ){
 
 //=================================================================================
 //
-// CROSS-CORRELATION ALGORITHM 0
+// CROSS-CORRELATION ALGORITHM 1
 //
 //=================================================================================
 
@@ -551,6 +551,88 @@ void CrossCorrelator::calculateXCCA(){
 					// shouldn't this case be something like
 					// crossCorrelation->set(i, j, k, 0);
 				}
+			}
+		}
+	}
+	
+	delete pixelBool;
+	delete pixelCount;
+	
+	delete normalization;
+	
+	delete speckle;
+	delete speckleNorm;
+	
+	if (p_debug >= 1) printf("done calculating cross-correlation...\n");
+}
+
+
+
+//----------------------------------------------------------------------------calculateXACA
+void CrossCorrelator::calculateXACA() {
+	
+	if (p_debug >= 1) cout << "deltaPhi: " << deltaphi() << endl;
+	if (p_debug >= 1) cout << "# of angles: " << samplingAngle() << endl;
+	for (int i=0; i<samplingAngle(); i++) {
+		phiave->set( i, phimin()+i*deltaphi() );
+	}
+	
+	// create array of the speckle pattern with the correct binning
+	array2D *speckle = new array2D( samplingLength(), samplingAngle() );
+	
+	// create array over pixel counts for each sampled q and phi
+	array2D *pixelCount = new array2D( samplingLength(), samplingAngle() );
+	array2D *pixelBool = new array2D( samplingLength(), samplingAngle() );
+	
+	if (p_debug >= 1) printf("calculating speckle arrays...\n");
+	
+	for (int i=0; i<arraySize(); i++) {
+		int qIndex = (int) round((q->get(i)-qmin())/deltaq()); // the index in qave[] that corresponds to q[i]
+		int phiIndex = (int) round((phi->get(i)-phimin())/deltaphi()); // the index in phiave[] that corresponds to phi[i]
+		if (p_debug >= 3) printf("qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
+		if (qIndex >= 0 && qIndex < samplingLength() && phiIndex >= 0 && phiIndex < samplingAngle()) { // make sure qIndex and phiIndex is not out of array bounds
+			speckle->set(qIndex, phiIndex, speckle->get(qIndex, phiIndex) + data->get(i) );
+			pixelCount->set(qIndex, phiIndex, pixelCount->get(qIndex,phiIndex)+1);
+			if (pixelBool->get(qIndex, phiIndex) != 1) {
+				pixelBool->set(qIndex, phiIndex, 1);
+			}
+		} else if (p_debug >= 2) printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
+	}
+	
+	// subtract the average SAXS intensity from the speckle array
+	array2D *speckleNorm = new array2D( samplingLength(), samplingAngle() );
+	
+	for (int i=0; i<samplingLength(); i++) { // make sure each element is initially zero
+		for (int j=0; j<samplingAngle(); j++) {
+			if (pixelBool->get(i,j) != 0) {
+				speckle->set(i, j, speckle->get(i,j) / pixelCount->get(i,j) );
+				speckleNorm->set(i, j, speckle->get(i,j) - iave->get(i) );
+			}
+			if (p_debug >= 2) printf("q: %f, phi: %f --> bool: %f, count: %f\n", qave->get(i), phiave->get(j), pixelBool->get(i, j), pixelCount->get(i, j));
+		}
+	}
+	
+	// calculate cross-correlation array and normalization array for cross-correlation
+	if (p_debug >= 1) cout << "# of angular lags: " << samplingLag() << endl;
+	
+	array2D *normalization = new array2D( samplingLength(), samplingLag() );
+	
+	if (p_debug >= 1) printf("starting main loop to calculate cross-correlation...\n");
+	
+	for (int i=0; i<samplingLength(); i++) { // q index
+		for (int k=0; k<samplingLag(); k++) { // phi lag => phi2 index = (l+k)%samplingAngle
+			for (int l=0; l<samplingAngle(); l++) { // phi1 index
+				crossCorrelation->set(i,i,k, crossCorrelation->get(i,i,k) + speckleNorm->get(i,l)*speckleNorm->get(i, (l+k)%samplingAngle()) );
+				normalization->set(i, k, normalization->get(i, k) + pixelBool->get(i,l)*pixelBool->get(i, (l+k)%samplingAngle()) );
+			}
+		}		
+	}
+	
+	// normalize the cross-correlation array with the average SAXS intensity and the calculated normalization constant
+	for (int i=0; i<samplingLength(); i++) {
+		for (int k=0; k<samplingLag(); k++) {
+			if (normalization->get(i,k) != 0) {
+				crossCorrelation->set(i, i, k, crossCorrelation->get(i,i,k) / (normalization->get(i,k)*iave->get(i)*iave->get(i)) );
 			}
 		}
 	}
@@ -860,7 +942,7 @@ double CrossCorrelator::getCrossCorrelation(unsigned index1, unsigned index2, un
 
 //=================================================================================
 //
-// CROSS-CORRELATION ALGORITHM 1 (_FAST)
+// CROSS-CORRELATION ALGORITHM 2 (_FAST)
 //
 //=================================================================================
 int CrossCorrelator::calculatePolarCoordinates_FAST(array2D *&polar, int number_q, int number_phi){
