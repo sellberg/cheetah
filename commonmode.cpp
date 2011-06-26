@@ -26,10 +26,11 @@
 #include <cmath>
 
 #include "commonmode.h"
+#include "worker.h"
 
 
 /*
- *	Subtract common mode on each module
+ *	Subtract common mode on each 2x1 module
  *	This is done in a very slow way now - speed up later once we know it works!
  */
 void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
@@ -44,7 +45,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	int			negcount;
 	
 	// Create histogram array
-	int			nhist = 65535;
+	long		nhist = 131071;
 	uint16_t	*histogram;
 	histogram = (uint16_t*) calloc(nhist, sizeof(uint16_t));
 	
@@ -54,19 +55,13 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 
 			// Zero histogram
 			memset(histogram, 0, nhist*sizeof(uint16_t));
-			negmin = 0;
-			negcount = 0;
 			
 			// Loop over pixels within a module
 			for(long i=0; i<2*ROWS; i++){ //for(long i=0; i<ROWS; i++){
 				for(long j=0; j<COLS; j++){
 					e = (j + mj*COLS) * (8*ROWS);
 					e += i + mi*2*ROWS; //e += i + mi*ROWS;
-					if (round(threadInfo->corrected_data[e]) < 0) {
-						if (threadInfo->corrected_data[e] < negmin) negmin = threadInfo->corrected_data[e];
-						negcount++;
-					}
-					else histogram[int(round(threadInfo->corrected_data[e]))] += 1;
+					histogram[int(round(threadInfo->corrected_data[e])+65535)] += 1;
 				}
 			}
 			
@@ -75,14 +70,11 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 			for(long i=0; i<nhist; i++){
 				counter += histogram[i];
 				if(counter > (global->cmFloor*2*ROWS*COLS)) { //if(counter > (global->cmFloor*ROWS*COLS)) {
-					median = i;
+					median = i-65535;
 					break;
 				}
 			}
-
-			DEBUGL2_ONLY printf("Median of module (%ld,%ld) = %ld\n",mi,mj,median);
-			DEBUGL2_ONLY printf("Minimum of module (%ld,%ld) = %f\n",mi,mj,negmin);
-			DEBUGL2_ONLY printf("Negative pixels of module (%ld,%ld) = %i\n",mi,mj,negcount);
+			
 			
 			// Ignore common mode for ASICs without wires (only Feb run)
 //			if ((mi == 1 && mj == 6) || (mi == 2 && mj == 5) || (mi == 3 && mj == 5) || (mi == 4 && mj == 5) || (mi == 4 && mj == 6)) {
@@ -95,13 +87,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 					e = (j + mj*COLS) * (8*ROWS);
 					e += i + mi*2*ROWS; //e += i + mi*ROWS;
 					threadInfo->corrected_data[e] -= median;
-
-					// Zero checking only needed if corrected data is uint16
-					//value = threadInfo->corrected_data[e];
-					//if(value > median)
-					//	threadInfo->corrected_data[e] -= median;
-					//else
-					//	threadInfo->corrected_data[e] = 0;
+					
 				}
 			}
 		}
