@@ -228,10 +228,7 @@ void cGlobal::defaultConfiguration(void) {
  *	Setup stuff to do with thread management, settings, etc.
  */
 void cGlobal::setup() {
-	/*
-	 *	Set up arrays for remembering powder data, background, etc.
-	 */
-	
+		
 	//initially, set everything to NULL, allocate only those that are actually needed below
 	powderRaw = NULL;
 	powderAssembled = NULL;
@@ -243,11 +240,51 @@ void cGlobal::setup() {
 	waterRaw = NULL;
 	waterAssembled = NULL;		
 	waterAverage = NULL;
-	correlation_nn = 0;
 	powderCorrelation = NULL;
 	iceCorrelation = NULL;
 	waterCorrelation = NULL;
+	correlation_nn = 0;
 	
+	
+	/*
+	 *	Trap specific configurations and mutually incompatible options
+	 */
+	if(generateDarkcal) {
+		cmModule = 0;
+		cmSubModule = 0;
+		subtractBg = 0;
+		useDarkcalSubtraction = 0;
+		useSubtractPersistentBackground = 0;
+		useBadPixelMask = 0;
+		hitfinder.use = 0;
+		waterfinder.use = 0;
+		icefinder.use = 0;
+		backgroundfinder.use = 0;
+		hitfinder.savehits = 0;
+		waterfinder.savehits = 0;
+		icefinder.savehits = 0;
+		backgroundfinder.savehits = 0;		
+		hdf5dump = 0;
+		saveRaw = 0;
+		useAutoHotpixel = 0;
+		startFrames = 0;
+		powdersum = 0;
+		powderthresh = 0;
+		powderSAXS = 0;
+		calculateCenterCorrectionPowder = 0;
+		calculateCenterCorrectionHit = 0;
+		refineMetrology = 0;
+		useAttenuationCorrection = -1;
+		useEnergyCalibration = 0;
+		useCorrelation = 0;
+		powderRaw = (double*) calloc(pix_nn, sizeof(double));
+		powderAssembled = (double*) calloc(image_nn, sizeof(double));
+	}
+	
+	
+	/*
+	 *	Set up arrays for remembering powder data, background, etc.
+	 */	
 	selfdark = (float*) calloc(pix_nn, sizeof(float));
 	
 	if (useAutoHotpixel) 
@@ -325,36 +362,6 @@ void cGlobal::setup() {
 
 	threadID = (pthread_t*) calloc(nThreads, sizeof(pthread_t));
 
-	
-	/*
-	 *	Trap specific configurations and mutually incompatible options
-	 */
-	if(generateDarkcal) {
-		cmModule = 0;
-		cmSubModule = 0;
-		subtractBg = 0;
-		useDarkcalSubtraction = 0;
-		useSubtractPersistentBackground = 0;
-		hitfinder.use = 0;
-		waterfinder.use = 0;
-		icefinder.use = 0;
-		backgroundfinder.use = 0;
-		hitfinder.savehits = 0;
-		waterfinder.savehits = 0;
-		icefinder.savehits = 0;
-		backgroundfinder.savehits = 0;		
-		hdf5dump = 0;
-		saveRaw = 0;
-		useAutoHotpixel = 0;
-		startFrames = 0;
-		powderthresh = 0;
-		powderSAXS = 0;
-		calculateCenterCorrectionPowder = 0;
-		calculateCenterCorrectionHit = 0;
-		useAttenuationCorrection = -1;
-		useEnergyCalibration = 0;
-		useCorrelation = 0;
-	}
 	
 	/*
 	 *	Other stuff

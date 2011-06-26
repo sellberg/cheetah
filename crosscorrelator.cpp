@@ -228,6 +228,7 @@ CrossCorrelator::~CrossCorrelator(){
 	//free memory for objects
 	delete data;
 	
+	delete mask;
 	delete qx;
 	delete qy;
     delete table;
@@ -268,6 +269,7 @@ void CrossCorrelator::initPrivateVariables(){
     p_outputdir = "";
 
 	data = NULL;
+	mask = NULL;
 	qx = NULL;
 	qy = NULL;	
 	q = NULL;

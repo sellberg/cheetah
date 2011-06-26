@@ -551,8 +551,8 @@ void event() {
 	while(global.nActiveThreads >= global.nThreads) {
 		usleep(100);
 	}
-
-
+	
+	
 	// Increment threadpool counter
 	pthread_mutex_lock(&global.nActiveThreads_mutex);
 	global.nActiveThreads += 1;
@@ -570,7 +570,6 @@ void event() {
 	//pthread_detach(thread);
 	global.nprocessedframes += 1;
 	
-
 	
 	/*
 	 *	Save periodic powder patterns
@@ -579,8 +578,6 @@ void event() {
 		saveRunningSums(&global);
 		global.updateLogfile();
 	}
-	
-	
 	
 	
 }
