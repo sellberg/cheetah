@@ -75,6 +75,15 @@ void cGlobal::defaultConfiguration(void) {
 	centerCorrectionDeltaR = 1;
 	centerCorrectionMaxC = 50;
 	centerCorrectionDeltaC = 1;
+	useMetrologyRefinement = 0;
+	quad0DX = 0;
+	quad0DY = 0;
+	quad1DX = 0;
+	quad1DY = 0;
+	quad2DX = 0;
+	quad2DY = 0;
+	quad3DX = 0;
+	quad3DY = 0;
 	refineMetrology = 0;
 	refinementMaxC = 20;
 	refinementDeltaC = 1;
@@ -238,8 +247,6 @@ void cGlobal::setup() {
 	powderCorrelation = NULL;
 	iceCorrelation = NULL;
 	waterCorrelation = NULL;
-	quad_dx = NULL;
-	quad_dy = NULL;
 	
 	selfdark = (float*) calloc(pix_nn, sizeof(float));
 	
@@ -290,11 +297,6 @@ void cGlobal::setup() {
 				waterCorrelation = (double*) calloc(correlation_nn, sizeof(double));
 		}
 	}// useCorrelation end
-	
-	if (refineMetrology) {
-		quad_dx = (float *) calloc(4, sizeof(float));
-		quad_dy = (float *) calloc(4, sizeof(float));
-	}
 	
 	
 	/*
@@ -598,6 +600,33 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "centercorrectiondeltac")) {
 		centerCorrectionDeltaC = atof(value);
+	}
+	else if (!strcmp(tag, "usemetrologyrefinement")) {
+		useMetrologyRefinement = atoi(value);
+	}
+	else if (!strcmp(tag, "quad0dx")) {
+		quad0DX = atof(value);
+	}
+	else if (!strcmp(tag, "quad0dy")) {
+		quad0DY = atof(value);
+	}
+	else if (!strcmp(tag, "quad1dx")) {
+		quad1DX = atof(value);
+	}
+	else if (!strcmp(tag, "quad1dy")) {
+		quad1DY = atof(value);
+	}
+	else if (!strcmp(tag, "quad2dx")) {
+		quad2DX = atof(value);
+	}
+	else if (!strcmp(tag, "quad2dy")) {
+		quad2DY = atof(value);
+	}
+	else if (!strcmp(tag, "quad3dx")) {
+		quad3DX = atof(value);
+	}
+	else if (!strcmp(tag, "quad3dy")) {
+		quad3DY = atof(value);
 	}
 	else if (!strcmp(tag, "refinemetrology")) {
 		refineMetrology = atoi(value);
@@ -1003,6 +1032,29 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	}
 	
 	
+	// Shift quads according to metrology refinement
+	quad_dx = NULL;
+	quad_dy = NULL;
+	if (refineMetrology || useMetrologyRefinement) {
+		quad_dx = (float *) calloc(4, sizeof(float));
+		quad_dy = (float *) calloc(4, sizeof(float));
+		if (useMetrologyRefinement) {
+			quad_dx[0] = quad0DX;
+			quad_dy[0] = quad0DY;
+			quad_dx[1] = quad1DX;
+			quad_dy[1] = quad1DY;
+			quad_dx[2] = quad2DX;
+			quad_dy[2] = quad2DY;
+			quad_dx[3] = quad3DX;
+			quad_dy[3] = quad3DY;
+		}
+	}	
+	if (useMetrologyRefinement && !refineMetrology) {
+		cout << "\tQuadrant refinement:" << endl;
+		shiftQuads(pix_x, quad_dx, pix_y, quad_dy);
+	}
+	
+	
 	// Find bounds of image array
 	float	xmax = -1e9;
 	float	xmin =  1e9;
@@ -1078,6 +1130,32 @@ float cGlobal::pixelCenter( float *pixel_array ) {
 	if (debugLevel >= 1) cout << "\tGap(Q0-Q2) = " << dq1 << endl;
 	if (debugLevel >= 1) cout << "\tGap(Q1-Q3) = " << dq2 << endl;
 	return center/quads;
+}
+
+
+/*
+ *	Help function for readDetectorGeometry to shift quads w.r.t. each other
+ */
+void cGlobal::shiftQuads(float *xarray, float *dx, float *yarray, float *dy) {
+	
+	for (int quad=0; quad<4; quad++) {
+		cout << "\tQuad" << quad << "(dx,dy) = (" << dx[quad] << "," << dy[quad] << ")" << endl;
+		
+		for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
+			for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
+				for(int i=0; i<ROWS; i++){
+					for(int j=0; j<COLS; j++){
+						long index = (j + mj*COLS) * (8*ROWS);
+						index += i + mi*ROWS + quad*2*ROWS;
+						xarray[index] += dx[quad];
+						yarray[index] += dy[quad];
+					}
+				}
+			}
+		}
+		
+	}
+	
 }
 
 

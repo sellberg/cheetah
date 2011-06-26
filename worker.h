@@ -168,7 +168,6 @@ void updateImageArrays(cGlobal *global);
 void updateImageArrays(cGlobal *global, cHit *hit);
 void updateSAXSArrays(cGlobal *global);
 void translateQuads(cGlobal *global);
-void shiftQuad(float *xarray, float dx, float *yarray, float dy, long arraylength);
 void rotateQuads(cGlobal *global);
 
 

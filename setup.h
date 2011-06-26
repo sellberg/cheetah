@@ -75,6 +75,15 @@ public:
 	double		centerCorrectionDeltaR;	// step length in pixels for the radius
 	double		centerCorrectionMaxC;	// maximum value in pixels of the shift in center that the hough transform will be performed for, the true center should lie inside +/- this value.
 	double		centerCorrectionDeltaC;	// step length in pixels for the center
+	int			useMetrologyRefinement;	// set to nonzero to shift X/Y values of the quads
+	float		quad0DX;
+	float		quad0DY;
+	float		quad1DX;
+	float		quad1DY;
+	float		quad2DX;
+	float		quad2DY;
+	float		quad3DX;
+	float		quad3DY;
 	int			refineMetrology;	// refine metrology by translating/rotating quads w.r.t. each other
 	float		refinementMaxC;			// maximum value in pixels of the shift in the quad center that the refinement will be performed for, the true quad center should lie inside +/- this value.
 	float		refinementDeltaC;		// step length in pixels for the quad center
@@ -294,6 +303,7 @@ public:
 	void setup(void);				// function that sets parameter values from default/config file/command line arguments
 	void readDetectorGeometry(char *);		// following functions read the h5 files in raw format
 	float pixelCenter(float *pixel_array); // help function for readDetectorGeometry to calculate center of pixel array
+	void shiftQuads(float *xarray, float *quad_dx, float *yarray, float *quad_dy); // help function for readDetectorGeometry to shift quads w.r.t. each other
 	void readDarkcal(char *);
 	void readGaincal(char *);
 	void readPeakmask(char *);

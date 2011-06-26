@@ -626,6 +626,7 @@ void endjob()
 	
 	// Refine metrology by translating/rotating quads w.r.t each other from regular powder pattern
 	if (global.hitfinder.use && global.powdersum && global.refineMetrology) {
+		cout << "Refining metrology..." << endl;
 		translateQuads(&global);
 		rotateQuads(&global);
 	}
