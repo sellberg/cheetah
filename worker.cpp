@@ -1831,18 +1831,18 @@ void translateQuads(cGlobal *global) {
 		global->pix_y[i] = pix_y[i];
 	}
 	
-	// refine x
-	for (int x=0; x<refinementNumC; x++) {
-		dx = x*global->refinementDeltaC - global->refinementMaxC;
-		DEBUGL1_ONLY cout << "dx: " << dx << endl;
+	// for each quad
+	for (int quad=0; quad<4; quad++) {
 		
-		// refine y
-		for (int y=0; y<refinementNumC; y++) {
-			dy = y*global->refinementDeltaC - global->refinementMaxC; 
-			DEBUGL1_ONLY cout << "\tdy: " << dy << endl;
+		// refine x
+		for (int x=0; x<refinementNumC; x++) {
+			dx = x*global->refinementDeltaC - global->refinementMaxC;
+			DEBUGL1_ONLY cout << "dx: " << dx << endl;
 			
-			// for each quad
-			for (int quad=0; quad<4; quad++) {
+			// refine y
+			for (int y=0; y<refinementNumC; y++) {
+				dy = y*global->refinementDeltaC - global->refinementMaxC; 
+				DEBUGL1_ONLY cout << "\tdy: " << dy << endl;
 				
 				// shift global->pix_x
 				for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
@@ -1903,7 +1903,21 @@ void translateQuads(cGlobal *global) {
 				}
 				
 			}
-
+			
+		}
+		
+		// shift global arrays by optimized position from quadrant to use for optimization of subsequent quadrants
+		for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
+			for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
+				for(int i=0; i<ROWS; i++){
+					for(int j=0; j<COLS; j++){
+						int index = (j + mj*COLS) * (8*ROWS);
+						index += i + mi*ROWS + quad*2*ROWS;
+						global->pix_x[index] += global->quad_dx[quad];
+						global->pix_y[index] += global->quad_dy[quad];
+					}
+				}
+			}
 		}
 		
 	}
@@ -1913,9 +1927,7 @@ void translateQuads(cGlobal *global) {
 	free(global->pix_y);
 	
 	// shift pix_x and pix_y to the correct position and update global arrays
-	for (int quad=0; quad<4; quad++) {
-		global->shiftQuads(pix_x, global->quad_dx, pix_y, global->quad_dy);
-	}
+	global->shiftQuads(pix_x, global->quad_dx, pix_y, global->quad_dy);
 	global->pix_x = pix_x;
 	global->pix_y = pix_y;
 }
