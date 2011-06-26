@@ -1204,7 +1204,7 @@ void calculatePowderSAXS(cGlobal *global) {
 		int counteri = 0; // reset counter
 		int counterw = 0; // reset counter
 		for (int j=0; j<global->pix_nn; j++) {
-			if ( pix_r[j] == global->powderQ[i] ) {
+			if ( pix_r[j] == global->powderQ[i] && (!global->useBadPixelMask || global->badpixelmask[j]) ) {
 				if (global->hitfinder.use) {
 					global->powderAverage[i] += global->powderRaw[j];
 					counterp++;
@@ -1906,7 +1906,7 @@ void translateQuads(cGlobal *global) {
 			
 		}
 		
-		// shift global arrays by optimized position from quadrant to use for optimization of subsequent quadrants
+		// shift global arrays by optimized position from the current quadrant to use for optimization of subsequent quadrants
 		for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
 			for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
 				for(int i=0; i<ROWS; i++){

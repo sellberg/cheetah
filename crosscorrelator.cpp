@@ -191,6 +191,39 @@ CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCA
 	
 }
 
+CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCArray, int16_t *maskCArray, int arraylength, int nq, int nphi) {
+	
+    initPrivateVariables();
+    
+    //set basic properties for the size of the arrays
+    setArraySize(arraylength);
+	p_samplingLength = nq;
+	p_samplingAngle = nphi;
+	p_samplingLag = (int) ceil(p_samplingAngle/2.0+1);
+	p_mask = true;
+	
+    //special feature: copy data from array over to internal data structure
+    data = new array1D(dataCArray, arraySize());
+    
+    //allocate all other internal objects
+	mask = new array1D(maskCArray, arraySize());
+    qx = new array1D(qxCArray, arraySize());
+	qy = new array1D(qyCArray, arraySize());
+    table = new array2D(50, 50);
+	
+	q = new array1D(arraySize());
+	phi = new array1D(arraySize());
+	
+	qave = new array1D(samplingLength());
+	iave = new array1D(samplingLength());
+	phiave = new array1D(samplingAngle());
+	
+	crossCorrelation = new array3D( samplingLength(), samplingLength(), samplingLag() );
+	
+	p_dataCArray = dataCArray;
+	
+}
+
 CrossCorrelator::~CrossCorrelator(){
 	//free memory for objects
 	delete data;
@@ -231,6 +264,7 @@ void CrossCorrelator::initPrivateVariables(){
 	p_samplingLength = 0;
 	p_samplingAngle = 0;
 	p_samplingLag = 0;
+	p_mask = false;
     p_outputdir = "";
 
 	data = NULL;
@@ -465,7 +499,7 @@ void CrossCorrelator::calculateSAXS() {
 		double itot = 0; // reset summed intensity
 		int counter = 0; // reset counter
 		for (int j=0; j<arraySize(); j++) {
-			if ( q->get(j) == qave->get(i) ) {
+			if ( q->get(j) == qave->get(i) && (!p_mask || mask->get(i))) {
 				itot += data->get(j);
 				counter++;
 			}
@@ -496,16 +530,18 @@ void CrossCorrelator::calculateXCCA(){
 	if (p_debug >= 1) printf("calculating speckle arrays...\n");
 
 	for (int i=0; i<arraySize(); i++) {
-		int qIndex = (int) round((q->get(i)-qmin())/deltaq()); // the index in qave[] that corresponds to q[i]
-		int phiIndex = (int) round((phi->get(i)-phimin())/deltaphi()); // the index in phiave[] that corresponds to phi[i]
-		if (p_debug >= 3) printf("qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
-		if (qIndex >= 0 && qIndex < samplingLength() && phiIndex >= 0 && phiIndex < samplingAngle()) { // make sure qIndex and phiIndex is not out of array bounds
-			speckle->set(qIndex, phiIndex, speckle->get(qIndex, phiIndex) + data->get(i) );
-			pixelCount->set(qIndex, phiIndex, pixelCount->get(qIndex,phiIndex)+1);
-			if (pixelBool->get(qIndex, phiIndex) != 1) {
-				pixelBool->set(qIndex, phiIndex, 1);
-			}
-		} else if (p_debug >= 2) printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
+		if (!p_mask || mask->get(i)) {
+			int qIndex = (int) round((q->get(i)-qmin())/deltaq()); // the index in qave[] that corresponds to q[i]
+			int phiIndex = (int) round((phi->get(i)-phimin())/deltaphi()); // the index in phiave[] that corresponds to phi[i]
+			if (p_debug >= 3) printf("qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
+			if (qIndex >= 0 && qIndex < samplingLength() && phiIndex >= 0 && phiIndex < samplingAngle()) { // make sure qIndex and phiIndex is not out of array bounds
+				speckle->set(qIndex, phiIndex, speckle->get(qIndex, phiIndex) + data->get(i) );
+				pixelCount->set(qIndex, phiIndex, pixelCount->get(qIndex,phiIndex)+1);
+				if (pixelBool->get(qIndex, phiIndex) != 1) {
+					pixelBool->set(qIndex, phiIndex, 1);
+				}
+			} else if (p_debug >= 2) printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
+		}
 	}
 		
 	// subtract the average SAXS intensity from the speckle array
@@ -587,16 +623,18 @@ void CrossCorrelator::calculateXACA() {
 	if (p_debug >= 1) printf("calculating speckle arrays...\n");
 	
 	for (int i=0; i<arraySize(); i++) {
-		int qIndex = (int) round((q->get(i)-qmin())/deltaq()); // the index in qave[] that corresponds to q[i]
-		int phiIndex = (int) round((phi->get(i)-phimin())/deltaphi()); // the index in phiave[] that corresponds to phi[i]
-		if (p_debug >= 3) printf("qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
-		if (qIndex >= 0 && qIndex < samplingLength() && phiIndex >= 0 && phiIndex < samplingAngle()) { // make sure qIndex and phiIndex is not out of array bounds
-			speckle->set(qIndex, phiIndex, speckle->get(qIndex, phiIndex) + data->get(i) );
-			pixelCount->set(qIndex, phiIndex, pixelCount->get(qIndex,phiIndex)+1);
-			if (pixelBool->get(qIndex, phiIndex) != 1) {
-				pixelBool->set(qIndex, phiIndex, 1);
-			}
-		} else if (p_debug >= 2) printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
+		if (!p_mask || mask->get(i)) {
+			int qIndex = (int) round((q->get(i)-qmin())/deltaq()); // the index in qave[] that corresponds to q[i]
+			int phiIndex = (int) round((phi->get(i)-phimin())/deltaphi()); // the index in phiave[] that corresponds to phi[i]
+			if (p_debug >= 3) printf("qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
+			if (qIndex >= 0 && qIndex < samplingLength() && phiIndex >= 0 && phiIndex < samplingAngle()) { // make sure qIndex and phiIndex is not out of array bounds
+				speckle->set(qIndex, phiIndex, speckle->get(qIndex, phiIndex) + data->get(i) );
+				pixelCount->set(qIndex, phiIndex, pixelCount->get(qIndex,phiIndex)+1);
+				if (pixelBool->get(qIndex, phiIndex) != 1) {
+					pixelBool->set(qIndex, phiIndex, 1);
+				}
+			} else if (p_debug >= 2) printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
+		}
 	}
 	
 	// subtract the average SAXS intensity from the speckle array

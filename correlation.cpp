@@ -51,8 +51,10 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 	
     //create cross correlator object that takes care of the computations
-	CrossCorrelator *cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
-
+	CrossCorrelator *cc = NULL;
+	if (global->useBadPixelMask) cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, global->badpixelmask, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
+	else cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
+	
     DEBUGL1_ONLY cc->setDebug(1);                           //turn on debug level inside the CrossCorrelator, if needed
     DEBUGL2_ONLY cc->setDebug(2);                           //turn on debug level inside the CrossCorrelator, if needed
 
