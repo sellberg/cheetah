@@ -104,7 +104,8 @@ public:
 
 	// Gain correction
 	int			useGaincal;			// whether to read to gain map from a file
-	int			invertGain;			// whether to invert the gain map????
+	int			invertGain;			// inverts the gain map, this is the standard since gain maps from flat fields should be divided with the measured intensity
+	int			normalizeGain;		// normalizes the gain map, so that a flat-field average can be used as gain calibration
 	char		gaincalFile[1024];			// Name of file containing the gain map
 	
 	// Running background subtraction

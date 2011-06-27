@@ -147,9 +147,9 @@ void beginjob() {
 	global.readDetectorGeometry(global.geometryFile);
 	global.setup();
 	global.readDarkcal(global.darkcalFile);
+	global.readBadpixelMask(global.badpixelFile);
 	global.readGaincal(global.gaincalFile);
 	global.readPeakmask(global.hitfinder.peaksearchFile);
-	global.readBadpixelMask(global.badpixelFile);
 	global.readIcemask(global.icefinder.peaksearchFile);
 	global.readWatermask(global.waterfinder.peaksearchFile);
 	global.readBackgroundmask(global.backgroundfinder.peaksearchFile);
@@ -296,7 +296,7 @@ void event() {
 	//printf("Beam %s : fiducial %x\n", beam ? "On":"Off", fiducial);
 	if(!beam)
 		return;
-  
+	
 	
 	/*
 	 * Get electron beam parameters from beamline data

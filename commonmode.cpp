@@ -46,8 +46,9 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	
 	// Create histogram array
 	long		nhist = 131071;
-	uint16_t	*histogram;
+	uint16_t	*histogram, *histograms;
 	histogram = (uint16_t*) calloc(nhist, sizeof(uint16_t));
+	histograms = (uint16_t*) calloc(32*nhist, sizeof(uint16_t));
 	
 	// Loop over 2x1 modules (4x8 array)
 	for(long mi=0; mi<4; mi++){ //for(long mi=0; mi<8; mi++){
@@ -73,6 +74,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 					median = i-65535;
 					break;
 				}
+				
 			}
 			
 			
@@ -93,6 +95,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 		}
 	}
 	free(histogram);
+	free(histograms);
 }
 
 /*

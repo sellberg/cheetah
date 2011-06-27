@@ -108,7 +108,8 @@ void *worker(void *threadarg) {
 	if(global->useGaincal) {
 		applyGainCorrection(threadInfo, global);
 	}
-
+	
+	
 	/*
 	 *	Apply bad pixel map
 	 */

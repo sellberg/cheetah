@@ -105,7 +105,8 @@ void cGlobal::defaultConfiguration(void) {
 	// Gain calibration correction
 	strcpy(gaincalFile, "gaincal.h5");
 	useGaincal = 0;
-	invertGain = 0;
+	invertGain = 1;
+	normalizeGain = 0;
 	
 	// Subtraction of running background (persistent photon background) 
 	useSubtractPersistentBackground = 0;
@@ -655,6 +656,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "invertgain")) {
 		invertGain = atoi(value);
+	}
+	else if (!strcmp(tag, "normalizegain")) {
+		normalizeGain = atoi(value);
 	}
 	else if (!strcmp(tag, "subtractcmsubmodule")) {
 		cmSubModule = atoi(value);
@@ -1246,21 +1250,32 @@ void cGlobal::readGaincal(char *filename){
 		printf("\tGeometry mismatch: %ix%x != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
 		printf("\tDefaulting to uniform gaincal\n");
 		return;
-	} 
+	}
 	
 	
 	// Copy into gaincal array
-	for(long i=0;i<pix_nn;i++)
+	double sum = 0;
+	unsigned counter = 0;
+	for(long i=0;i<pix_nn;i++) {
 		gaincal[i] = (float) temp2d.data[i];
-
-
+		if (!useBadPixelMask || badpixelmask[i]) {
+			sum += gaincal[i];
+			counter++;
+		}
+	}
+	sum /= counter;
+	
+	
 	// Invert the gain so we have an array that all we need to do is simple multiplication
 	// Pixels with zero gain become dead pixels
 	if(invertGain) {
 		for(long i=0;i<pix_nn;i++) {
-			if(gaincal[i] != 0)
-				gaincal[i] = 1.0/gaincal[i];
-			else 
+			if (gaincal[i] != 0) {
+				if (normalizeGain)
+					gaincal[i] = sum/gaincal[i];
+				else
+					gaincal[i] = 1.0/gaincal[i];
+			} else 
 				gaincal[i] = 0;
 		}
 	}
@@ -1707,7 +1722,7 @@ void cGlobal::writeFinalLog(void){
  */
 void cGlobal::readIcemask(char *filename){
 	
-	printf("Reading peak search mask:\n");
+	printf("Reading ice peak search mask:\n");
 	printf("\t%s\n",filename);
 	
 	
@@ -1752,7 +1767,7 @@ void cGlobal::readIcemask(char *filename){
  */
 void cGlobal::readWatermask(char *filename){
 	
-	printf("Reading peak search mask:\n");
+	printf("Reading water peak search mask:\n");
 	printf("\t%s\n",filename);
 	
 	
@@ -1797,7 +1812,7 @@ void cGlobal::readWatermask(char *filename){
  */
 void cGlobal::readBackgroundmask(char *filename){
 	
-	printf("Reading peak search mask:\n");
+	printf("Reading background search mask:\n");
 	printf("\t%s\n",filename);
 	
 	
