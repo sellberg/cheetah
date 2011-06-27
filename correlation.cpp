@@ -52,8 +52,13 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 	
     //create cross correlator object that takes care of the computations
 	CrossCorrelator *cc = NULL;
-	if (global->useBadPixelMask) cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, global->badpixelmask, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
-	else cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
+	if (global->autoCorrelationOnly) {
+		if (global->useBadPixelMask) cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, global->badpixelmask, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
+		else cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
+	} else {
+		if (global->useBadPixelMask) cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, global->badpixelmask, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );
+		else cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );	
+	}
 	
     DEBUGL1_ONLY cc->setDebug(1);                           //turn on debug level inside the CrossCorrelator, if needed
     DEBUGL2_ONLY cc->setDebug(2);                           //turn on debug level inside the CrossCorrelator, if needed
@@ -65,11 +70,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		
 		cc->calculatePolarCoordinates(global->correlationStartQ, global->correlationStopQ);
 		cc->calculateSAXS();
-		if (global->autoCorrelationOnly) {
-			cc->calculateXACA();
-		} else {
-			cc->calculateXCCA();
-		}
+		cc->calculateXCCA();
 		
 		//writeSAXS(threadInfo, global, cc, threadInfo->eventname); // writes SAXS only to binary
 		writeXCCA(threadInfo, global, cc, threadInfo->eventname); // writes XCCA/XACA+SAXS to binary
@@ -220,14 +221,14 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	fwrite(&buffer[0],sizeof(double),cc->samplingAngle(),filePointerWrite);
 	
 	// cross-correlation
-	if (global->useCorrelation){
+	if (global->useCorrelation) {
 		if (global->autoCorrelationOnly) {
 			// autocorrelation only (q1=q2)
 			for (int i=0; i<cc->samplingLength(); i++) {
 				for (int k=0; k<cc->samplingLag(); k++) {
 					if (global->sumCorrelation)
-						info->correlation[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,i,k);
-					else buffer[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,i,k);
+						info->correlation[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,k);
+					else buffer[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,k);
 				}
 			}
 			fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);

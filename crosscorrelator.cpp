@@ -185,6 +185,38 @@ CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCA
 	iave = new array1D(samplingLength());
 	phiave = new array1D(samplingAngle());
 	
+	autoCorrelation = new array2D( samplingLength(), samplingLag() );
+	p_xcca = false;
+	
+	p_dataCArray = dataCArray;
+	
+}
+
+CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, int nq1, int nq2, int nphi) {
+	
+    initPrivateVariables();
+    
+    //set basic properties for the size of the arrays
+    setArraySize(arraylength);
+	p_samplingLength = (nq1 > nq2) ? nq1 : nq2;
+	p_samplingAngle = nphi;
+	p_samplingLag = (int) ceil(p_samplingAngle/2.0+1);
+	
+    //special feature: copy data from array over to internal data structure
+    data = new array1D(dataCArray, arraySize());
+    
+    //allocate all other internal objects
+    qx = new array1D(qxCArray, arraySize());
+	qy = new array1D(qyCArray, arraySize());
+    table = new array2D(50, 50);
+	
+	q = new array1D(arraySize());
+	phi = new array1D(arraySize());
+	
+	qave = new array1D(samplingLength());
+	iave = new array1D(samplingLength());
+	phiave = new array1D(samplingAngle());
+	
 	crossCorrelation = new array3D( samplingLength(), samplingLength(), samplingLag() );
 	
 	p_dataCArray = dataCArray;
@@ -198,6 +230,40 @@ CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCA
     //set basic properties for the size of the arrays
     setArraySize(arraylength);
 	p_samplingLength = nq;
+	p_samplingAngle = nphi;
+	p_samplingLag = (int) ceil(p_samplingAngle/2.0+1);
+	p_mask = true;
+	
+    //special feature: copy data from array over to internal data structure
+    data = new array1D(dataCArray, arraySize());
+    
+    //allocate all other internal objects
+	mask = new array1D(maskCArray, arraySize());
+    qx = new array1D(qxCArray, arraySize());
+	qy = new array1D(qyCArray, arraySize());
+    table = new array2D(50, 50);
+	
+	q = new array1D(arraySize());
+	phi = new array1D(arraySize());
+	
+	qave = new array1D(samplingLength());
+	iave = new array1D(samplingLength());
+	phiave = new array1D(samplingAngle());
+	
+	autoCorrelation = new array2D( samplingLength(), samplingLag() );
+	p_xcca = false;
+	
+	p_dataCArray = dataCArray;
+	
+}
+
+CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCArray, int16_t *maskCArray, int arraylength, int nq1, int nq2, int nphi) {
+	
+    initPrivateVariables();
+    
+    //set basic properties for the size of the arrays
+    setArraySize(arraylength);
+	p_samplingLength = (nq1 > nq2) ? nq1 : nq2;
 	p_samplingAngle = nphi;
 	p_samplingLag = (int) ceil(p_samplingAngle/2.0+1);
 	p_mask = true;
@@ -241,6 +307,7 @@ CrossCorrelator::~CrossCorrelator(){
 	delete phiave;
 	
 	delete crossCorrelation;
+	delete autoCorrelation;
 }
 
 
@@ -266,6 +333,7 @@ void CrossCorrelator::initPrivateVariables(){
 	p_samplingAngle = 0;
 	p_samplingLag = 0;
 	p_mask = false;
+	p_xcca = true;
     p_outputdir = "";
 
 	data = NULL;
@@ -277,7 +345,8 @@ void CrossCorrelator::initPrivateVariables(){
 	qave = NULL;
 	iave = NULL;
 	phiave = NULL;
-	crossCorrelation = NULL;	    
+	crossCorrelation = NULL;
+	autoCorrelation = NULL;
     table = NULL;
 	
     p_debug = 0;      
@@ -515,7 +584,7 @@ void CrossCorrelator::calculateSAXS() {
 
 //----------------------------------------------------------------------------calculateXCCA
 void CrossCorrelator::calculateXCCA(){
-
+	
 	if (p_debug >= 1) cout << "deltaPhi: " << deltaphi() << endl;
 	if (p_debug >= 1) cout << "# of angles: " << samplingAngle() << endl;
 	for (int i=0; i<samplingAngle(); i++) {
@@ -561,42 +630,68 @@ void CrossCorrelator::calculateXCCA(){
 	
 	// calculate cross-correlation array and normalization array for cross-correlation
 	if (p_debug >= 1) cout << "# of angular lags: " << samplingLag() << endl;
+	
+	if (p_xcca) {
 
-	array3D *normalization = new array3D( samplingLength(), samplingLength(), samplingLag() );
-	
-	if (p_debug >= 1) printf("starting main loop to calculate cross-correlation...\n");
-	
-	for (int i=0; i<samplingLength(); i++) { // q1 index
-		for (int j=0; j<samplingLength(); j++) { // q2 index 
+		array3D *normalization = new array3D( samplingLength(), samplingLength(), samplingLag() );
+		
+		if (p_debug >= 1) printf("starting main loop to calculate cross-correlation...\n");
+		
+		for (int i=0; i<samplingLength(); i++) { // q1 index
+			for (int j=0; j<samplingLength(); j++) { // q2 index 
+				for (int k=0; k<samplingLag(); k++) { // phi lag => phi2 index = (l+k)%samplingAngle
+					for (int l=0; l<samplingAngle(); l++) { // phi1 index
+						crossCorrelation->set(i,j,k, crossCorrelation->get(i,j,k) + speckleNorm->get(i,l)*speckleNorm->get(j, (l+k)%samplingAngle()) );
+						normalization->set(i, j, k, normalization->get(i, j, k) + pixelBool->get(i,l)*pixelBool->get(j, (l+k)%samplingAngle()) );
+						if (p_debug >= 3) printf("phi2: %d\n",(l+k)%samplingAngle());
+					}
+				}
+			}
+		}
+		
+		// normalize the cross-correlation array with the average SAXS intensity and the calculated normalization constant
+		for (int i=0; i<samplingLength(); i++) { // make sure each element is initially zero
+			for (int j=0; j<samplingLength(); j++) {
+				for (int k=0; k<samplingLag(); k++) {
+					if (normalization->get(i,j,k) != 0) {
+						crossCorrelation->set(i, j, k, crossCorrelation->get(i,j,k) / ( normalization->get(i,j,k)*iave->get(i)*iave->get(j)) );
+					}
+				}
+			}
+		}
+		
+		delete normalization;
+		
+	} else {
+		
+		array2D *normalization = new array2D( samplingLength(), samplingLag() );
+		
+		if (p_debug >= 1) printf("starting main loop to calculate cross-correlation...\n");
+		
+		for (int i=0; i<samplingLength(); i++) { // q index
 			for (int k=0; k<samplingLag(); k++) { // phi lag => phi2 index = (l+k)%samplingAngle
 				for (int l=0; l<samplingAngle(); l++) { // phi1 index
-					crossCorrelation->set(i,j,k, crossCorrelation->get(i,j,k) + speckleNorm->get(i,l)*speckleNorm->get(j, (l+k)%samplingAngle()) );
-					normalization->set(i, j, k, normalization->get(i, j, k) + pixelBool->get(i,l)*pixelBool->get(j, (l+k)%samplingAngle()) );
-					if (p_debug >= 3) printf("phi2: %d\n",(l+k)%samplingAngle());
+					autoCorrelation->set(i,k, autoCorrelation->get(i,k) + speckleNorm->get(i,l)*speckleNorm->get(i, (l+k)%samplingAngle()) );
+					normalization->set(i, k, normalization->get(i, k) + pixelBool->get(i,l)*pixelBool->get(i, (l+k)%samplingAngle()) );
 				}
-			}
+			}		
 		}
-	}
-	
-	// normalize the cross-correlation array with the average SAXS intensity and the calculated normalization constant
-	for (int i=0; i<samplingLength(); i++) { // make sure each element is initially zero
-		for (int j=0; j<samplingLength(); j++) {
+		
+		// normalize the cross-correlation array with the average SAXS intensity and the calculated normalization constant
+		for (int i=0; i<samplingLength(); i++) {
 			for (int k=0; k<samplingLag(); k++) {
-				if (normalization->get(i,j,k) != 0) {
-					crossCorrelation->set(i, j, k, crossCorrelation->get(i,j,k) / ( normalization->get(i,j,k)*iave->get(i)*iave->get(j)) );
-				}else{
-					// jf: what happens here, if the normalization is indeed == 0 ?
-					// shouldn't this case be something like
-					// crossCorrelation->set(i, j, k, 0);
+				if (normalization->get(i,k) != 0) {
+					autoCorrelation->set(i, k, autoCorrelation->get(i,k) / (normalization->get(i,k)*iave->get(i)*iave->get(i)) );
 				}
 			}
 		}
+		
+		delete normalization;
+		
 	}
 	
 	delete pixelBool;
 	delete pixelCount;
-	
-	delete normalization;
 	
 	delete speckle;
 	delete speckleNorm;
@@ -974,10 +1069,13 @@ double CrossCorrelator::getIave(unsigned index) const {
 	return iave->get(index);
 }
 
+double CrossCorrelator::getCrossCorrelation(unsigned index1, unsigned index2) const {
+	return autoCorrelation->get(index1,index2);
+}
+
 double CrossCorrelator::getCrossCorrelation(unsigned index1, unsigned index2, unsigned index3) const {
 	return crossCorrelation->get(index1,index2,index3);
 }
-
 
 
 //=================================================================================
