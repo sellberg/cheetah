@@ -150,7 +150,7 @@ public:
     // Correlation analysis
     int         useCorrelation;     // set to nonzero to turn on angular cross-correlation module, also controls what correlation algorithm to be used, 1: regular, 2: fast
 	int			sumCorrelation;		// set to nonzero to sum cross-correlation patterns for different hits
-	int			autoCorrelationOnly;		// set to nonzero to only calculate autocorrelation (q1=q2)
+	int			autoCorrelateOnly;		// set to nonzero to only calculate autocorrelation (q1=q2)
     double 		correlationStartQ;		// customize the range of the correlation algorithms
     double 		correlationStopQ;		// startQ/stopQ are in units of detector pixels
     int 		correlationNumQ;		// number of q values between start and stop

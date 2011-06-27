@@ -191,7 +191,7 @@ void cGlobal::defaultConfiguration(void) {
 	// Correlation analysis
 	useCorrelation = 0;
 	sumCorrelation = 0;
-	autoCorrelationOnly = 1;
+	autoCorrelateOnly = 1;
     correlationStartQ = 100;
     correlationStopQ = 600;
     correlationNumQ = 51;
@@ -321,7 +321,7 @@ void cGlobal::setup() {
 	if (useCorrelation) {
 		if (!correlationNumDelta) 
 			correlationNumDelta = (int) ceil(correlationNumPhi/2.0+1);
-		if (autoCorrelationOnly) {
+		if (autoCorrelateOnly) {
 			correlation_nn = correlationNumQ*correlationNumDelta;
 		} else {
 			correlation_nn = correlationNumQ*correlationNumQ*correlationNumDelta;
@@ -702,8 +702,8 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "sumcorrelation")) {
 		sumCorrelation = atoi(value);
 	}
-	else if (!strcmp(tag, "autocorrelationonly")) {
-		autoCorrelationOnly = atoi(value);
+	else if (!strcmp(tag, "autocorrelateonly")) {
+		autoCorrelateOnly = atoi(value);
 	}
     else if (!strcmp(tag, "correlationstartq")) {
 		correlationStartQ = atof(value);

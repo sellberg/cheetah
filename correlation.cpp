@@ -52,7 +52,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 	
     //create cross correlator object that takes care of the computations
 	CrossCorrelator *cc = NULL;
-	if (global->autoCorrelationOnly) {
+	if (global->autoCorrelateOnly) {
 		if (global->useBadPixelMask) cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, global->badpixelmask, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
 		else cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
 	} else {
@@ -190,7 +190,7 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	buffer = (double*) calloc(cc->samplingLength()*cc->samplingLength()*cc->samplingLag(), sizeof(double));
 	info->correlation = (double*) calloc(global->correlation_nn, sizeof(double));
 	
-	if (global->autoCorrelationOnly){
+	if (global->autoCorrelateOnly){
 		sprintf(outfile,"%s-xaca.bin",eventname);
 	} else {
 		sprintf(outfile,"%s-xcca.bin",eventname);
@@ -222,7 +222,7 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	
 	// cross-correlation
 	if (global->useCorrelation) {
-		if (global->autoCorrelationOnly) {
+		if (global->autoCorrelateOnly) {
 			// autocorrelation only (q1=q2)
 			for (int i=0; i<cc->samplingLength(); i++) {
 				for (int k=0; k<cc->samplingLag(); k++) {
