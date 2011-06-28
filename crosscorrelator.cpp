@@ -570,7 +570,7 @@ void CrossCorrelator::calculateSAXS() {
 		double itot = 0; // reset summed intensity
 		int counter = 0; // reset counter
 		for (int j=0; j<arraySize(); j++) {
-			if ( q->get(j) == qave->get(i) && (!p_mask || mask->get(i))) {
+			if ( q->get(j) == qave->get(i) && (!p_mask || mask->get(j))) {
 				itot += data->get(j);
 				counter++;
 			}
