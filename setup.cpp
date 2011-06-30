@@ -63,7 +63,7 @@ void cGlobal::defaultConfiguration(void) {
 
 	// Geometry
 	strcpy(geometryFile, "geometry/cspad_pixelmap.h5");
-	pixelSize = 110e-6;
+	pixelSize = 109.92e-6;
 	useCenterCorrection = 0;
 	pixelCenterX = 0;
 	pixelCenterY = 0;
@@ -100,7 +100,8 @@ void cGlobal::defaultConfiguration(void) {
 	// Common mode subtraction from each ASIC
 	cmModule = 0;
 	cmSubModule = 0;
-	cmFloor = 0.1;
+	cmSaveHistograms = 1;
+	cmFloor = 0.02;
 
 	// Gain calibration correction
 	strcpy(gaincalFile, "gaincal.h5");
@@ -110,7 +111,6 @@ void cGlobal::defaultConfiguration(void) {
 	
 	// Subtraction of running background (persistent photon background) 
 	useSubtractPersistentBackground = 0;
-	subtractBg = 0;
 	bgMemory = 50;
 	startFrames = 0;
 	scaleBackground = 0;
@@ -253,7 +253,6 @@ void cGlobal::setup() {
 	if(generateDarkcal) {
 		cmModule = 0;
 		cmSubModule = 0;
-		subtractBg = 0;
 		useDarkcalSubtraction = 0;
 		useSubtractPersistentBackground = 0;
 		useBadPixelMask = 0;
@@ -645,11 +644,17 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "refinementdeltac")) {
 		refinementDeltaC = atof(value);
 	}
+	else if (!strcmp(tag, "subtractcmsubmodule")) {
+		cmSubModule = atoi(value);
+	}
 	else if (!strcmp(tag, "subtractcmmodule")) {
 		cmModule = atoi(value);
 	}
 	else if (!strcmp(tag, "cmmodule")) {
 		cmModule = atoi(value);
+	}
+	else if (!strcmp(tag, "cmsavehistograms")) {
+		cmSaveHistograms = atoi(value);
 	}
 	else if (!strcmp(tag, "usegaincal")) {
 		useGaincal = atoi(value);
@@ -660,14 +665,8 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "normalizegain")) {
 		normalizeGain = atoi(value);
 	}
-	else if (!strcmp(tag, "subtractcmsubmodule")) {
-		cmSubModule = atoi(value);
-	}
 	else if (!strcmp(tag, "generatedarkcal")) {
 		generateDarkcal = atoi(value);
-	}
-	else if (!strcmp(tag, "subtractbg")) {
-		subtractBg = atoi(value);
 	}
 	else if (!strcmp(tag, "usebadpixelmask")) {
 		useBadPixelMask = atoi(value);

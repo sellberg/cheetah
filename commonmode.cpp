@@ -73,6 +73,20 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 				counter += histograms[i+mj*nhist+mi*8*nhist];
 				if(counter > (global->cmFloor*2*ROWS*COLS)) { //if(counter > (global->cmFloor*ROWS*COLS)) {
 					median = i-65535;
+					
+					if (global->cmSaveHistograms) {
+						if (histograms[mj*nhist+mi*8*nhist] == 0) histograms[mj*nhist+mi*8*nhist] = i;
+						else {
+							cout << "1st element of histogram non-zero! Save median to 11th element." << endl;
+							if (histograms[10+mj*nhist+mi*8*nhist] == 0) histograms[10+mj*nhist+mi*8*nhist] = i;
+							else {
+								cout << "11th element of histogram non-zero! Save median to 101st element." << endl;
+								if (histograms[100+mj*nhist+mi*8*nhist] == 0) histograms[100+mj*nhist+mi*8*nhist] = i;
+								else cout << "101st element of histogram non-zero! Aborting save of median..." << endl;
+							}							
+						}
+					}
+					
 					break;
 				}
 				
@@ -96,8 +110,10 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 		}
 	}
 	//free(histogram);
-	sprintf(filename,"%s_cm-hist.h5",threadInfo->eventname);
-	writeSimpleHDF5(filename, histograms, (int)nhist, 8, 4, H5T_STD_UI16LE);
+	if (global->cmSaveHistograms) {
+		sprintf(filename,"%s_cm-hist.h5",threadInfo->eventname);
+		writeSimpleHDF5(filename, histograms, (int)nhist, 8, 4, H5T_STD_U16LE);
+	}
 	free(histograms);
 }
 
@@ -122,9 +138,11 @@ void cmSubModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	histogram = (uint16_t*) calloc(nhist, sizeof(uint16_t));
 	
 	// Subunits
-	long	nn=global->cmSubModule;		// Multiple of 2 please!
-	if(nn < 2 )
-		return;
+	long		nn = global->cmSubModule;		// Multiple of 2 please!
+	if (nn % 2) {
+		cout << "cmSubModule must be a multiple of 2, using regular common mode correction." << endl;
+		nn = 1;
+	}
 	
 	// Loop over whole modules (8x8 array)
 	for(long mi=0; mi<8; mi++){
@@ -153,7 +171,7 @@ void cmSubModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 					counter = 0;
 					for(long i=0; i<nhist; i++){
 						counter += histogram[i];
-						if(counter > (0.25*ROWS*COLS/(nn*nn))) {
+						if(counter > (global->cmFloor*ROWS*COLS/(nn*nn))) {
 							median = i-65535;
 							break;
 						}

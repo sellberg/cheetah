@@ -98,9 +98,10 @@ public:
 	int			generateDarkcal;		// Flip this on to generate a darkcal (auto-turns-on appropriate other options)
 	
 	// Common mode and pedastal subtraction
-	int			cmModule;				// Subtract common mode from each ASIC
+	int			cmModule;				// Subtract common mode from each 2x1 Module (2 ASICs)
 	int			cmSubModule;			// Subtract common mode from subsets of each ASIC (currently 16 sub-portions)
 	float		cmFloor;				// Use lowest x% of values as the offset to subtract (typically lowest 2%)
+	int			cmSaveHistograms;		// Save intensity histograms for each 2x1 Module. Histograms are saved into separate files for each event. The median defined by cmFloor is saved in the first element unless terminal output states otherwise
 
 	// Gain correction
 	int			useGaincal;			// whether to read to gain map from a file
@@ -110,7 +111,6 @@ public:
 	
 	// Running background subtraction
 	int			useSubtractPersistentBackground;  // if set a running background will be calculated and subtracted. 
-	int			subtractBg;			  // what is this parameter?? It's also not in the ini file
 	int			scaleBackground;		  // scale the running background for each shot to account for intensity fluctuations
 	float		bgMemory;				  // number of frames to use for determining the running background
 	
