@@ -139,9 +139,9 @@ void cmSubModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	
 	// Subunits
 	long		nn = global->cmSubModule;		// Multiple of 2 please!
-	if (nn % 2) {
-		cout << "cmSubModule must be a multiple of 2, using regular common mode correction." << endl;
-		nn = 1;
+	if (nn == 1 || nn % 2) {
+		cout << "subtractCMSubModule must be a multiple of 2, aborting common-mode correction." << endl;
+		return;
 	}
 	
 	// Loop over whole modules (8x8 array)

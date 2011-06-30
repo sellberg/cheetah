@@ -100,7 +100,7 @@ void cGlobal::defaultConfiguration(void) {
 	// Common mode subtraction from each ASIC
 	cmModule = 0;
 	cmSubModule = 0;
-	cmSaveHistograms = 1;
+	cmSaveHistograms = 0;
 	cmFloor = 0.02;
 
 	// Gain calibration correction
@@ -644,14 +644,17 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "refinementdeltac")) {
 		refinementDeltaC = atof(value);
 	}
-	else if (!strcmp(tag, "subtractcmsubmodule")) {
-		cmSubModule = atoi(value);
-	}
 	else if (!strcmp(tag, "subtractcmmodule")) {
 		cmModule = atoi(value);
 	}
 	else if (!strcmp(tag, "cmmodule")) {
 		cmModule = atoi(value);
+	}
+	else if (!strcmp(tag, "subtractcmsubmodule")) {
+		cmSubModule = atoi(value);
+	}
+	else if (!strcmp(tag, "cmsubmodule")) {
+		cmSubModule = atoi(value);
 	}
 	else if (!strcmp(tag, "cmsavehistograms")) {
 		cmSaveHistograms = atoi(value);
