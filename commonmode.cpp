@@ -41,8 +41,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	long		counter;
 //	uint16_t	value;
 	long		median;
-	float		negmin;
-	int			negcount;
+	char		filename[1024];
 	
 	// Create histogram array
 	long		nhist = 131071;
@@ -97,6 +96,8 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 		}
 	}
 	//free(histogram);
+	sprintf(filename,"%s_cm-hist.h5",threadInfo->eventname);
+	writeSimpleHDF5(filename, histograms, (int)nhist, 8, 4, H5T_STD_UI16LE);
 	free(histograms);
 }
 
