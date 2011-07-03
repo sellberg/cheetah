@@ -23,7 +23,11 @@
 #include <string.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <hdf5.h>
 #include <cmath>
+#include <iostream>
+using std::cout;
+using std::endl;
 
 #include "commonmode.h"
 #include "worker.h"

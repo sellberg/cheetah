@@ -306,7 +306,7 @@ void cGlobal::setup() {
 			if (waterfinder.use) 
 				waterRaw = (double*) calloc(pix_nn, sizeof(double));
 		}
-		if (powderSAXS) {
+		if (powderSAXS || refineMetrology) {
 			powderQ = (double*) calloc(powder_nn, sizeof(double));
 			if (hitfinder.use) 
 				powderAverage = (double*) calloc(powder_nn, sizeof(double));
