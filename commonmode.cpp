@@ -115,8 +115,9 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	}
 	//free(histogram);
 	if (global->cmSaveHistograms) {
-		sprintf(filename,"%s_cm-hist.h5",threadInfo->eventname);
-		writeSimpleHDF5(filename, histograms, (int)nhist, 8, 4, H5T_STD_U16LE);
+		sprintf(filename,"%s-hist.h5",threadInfo->eventname);
+		//writeSimpleHDF5(filename, histograms, (int)nhist, 8, 4, H5T_STD_U16LE);
+		writeSimpleHDF5(filename, histograms, (int)nhist, 32, H5T_STD_U16LE); // save as 2D array with each 2x1 sorted by quad
 	}
 	free(histograms);
 }
