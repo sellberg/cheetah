@@ -112,6 +112,7 @@ Result XtcSlice::_next()
         return End;
       if (!_open())
         return Error;
+	  return OK;
     }
     return r;
   }
