@@ -25,8 +25,8 @@ class arraydataIO{
 //#define ARRAYDATAIO_EDF			//use EDF
 #undef ARRAYDATAIO_EDF				//do not use EDF
 
-//#define ARRAYDATAIO_TIFF			//use TIFF
-#undef ARRAYDATAIO_TIFF				//do not use TIFF
+#define ARRAYDATAIO_TIFF			//use TIFF
+//#undef ARRAYDATAIO_TIFF				//do not use TIFF
 
 #define ARRAYDATAIO_HDF5			//use HDF5
 //#undef ARRAYDATAIO_HDF5			//do not use HDF5
