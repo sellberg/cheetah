@@ -164,6 +164,8 @@ crosscorrelator.o: crosscorrelator.cpp crosscorrelator.h \
 arrayclasses.o: arrayclasses.cpp arrayclasses.h
 	$(CPP) $(CFLAGS) $<
 
+arraydataIO.o: arraydataIO.cpp arraydataIO.h
+	$(CPP) $(CFLAGS) $<
 
 
 #--------------------------------------------------------------
@@ -181,6 +183,7 @@ cheetah: cheetah.o \
   correlation.o \
   crosscorrelator.o \
   arrayclasses.o \
+  arraydataIO.o \
   $(MYANADIR)/XtcRun.o \
   $(MYANADIR)/main.o \
   $(CSPADDIR)/CspadCorrector.o \
