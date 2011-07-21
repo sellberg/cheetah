@@ -11,6 +11,7 @@
 #define _crosscorrelator_h
 
 #include "arrayclasses.h"
+//#include "arraydataIO.h"				// can be used, but shouldn't be mandatory here
 
 #include <string>
 
@@ -46,6 +47,8 @@ private:
 	fftw_plan p_fplan;		//forward FFT plan
 	fftw_plan p_bplan;		//backward FFT plan
 
+	//arraydataIO *io;		(arraydataIO.h needed for this)
+
     //-----some debug features that can turned on via setDebug()
     int p_debug;
 //    array1D *check1D;
@@ -67,7 +70,7 @@ public:
 	void initFromFile( std::string filename, int type=0 );
     void initWithTestPattern( int sizex, int sizey, int type=0 );                           //generate some test patterns
 	void printRawData(uint16_t *buffer,long lSize);
-	void dumpResults( std::string filename );
+//	void dumpResults( std::string filename );				// (arraydataIO needed for this)
 	
 	//---------------------------------------------calculations (Jonas's way)
 	void calculatePolarCoordinates();

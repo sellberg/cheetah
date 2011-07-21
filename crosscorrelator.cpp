@@ -11,7 +11,6 @@
 #include "crosscorrelator.h"
 
 
-
 //---------------------------------------------------------------------------
 /* XCCA analysis code for LCLS
  * The program reads in a binary with raw data,
@@ -71,6 +70,8 @@ CrossCorrelator::CrossCorrelator(int arraylength){
 	
 	crossCorrelation = new array3D( samplingLength(), samplingLength(), samplingLag() );
 	
+	//io = new arraydataIO;
+	
 }
 
 CrossCorrelator::CrossCorrelator( float *dataCArray, int arraylength ){
@@ -99,6 +100,8 @@ CrossCorrelator::CrossCorrelator( float *dataCArray, int arraylength ){
 	phiave = new array1D(samplingAngle());
 	
 	crossCorrelation = new array3D( samplingLength(), samplingLength(), samplingLag() );
+	
+	//io = new arraydataIO;
     
 }
 
@@ -129,6 +132,8 @@ CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCA
 	crossCorrelation = new array3D( samplingLength(), samplingLength(), samplingLag() );
 
 	p_dataCArray = dataCArray;	
+	
+	//io = new arraydataIO;
 }
 
 CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, double qMax, double qMin) {
@@ -157,6 +162,8 @@ CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCA
 	crossCorrelation = new array3D( samplingLength(), samplingLength(), samplingLag() );
 	
 	p_dataCArray = dataCArray;
+	
+	//io = new arraydataIO;
 	
 }
 
@@ -189,6 +196,8 @@ CrossCorrelator::CrossCorrelator(float *dataCArray, float *qxCArray, float *qyCA
 	
 	p_dataCArray = dataCArray;
 	
+	//io = new arraydataIO;
+	
 }
 
 CrossCorrelator::~CrossCorrelator(){
@@ -207,6 +216,8 @@ CrossCorrelator::~CrossCorrelator(){
 	delete phiave;
 	
 	delete crossCorrelation;
+	
+	//delete io;
 }
 
 
@@ -300,8 +311,8 @@ void CrossCorrelator::initWithTestPattern( int sizex, int sizey, int type ){
     //create test q-calibration (should have been done already, but just to make sure)
     initDefaultQ();
     
-    //write tiff image to check what the pattern looks like
-    test->writeToTiff( outputdir() + "testpattern.tif" );
+    //write tiff image to check what the pattern looks like (arraydataIO needed for this)
+    //io->writeToTiff( outputdir() + "testpattern.tif", test );
     
 	if (debug()>1) {
 		cout << "CrossCorrelator::initWithTestPattern done." << endl;
@@ -757,18 +768,20 @@ void CrossCorrelator::writeXCCA(){
 
 
 //----------------------------------------------------------------------------dumpResults
-void CrossCorrelator::dumpResults( std::string filename ){
-	cout << "Writing results to TIFF file '" << filename << "'." << endl;
-    
-    //convert data to 2D array class (using known dimensions)
-    int dim1 = matrixSize();                // not exact.... will have to change this soon
-    int dim2 = matrixSize();
-    array2D *dataTwoD = new array2D( data, dim1, dim2 );
-    
-    //write to tiff image
-    dataTwoD->writeToTiff( outputdir()+filename );
-    delete dataTwoD;
-}
+//(arraydataIO needed for this)
+//----------------------------------------------------------------------------
+//void CrossCorrelator::dumpResults( std::string filename ){
+//	cout << "Writing results to TIFF file '" << filename << "'." << endl;
+//    
+//    //convert data to 2D array class (using known dimensions)
+//    int dim1 = matrixSize();                // not exact.... will have to change this soon
+//    int dim2 = matrixSize();
+//    array2D *dataTwoD = new array2D( data, dim1, dim2 );
+//    
+//    //write to tiff image
+//    io->writeToTiff( outputdir()+filename, dataTwoD );
+//    delete dataTwoD;
+//}
 
 
 
@@ -1021,10 +1034,10 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D *&polar,
 	    //write output of the intermediate files? (all zero by default, turn on for debugging or whatever)
 		int output_data_ASCII = 0;
 		int output_polar_ASCII = 0;
-		int output_polar_TIF = 0;
+//		int output_polar_TIF = 0;
 		if (output_data_ASCII){ cout << "data: " << data->getASCIIdata() << endl; }
 		if (output_polar_ASCII){ cout << "polar: " << polar->getASCIIdata() << endl; }
-		if (output_polar_TIF){ polar->writeToTiff( outputdir()+"polar.tif" ); }            
+		//if (output_polar_TIF){ io->writeToTiff( outputdir()+"polar.tif", polar ); }      //(arraydataIO needed for this)      
 	}
     return retval;
 }
