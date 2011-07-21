@@ -63,7 +63,7 @@ void cGlobal::defaultConfiguration(void) {
 
 	// Geometry
 	strcpy(geometryFile, "geometry/cspad_pixelmap.h5");
-	pixelSize = 110e-6;
+	pixelSize = 109.92e-6;
 	useCenterCorrection = 0;
 	pixelCenterX = 0;
 	pixelCenterY = 0;
@@ -75,6 +75,15 @@ void cGlobal::defaultConfiguration(void) {
 	centerCorrectionDeltaR = 1;
 	centerCorrectionMaxC = 50;
 	centerCorrectionDeltaC = 1;
+	useMetrologyRefinement = 0;
+	quad0DX = 0;
+	quad0DY = 0;
+	quad1DX = 0;
+	quad1DY = 0;
+	quad2DX = 0;
+	quad2DY = 0;
+	quad3DX = 0;
+	quad3DY = 0;
 	refineMetrology = 0;
 	refinementMaxC = 20;
 	refinementDeltaC = 1;
@@ -91,16 +100,17 @@ void cGlobal::defaultConfiguration(void) {
 	// Common mode subtraction from each ASIC
 	cmModule = 0;
 	cmSubModule = 0;
-	cmFloor = 0.1;
+	cmSaveHistograms = 0;
+	cmFloor = 0.02;
 
 	// Gain calibration correction
 	strcpy(gaincalFile, "gaincal.h5");
 	useGaincal = 0;
-	invertGain = 0;
+	invertGain = 1;
+	normalizeGain = 0;
 	
 	// Subtraction of running background (persistent photon background) 
 	useSubtractPersistentBackground = 0;
-	subtractBg = 0;
 	bgMemory = 50;
 	startFrames = 0;
 	scaleBackground = 0;
@@ -181,7 +191,7 @@ void cGlobal::defaultConfiguration(void) {
 	// Correlation analysis
 	useCorrelation = 0;
 	sumCorrelation = 0;
-	autoCorrelationOnly = 1;
+	autoCorrelateOnly = 1;
     correlationStartQ = 100;
     correlationStopQ = 600;
     correlationNumQ = 51;
@@ -219,10 +229,7 @@ void cGlobal::defaultConfiguration(void) {
  *	Setup stuff to do with thread management, settings, etc.
  */
 void cGlobal::setup() {
-	/*
-	 *	Set up arrays for remembering powder data, background, etc.
-	 */
-	
+		
 	//initially, set everything to NULL, allocate only those that are actually needed below
 	powderRaw = NULL;
 	powderAssembled = NULL;
@@ -234,13 +241,50 @@ void cGlobal::setup() {
 	waterRaw = NULL;
 	waterAssembled = NULL;		
 	waterAverage = NULL;
-	correlation_nn = 0;
 	powderCorrelation = NULL;
 	iceCorrelation = NULL;
 	waterCorrelation = NULL;
-	quad_dx = NULL;
-	quad_dy = NULL;
+	correlation_nn = 0;
 	
+	
+	/*
+	 *	Trap specific configurations and mutually incompatible options
+	 */
+	if(generateDarkcal) {
+		cmModule = 0;
+		cmSubModule = 0;
+		useDarkcalSubtraction = 0;
+		useSubtractPersistentBackground = 0;
+		useBadPixelMask = 0;
+		hitfinder.use = 0;
+		waterfinder.use = 0;
+		icefinder.use = 0;
+		backgroundfinder.use = 0;
+		hitfinder.savehits = 0;
+		waterfinder.savehits = 0;
+		icefinder.savehits = 0;
+		backgroundfinder.savehits = 0;		
+		hdf5dump = 0;
+		saveRaw = 0;
+		useAutoHotpixel = 0;
+		startFrames = 0;
+		powdersum = 0;
+		powderthresh = 0;
+		powderSAXS = 0;
+		calculateCenterCorrectionPowder = 0;
+		calculateCenterCorrectionHit = 0;
+		refineMetrology = 0;
+		useAttenuationCorrection = -1;
+		useEnergyCalibration = 0;
+		useCorrelation = 0;
+		powderRaw = (double*) calloc(pix_nn, sizeof(double));
+		powderAssembled = (double*) calloc(image_nn, sizeof(double));
+	}
+	
+	
+	/*
+	 *	Set up arrays for remembering powder data, background, etc.
+	 */	
 	selfdark = (float*) calloc(pix_nn, sizeof(float));
 	
 	if (useAutoHotpixel) 
@@ -262,7 +306,7 @@ void cGlobal::setup() {
 			if (waterfinder.use) 
 				waterRaw = (double*) calloc(pix_nn, sizeof(double));
 		}
-		if (powderSAXS) {
+		if (powderSAXS || refineMetrology) {
 			powderQ = (double*) calloc(powder_nn, sizeof(double));
 			if (hitfinder.use) 
 				powderAverage = (double*) calloc(powder_nn, sizeof(double));
@@ -276,7 +320,7 @@ void cGlobal::setup() {
 	if (useCorrelation) {
 		if (!correlationNumDelta) 
 			correlationNumDelta = (int) ceil(correlationNumPhi/2.0+1);
-		if (autoCorrelationOnly) {
+		if (autoCorrelateOnly) {
 			correlation_nn = correlationNumQ*correlationNumDelta;
 		} else {
 			correlation_nn = correlationNumQ*correlationNumQ*correlationNumDelta;
@@ -290,11 +334,6 @@ void cGlobal::setup() {
 				waterCorrelation = (double*) calloc(correlation_nn, sizeof(double));
 		}
 	}// useCorrelation end
-	
-	if (refineMetrology) {
-		quad_dx = (float *) calloc(4, sizeof(float));
-		quad_dy = (float *) calloc(4, sizeof(float));
-	}
 	
 	
 	/*
@@ -323,36 +362,6 @@ void cGlobal::setup() {
 
 	threadID = (pthread_t*) calloc(nThreads, sizeof(pthread_t));
 
-	
-	/*
-	 *	Trap specific configurations and mutually incompatible options
-	 */
-	if(generateDarkcal) {
-		cmModule = 0;
-		cmSubModule = 0;
-		subtractBg = 0;
-		useDarkcalSubtraction = 0;
-		useSubtractPersistentBackground = 0;
-		hitfinder.use = 0;
-		waterfinder.use = 0;
-		icefinder.use = 0;
-		backgroundfinder.use = 0;
-		hitfinder.savehits = 0;
-		waterfinder.savehits = 0;
-		icefinder.savehits = 0;
-		backgroundfinder.savehits = 0;		
-		hdf5dump = 0;
-		saveRaw = 0;
-		useAutoHotpixel = 0;
-		startFrames = 0;
-		powderthresh = 0;
-		powderSAXS = 0;
-		calculateCenterCorrectionPowder = 0;
-		calculateCenterCorrectionHit = 0;
-		useAttenuationCorrection = -1;
-		useEnergyCalibration = 0;
-		useCorrelation = 0;
-	}
 	
 	/*
 	 *	Other stuff
@@ -599,6 +608,33 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "centercorrectiondeltac")) {
 		centerCorrectionDeltaC = atof(value);
 	}
+	else if (!strcmp(tag, "usemetrologyrefinement")) {
+		useMetrologyRefinement = atoi(value);
+	}
+	else if (!strcmp(tag, "quad0dx")) {
+		quad0DX = atof(value);
+	}
+	else if (!strcmp(tag, "quad0dy")) {
+		quad0DY = atof(value);
+	}
+	else if (!strcmp(tag, "quad1dx")) {
+		quad1DX = atof(value);
+	}
+	else if (!strcmp(tag, "quad1dy")) {
+		quad1DY = atof(value);
+	}
+	else if (!strcmp(tag, "quad2dx")) {
+		quad2DX = atof(value);
+	}
+	else if (!strcmp(tag, "quad2dy")) {
+		quad2DY = atof(value);
+	}
+	else if (!strcmp(tag, "quad3dx")) {
+		quad3DX = atof(value);
+	}
+	else if (!strcmp(tag, "quad3dy")) {
+		quad3DY = atof(value);
+	}
 	else if (!strcmp(tag, "refinemetrology")) {
 		refineMetrology = atoi(value);
 	}
@@ -614,20 +650,26 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "cmmodule")) {
 		cmModule = atoi(value);
 	}
+	else if (!strcmp(tag, "subtractcmsubmodule")) {
+		cmSubModule = atoi(value);
+	}
+	else if (!strcmp(tag, "cmsubmodule")) {
+		cmSubModule = atoi(value);
+	}
+	else if (!strcmp(tag, "cmsavehistograms")) {
+		cmSaveHistograms = atoi(value);
+	}
 	else if (!strcmp(tag, "usegaincal")) {
 		useGaincal = atoi(value);
 	}
 	else if (!strcmp(tag, "invertgain")) {
 		invertGain = atoi(value);
 	}
-	else if (!strcmp(tag, "subtractcmsubmodule")) {
-		cmSubModule = atoi(value);
+	else if (!strcmp(tag, "normalizegain")) {
+		normalizeGain = atoi(value);
 	}
 	else if (!strcmp(tag, "generatedarkcal")) {
 		generateDarkcal = atoi(value);
-	}
-	else if (!strcmp(tag, "subtractbg")) {
-		subtractBg = atoi(value);
 	}
 	else if (!strcmp(tag, "usebadpixelmask")) {
 		useBadPixelMask = atoi(value);
@@ -662,8 +704,8 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "sumcorrelation")) {
 		sumCorrelation = atoi(value);
 	}
-	else if (!strcmp(tag, "autocorrelationonly")) {
-		autoCorrelationOnly = atoi(value);
+	else if (!strcmp(tag, "autocorrelateonly")) {
+		autoCorrelateOnly = atoi(value);
 	}
     else if (!strcmp(tag, "correlationstartq")) {
 		correlationStartQ = atof(value);
@@ -1003,6 +1045,29 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	}
 	
 	
+	// Shift quads according to metrology refinement
+	quad_dx = NULL;
+	quad_dy = NULL;
+	if (refineMetrology || useMetrologyRefinement) {
+		quad_dx = (float *) calloc(4, sizeof(float));
+		quad_dy = (float *) calloc(4, sizeof(float));
+		if (useMetrologyRefinement) {
+			quad_dx[0] = quad0DX;
+			quad_dy[0] = quad0DY;
+			quad_dx[1] = quad1DX;
+			quad_dy[1] = quad1DY;
+			quad_dx[2] = quad2DX;
+			quad_dy[2] = quad2DY;
+			quad_dx[3] = quad3DX;
+			quad_dy[3] = quad3DY;
+		}
+	}	
+	if (useMetrologyRefinement && !refineMetrology) {
+		cout << "\tQuadrant refinement:" << endl;
+		shiftQuads(pix_x, quad_dx, pix_y, quad_dy);
+	}
+	
+	
 	// Find bounds of image array
 	float	xmax = -1e9;
 	float	xmin =  1e9;
@@ -1078,6 +1143,32 @@ float cGlobal::pixelCenter( float *pixel_array ) {
 	if (debugLevel >= 1) cout << "\tGap(Q0-Q2) = " << dq1 << endl;
 	if (debugLevel >= 1) cout << "\tGap(Q1-Q3) = " << dq2 << endl;
 	return center/quads;
+}
+
+
+/*
+ *	Help function for readDetectorGeometry to shift quads w.r.t. each other
+ */
+void cGlobal::shiftQuads(float *xarray, float *dx, float *yarray, float *dy) {
+	
+	for (int quad=0; quad<4; quad++) {
+		cout << "\tQuad" << quad << "(dx,dy) = (" << dx[quad] << "," << dy[quad] << ")" << endl;
+		
+		for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
+			for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
+				for(int i=0; i<ROWS; i++){
+					for(int j=0; j<COLS; j++){
+						long index = (j + mj*COLS) * (8*ROWS);
+						index += i + mi*ROWS + quad*2*ROWS;
+						xarray[index] += dx[quad];
+						yarray[index] += dy[quad];
+					}
+				}
+			}
+		}
+		
+	}
+	
 }
 
 
@@ -1161,21 +1252,32 @@ void cGlobal::readGaincal(char *filename){
 		printf("\tGeometry mismatch: %ix%x != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
 		printf("\tDefaulting to uniform gaincal\n");
 		return;
-	} 
+	}
 	
 	
 	// Copy into gaincal array
-	for(long i=0;i<pix_nn;i++)
+	double sum = 0;
+	unsigned counter = 0;
+	for(long i=0;i<pix_nn;i++) {
 		gaincal[i] = (float) temp2d.data[i];
-
-
+		if (!useBadPixelMask || badpixelmask[i]) {
+			sum += gaincal[i];
+			counter++;
+		}
+	}
+	sum /= counter;
+	
+	
 	// Invert the gain so we have an array that all we need to do is simple multiplication
 	// Pixels with zero gain become dead pixels
 	if(invertGain) {
 		for(long i=0;i<pix_nn;i++) {
-			if(gaincal[i] != 0)
-				gaincal[i] = 1.0/gaincal[i];
-			else 
+			if (gaincal[i] != 0) {
+				if (normalizeGain)
+					gaincal[i] = sum/gaincal[i];
+				else
+					gaincal[i] = 1.0/gaincal[i];
+			} else 
 				gaincal[i] = 0;
 		}
 	}
@@ -1622,7 +1724,7 @@ void cGlobal::writeFinalLog(void){
  */
 void cGlobal::readIcemask(char *filename){
 	
-	printf("Reading peak search mask:\n");
+	printf("Reading ice peak search mask:\n");
 	printf("\t%s\n",filename);
 	
 	
@@ -1667,7 +1769,7 @@ void cGlobal::readIcemask(char *filename){
  */
 void cGlobal::readWatermask(char *filename){
 	
-	printf("Reading peak search mask:\n");
+	printf("Reading water peak search mask:\n");
 	printf("\t%s\n",filename);
 	
 	
@@ -1712,7 +1814,7 @@ void cGlobal::readWatermask(char *filename){
  */
 void cGlobal::readBackgroundmask(char *filename){
 	
-	printf("Reading peak search mask:\n");
+	printf("Reading background search mask:\n");
 	printf("\t%s\n",filename);
 	
 	

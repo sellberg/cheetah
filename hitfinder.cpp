@@ -71,6 +71,7 @@ int hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder *hitf) {
 					nat++;
 				}
 			}
+			threadInfo->nPeaks = (int)nat;
 			if(nat >= hitf->NAT)
 				hit = 1;
 			break;

@@ -75,6 +75,15 @@ public:
 	double		centerCorrectionDeltaR;	// step length in pixels for the radius
 	double		centerCorrectionMaxC;	// maximum value in pixels of the shift in center that the hough transform will be performed for, the true center should lie inside +/- this value.
 	double		centerCorrectionDeltaC;	// step length in pixels for the center
+	int			useMetrologyRefinement;	// set to nonzero to shift X/Y values of the quads
+	float		quad0DX;
+	float		quad0DY;
+	float		quad1DX;
+	float		quad1DY;
+	float		quad2DX;
+	float		quad2DY;
+	float		quad3DX;
+	float		quad3DY;
 	int			refineMetrology;	// refine metrology by translating/rotating quads w.r.t. each other
 	float		refinementMaxC;			// maximum value in pixels of the shift in the quad center that the refinement will be performed for, the true quad center should lie inside +/- this value.
 	float		refinementDeltaC;		// step length in pixels for the quad center
@@ -89,18 +98,19 @@ public:
 	int			generateDarkcal;		// Flip this on to generate a darkcal (auto-turns-on appropriate other options)
 	
 	// Common mode and pedastal subtraction
-	int			cmModule;				// Subtract common mode from each ASIC
-	int			cmSubModule;			// Subtract common mode from subsets of each ASIC (currently 16 sub-portions)
+	int			cmModule;				// Subtract common mode from each 2x1 Module (2 ASICs)
+	int			cmSubModule;			// Subtract common mode from subsets of each ASIC, the value of cmSubModule defines how many times each dimension of each ASIC will be divided by and should be 1 or a multiple of 2
 	float		cmFloor;				// Use lowest x% of values as the offset to subtract (typically lowest 2%)
+	int			cmSaveHistograms;		// Save intensity histograms for each 2x1 Module. Histograms are saved into separate files for each event. The median defined by cmFloor is saved in the first element unless terminal output states otherwise
 
 	// Gain correction
 	int			useGaincal;			// whether to read to gain map from a file
-	int			invertGain;			// whether to invert the gain map????
+	int			invertGain;			// inverts the gain map, this is the standard since gain maps from flat fields should be divided with the measured intensity
+	int			normalizeGain;		// normalizes the gain map, so that a flat-field average can be used as gain calibration
 	char		gaincalFile[1024];			// Name of file containing the gain map
 	
 	// Running background subtraction
 	int			useSubtractPersistentBackground;  // if set a running background will be calculated and subtracted. 
-	int			subtractBg;			  // what is this parameter?? It's also not in the ini file
 	int			scaleBackground;		  // scale the running background for each shot to account for intensity fluctuations
 	float		bgMemory;				  // number of frames to use for determining the running background
 	
@@ -140,7 +150,7 @@ public:
     // Correlation analysis
     int         useCorrelation;     // set to nonzero to turn on angular cross-correlation module, also controls what correlation algorithm to be used, 1: regular, 2: fast
 	int			sumCorrelation;		// set to nonzero to sum cross-correlation patterns for different hits
-	int			autoCorrelationOnly;		// set to nonzero to only calculate autocorrelation (q1=q2)
+	int			autoCorrelateOnly;		// set to nonzero to only calculate autocorrelation (q1=q2)
     double 		correlationStartQ;		// customize the range of the correlation algorithms
     double 		correlationStopQ;		// startQ/stopQ are in units of detector pixels
     int 		correlationNumQ;		// number of q values between start and stop
@@ -294,6 +304,7 @@ public:
 	void setup(void);				// function that sets parameter values from default/config file/command line arguments
 	void readDetectorGeometry(char *);		// following functions read the h5 files in raw format
 	float pixelCenter(float *pixel_array); // help function for readDetectorGeometry to calculate center of pixel array
+	void shiftQuads(float *xarray, float *quad_dx, float *yarray, float *quad_dy); // help function for readDetectorGeometry to shift quads w.r.t. each other
 	void readDarkcal(char *);
 	void readGaincal(char *);
 	void readPeakmask(char *);

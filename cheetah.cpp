@@ -147,9 +147,9 @@ void beginjob() {
 	global.readDetectorGeometry(global.geometryFile);
 	global.setup();
 	global.readDarkcal(global.darkcalFile);
+	global.readBadpixelMask(global.badpixelFile);
 	global.readGaincal(global.gaincalFile);
 	global.readPeakmask(global.hitfinder.peaksearchFile);
-	global.readBadpixelMask(global.badpixelFile);
 	global.readIcemask(global.icefinder.peaksearchFile);
 	global.readWatermask(global.waterfinder.peaksearchFile);
 	global.readBackgroundmask(global.backgroundfinder.peaksearchFile);
@@ -296,7 +296,7 @@ void event() {
 	//printf("Beam %s : fiducial %x\n", beam ? "On":"Off", fiducial);
 	if(!beam)
 		return;
-  
+	
 	
 	/*
 	 * Get electron beam parameters from beamline data
@@ -551,8 +551,8 @@ void event() {
 	while(global.nActiveThreads >= global.nThreads) {
 		usleep(100);
 	}
-
-
+	
+	
 	// Increment threadpool counter
 	pthread_mutex_lock(&global.nActiveThreads_mutex);
 	global.nActiveThreads += 1;
@@ -570,7 +570,6 @@ void event() {
 	//pthread_detach(thread);
 	global.nprocessedframes += 1;
 	
-
 	
 	/*
 	 *	Save periodic powder patterns
@@ -579,8 +578,6 @@ void event() {
 		saveRunningSums(&global);
 		global.updateLogfile();
 	}
-	
-	
 	
 	
 }
@@ -626,6 +623,7 @@ void endjob()
 	
 	// Refine metrology by translating/rotating quads w.r.t each other from regular powder pattern
 	if (global.hitfinder.use && global.powdersum && global.refineMetrology) {
+		cout << "Refining metrology..." << endl;
 		translateQuads(&global);
 		rotateQuads(&global);
 	}

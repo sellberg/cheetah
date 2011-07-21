@@ -108,7 +108,8 @@ void *worker(void *threadarg) {
 	if(global->useGaincal) {
 		applyGainCorrection(threadInfo, global);
 	}
-
+	
+	
 	/*
 	 *	Apply bad pixel map
 	 */
@@ -268,8 +269,15 @@ void *worker(void *threadarg) {
 			writeHDF5(threadInfo, global, eventname, global->backgroundfinder.cleanedfp);
 		}
 	}
-	printf("r%04u:%i (%3.1f Hz): Processed (npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum,global->datarate, threadInfo->nPeaks);
-
+	if (global->icefinder.use) {
+		printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.ice, threadInfo->nPeaks);
+	} else if (global->waterfinder.use) {
+		printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.water, threadInfo->nPeaks);
+	} else if (global->hitfinder.use) {
+		printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.standard, threadInfo->nPeaks);
+	} else if ((global->nprocessedframes % 100) == 0) {
+		printf("r%04u:%i (%3.1f Hz): Processed %i events\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, global->nprocessedframes);
+	}
 
 	/*
 	 *	Write out information on each frame to a log file
@@ -1052,7 +1060,7 @@ void saveRunningSums(cGlobal *global) {
 				for(long i=0; i<global->correlation_nn; i++)
 					buffer8[i] = (float) global->powderCorrelation[i]/global->npowder;
 				pthread_mutex_unlock(&global->powdersumcorrelation_mutex);
-				if (global->autoCorrelationOnly) writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
+				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				else writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				free(buffer8);
 				
@@ -1110,7 +1118,7 @@ void saveRunningSums(cGlobal *global) {
 				for(long i=0; i<global->correlation_nn; i++)
 					buffer9[i] = (float) global->iceCorrelation[i]/global->nice;
 				pthread_mutex_unlock(&global->icesumcorrelation_mutex);
-				if (global->autoCorrelationOnly) writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
+				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				else writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				free(buffer9);
 				
@@ -1167,7 +1175,7 @@ void saveRunningSums(cGlobal *global) {
 				for(long i=0; i<global->correlation_nn; i++)
 					buffer10[i] = (float) global->waterCorrelation[i]/global->nice;
 				pthread_mutex_unlock(&global->watersumcorrelation_mutex);
-				if (global->autoCorrelationOnly) writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
+				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				else writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				free(buffer10);
 				
@@ -1204,7 +1212,7 @@ void calculatePowderSAXS(cGlobal *global) {
 		int counteri = 0; // reset counter
 		int counterw = 0; // reset counter
 		for (int j=0; j<global->pix_nn; j++) {
-			if ( pix_r[j] == global->powderQ[i] ) {
+			if ( pix_r[j] == global->powderQ[i] && (!global->useBadPixelMask || global->badpixelmask[j]) ) {
 				if (global->hitfinder.use) {
 					global->powderAverage[i] += global->powderRaw[j];
 					counterp++;
@@ -1815,73 +1823,123 @@ void updateSAXSArrays(cGlobal *global) {
 
 void translateQuads(cGlobal *global) {
 	
+	float dx, dy;
+	int refinementNumC = int(2*round(global->refinementMaxC/global->refinementDeltaC) + 1);
+	double imax[4];
+	for (int i=0; i<4; i++) {
+		imax[i] = 0;
+	}
+	
 	float *pix_x = global->pix_x; // let original pix_x be stored through local pointer
 	float *pix_y = global->pix_y; // let original pix_y be stored through local pointer
 	global->pix_x = (float *) calloc(global->pix_nn, sizeof(float));
 	global->pix_y = (float *) calloc(global->pix_nn, sizeof(float));
-	float delta;
-	int refinementNumC = int(2*round(global->refinementMaxC/global->refinementDeltaC) + 1);
+	for (int i=0; i<global->pix_nn; i++) {
+		global->pix_x[i] = pix_x[i];
+		global->pix_y[i] = pix_y[i];
+	}
 	
-//	for (int c=0; c<refinementNumC; c++) {
-//		
-//		delta = c*global->refinementDeltaC - global-<refinementMaxC;
-//		
-//		
-//		
-//		
-//		for (int quad=0; quad<4; quad++) {
-//			
-//			// for each quad, pix_x
-//			for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
-//				for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
-//					for(int i=0; i<ROWS; i++){
-//						for(int j=0; j<COLS; j++){
-//							long index = (j + mj*COLS) * (8*ROWS);
-//							index += i + mi*ROWS + quad*2*ROWS;
-//							global->pix_x[index] = pix_x[index]+delta;
-//							
-//						}
-//					}
-//				}
-//			}
-//			
-//			// for each quad, pix_y
-//			for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
-//				for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
-//					for(int i=0; i<ROWS; i++){
-//						for(int j=0; j<COLS; j++){
-//							int index = (j + mj*COLS) * (8*ROWS);
-//							index += i + mi*ROWS + quad*2*ROWS;
-//							global->pix_y[index] = pix_y[index]+delta;
-//							
-//						}
-//					}
-//				}
-//			}
-//			
-//			calculatePowderSAXS(global);
-//			
-//		}
-//		
-//	}
+	// for each quad
+	for (int quad=0; quad<4; quad++) {
+		
+		// refine x
+		for (int x=0; x<refinementNumC; x++) {
+			dx = x*global->refinementDeltaC - global->refinementMaxC;
+			DEBUGL1_ONLY cout << "dx: " << dx << endl;
+			
+			// refine y
+			for (int y=0; y<refinementNumC; y++) {
+				dy = y*global->refinementDeltaC - global->refinementMaxC; 
+				DEBUGL1_ONLY cout << "\tdy: " << dy << endl;
+				
+				// shift global->pix_x
+				for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
+					for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
+						for(int i=0; i<ROWS; i++){
+							for(int j=0; j<COLS; j++){
+								long index = (j + mj*COLS) * (8*ROWS);
+								index += i + mi*ROWS + quad*2*ROWS;
+								global->pix_x[index] += dx;
+							}
+						}
+					}
+				}
+				
+				// shift global->pix_y
+				for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
+					for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
+						for(int i=0; i<ROWS; i++){
+							for(int j=0; j<COLS; j++){
+								int index = (j + mj*COLS) * (8*ROWS);
+								index += i + mi*ROWS + quad*2*ROWS;
+								global->pix_y[index] += dy;
+							}
+						}
+					}
+				}
+				
+				calculatePowderSAXS(global);
+				
+				// evaluate maximum intensity
+				double imaxtemp = 0;
+				for (int i=0; i<global->powder_nn; i++) {
+					if (global->powderAverage[i] > imaxtemp) imaxtemp = global->powderAverage[i];
+					global->powderAverage[i] = 0;
+				}
+				DEBUGL1_ONLY cout << "\tQ" << quad << ", Imax: " << imaxtemp << endl;
+				
+				// update best dx/dy based on maximum intensity
+				if (imaxtemp > imax[quad]) {
+					imax[quad] = imaxtemp;
+					global->quad_dx[quad] = dx;
+					global->quad_dy[quad] = dy;
+					cout << "\tQ" << quad << ": (" << dx << "," << dy << ")" << endl;
+				}
+				
+				// restore global arrays
+				for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
+					for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
+						for(int i=0; i<ROWS; i++){
+							for(int j=0; j<COLS; j++){
+								int index = (j + mj*COLS) * (8*ROWS);
+								index += i + mi*ROWS + quad*2*ROWS;
+								global->pix_x[index] = pix_x[index];
+								global->pix_y[index] = pix_y[index];
+							}
+						}
+					}
+				}
+				
+			}
+			
+		}
+		
+		// shift global arrays by optimized position from the current quadrant to use for optimization of subsequent quadrants
+		for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
+			for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
+				for(int i=0; i<ROWS; i++){
+					for(int j=0; j<COLS; j++){
+						int index = (j + mj*COLS) * (8*ROWS);
+						index += i + mi*ROWS + quad*2*ROWS;
+						global->pix_x[index] += global->quad_dx[quad];
+						global->pix_y[index] += global->quad_dy[quad];
+					}
+				}
+			}
+		}
+		
+	}
 	
-	
+	// clear global arrays
 	free(global->pix_x);
 	free(global->pix_y);
-	//SHIFT pix_x and pix_y TO THE CORRECT POSITION
-	for (int quad=0; quad<4; quad++)
-		//shiftQuad(pix_x, quad_dx[quad], pix_y, quad_dy[quad], global->pix_nn);
+	
+	// shift pix_x and pix_y to the correct position and update global arrays
+	global->shiftQuads(pix_x, global->quad_dx, pix_y, global->quad_dy);
 	global->pix_x = pix_x;
 	global->pix_y = pix_y;
 }
 
-void shiftQuad(float *xarray, float dx, float *yarray, float dy, long arraylength) {
-	for (long i=0; i<arraylength; i++) {
-		xarray[i] += dx;
-		yarray[i] += dy;
-	}
-}
-
 void rotateQuads(cGlobal *global) {
-	cout << "rotateQuads" << endl;
+	DEBUGL1_ONLY cout << "rotateQuads" << endl;
 }

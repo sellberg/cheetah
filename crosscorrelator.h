@@ -28,11 +28,14 @@ private:
 	int p_samplingLength;
 	int p_samplingAngle;
 	int p_samplingLag;
+	bool p_mask;			// enables/disables masking of bad pixels
+	bool p_xcca;		// enables/disables cross-correlations (if disabled only autocorrelations are calculated)
     std::string p_outputdir;  // the output directory if anything is dumped from withing this class (default is working dir)
 
 	array1D *data;			//data storage
-	array1D *qx;				//pixel x coordinate
-	array1D *qy;				//pixel y coordinate
+	array1D *qx;			//pixel x coordinate
+	array1D *qy;			//pixel y coordinate
+	array1D *mask;			//mask used to remove bad pixels
 	
 	array1D *q;				//magnitude of q vector (1st dimension in correlation)
 	array1D *phi;			//angle (2nd dimension in correlation)
@@ -40,6 +43,7 @@ private:
 	array1D *qave;
 	array1D *iave;
 	array1D *phiave;
+	array2D *autoCorrelation;
 	array3D *crossCorrelation;	
 	void updateDependentVariables();
     
@@ -60,7 +64,10 @@ public:
 	CrossCorrelator( float *dataCArray, int arraylength );                                        //init with actual data
     CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength );      //init with actual data + centered(!) q calibration
 	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, double qMax, double qMin );
-	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, int nq, int nphi );
+	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, int nq, int nphi ); // autocorrelation only
+	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, int nq1, int nq2, int nphi ); // full xcca
+	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int16_t *maskCArray, int arraylength, int nq, int nphi ); // autocorrelation only
+	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int16_t *maskCArray, int arraylength, int nq1, int nq2, int nphi ); // full xcca
 	
 	~CrossCorrelator();
 	
@@ -152,6 +159,7 @@ public:
 	double getQave(unsigned index) const;
 	double getPhiave(unsigned index) const;
 	double getIave(unsigned index) const;
+	double getCrossCorrelation(unsigned index1, unsigned index2) const;
 	double getCrossCorrelation(unsigned index1, unsigned index2, unsigned index3) const;
 };
 
