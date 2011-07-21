@@ -39,6 +39,9 @@ using std::endl;
 #include "correlation.h"
 #include "crosscorrelator.h"
 
+#include "arrayclasses.h"
+#include "arraydataIO.h"
+
 
 
 
@@ -115,8 +118,10 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		//writing Tiff is not explicitly thread-safe... is this a problem for the cheetah?
 		std::ostringstream name_osst;
 		name_osst << threadInfo->eventname << "-xaca.tif";
-		corr->writeToTiff( name_osst.str(), 1 );            //dump scaled output from correlation
-				
+		arraydataIO *io = new arraydataIO;
+		io->writeToTiff( name_osst.str(), corr, 1 );            //dump scaled output from correlation
+		delete io;
+		
 		//clean up
         delete polar;
         delete corr;
