@@ -27,9 +27,6 @@ using std::ofstream;
 #include <cmath>
 #include <complex>              // needed to let fftw use regular doubles
 
-//include headers
-#include <hdf5.h>
-#include <tiffio.h>
 
 
 
@@ -117,6 +114,19 @@ void arraydata::copy( const double* src_data, const unsigned int arraysize ){		/
         p_data = new double[ arraysize ];
         for (int i = 0; i < p_size; i++) {
             p_data[i] = src_data[i];
+        }
+    }else{
+        p_data = NULL;
+    }
+}
+
+void arraydata::copy( const float* src_data, const unsigned int arraysize ){		//src type: double c-array
+    p_size = arraysize;
+    if (p_size > 0){
+		this->destroy();
+        p_data = new double[ arraysize ];
+        for (int i = 0; i < p_size; i++) {
+            p_data[i] = (double)src_data[i];
         }
     }else{
         p_data = NULL;
@@ -675,266 +685,15 @@ std::string array2D::getASCIIdata() const{
 }
 
 
-//-------------------------------------------------------------- writeToTiff
-// (needs TIFFLIB installation)
-// ATTENTION: libtiff is not explicitly thread-safe
-//			be sure to use mutexes when writing to disk
-//
-// scaleFlag 0: direct output of values, 
-//				cut off values larger than 2^16-1 = 65535
-// scaleFlag 1: scaled output to full tiff scale of 0 to 65535
-//
-// implementation borrowed following matrixdata::tiff16out 
-// of the tomo/matlib package (see http://xray-lens.de )
-//--------------------------------------------------------------------------
-int array2D::writeToTiff( std::string filename, int scaleFlag, int verbose ) const{
-
-    if (size() == 0) {
-        cerr << "Error in writeToTiff! Array size is zero." << endl;
-    }
-    
-    if (!p_data) {
-        cerr << "Error in writeToTiff! No data in array." << endl;
-    }
-
-    
-	TIFF *out = TIFFOpen(filename.c_str() ,"w");
-	if(out)
-	{
-		uint32 width = (uint32) dim1();
-		uint32 height = (uint32) dim2();
-		
-		//int imagesize = i_width * i_height;
-		// float xRes, yRes;
-		// uint16 res_unit;
-		uint16 spp, bpp, photo;
-		
-		double MaxValue = calcMax();
-		double MinValue = calcMin();
-		double MaxMinRange = MaxValue - MinValue;
-		
-		uint16 *tifdata = new uint16[width];
-		
-		
-		// define tif-parameters
-		spp = 1;      // Samples per pixel
-		bpp = 16;     // Bits per sample
-		photo = PHOTOMETRIC_MINISBLACK;
-		
-		// set the width of the image
-		TIFFSetField(out, TIFFTAG_IMAGEWIDTH, width/spp);  
-		//TIFFSetField(out, TIFFTAG_IMAGEWIDTH, image_width * bpp * 8); 
-		
-		// set the height of the image
-		TIFFSetField(out, TIFFTAG_IMAGELENGTH, height);  
-		
-		// set the size of the channels   
-		TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, bpp); 
-		
-		// set number of channels per pixel
-		TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, spp);
-		
-		// set the origin of the image
-		TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    
-		
-		TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
-		TIFFSetField(out, TIFFTAG_PHOTOMETRIC, photo);
-
-		
-		
-		//write to file
-		for (uint32 i = 0; i < height; i++)
-		{
-			for (unsigned int j = 0; j < width; j++)
-			{
-				if (scaleFlag) {								//scale image to full range
-					tifdata[j] = (uint16) floor(65535.* (get(j,i)-MinValue)/MaxMinRange);
-				} 
-				else {											//direct output, cut off larger values
-					if( get(j,i) < 0 ) {
-						tifdata[j] = 0;
-					}
-					else if ( get(j,i) > 65535 ) {
-						tifdata[j] = 65535;
-					}
-					else{ 
-						tifdata[j] = (uint16) floor(get(j,i));
-					}
-				}
-			}
-			
-			TIFFWriteScanline(out, tifdata, i, 0);
-		}
-		
-		
-		if (verbose){
-			cout << "Tiff image '" << filename << "' written to disc!" << endl;
-		}
-		
-		delete[] tifdata;
-		TIFFClose(out);
-		return 0;
-	}else{
-        cerr << "Error in array2D::writeToTiff! Could not open '" << filename << "' for writing!" << endl;
-		return 1;	
-    }
-}
-
-
-//-------------------------------------------------------------- writeToHDF5
-int array2D::writeToHDF5( std::string filename ) const{
-		
-	std::string dataset_name = "data";
-	int NX = dim1();
-	int NY = dim2();
-	int image_rank = 2;
-	
-	cout << "dim1: " << dim1() << ", dim2: " << dim2() << ", sizeof(int)=" << sizeof(int) << endl;
-	
-    hid_t		fileID, datasetID;          //file and dataset handles
-	hid_t		groupID;					//group id
-    hid_t		dataspaceID;				// handles 
-    hsize_t		dimension[2];				// dataset dimensions
-    herr_t		status;
-    int			data[NX][NY];				// data to write
-    int			i, j;
-	
-	
-	
-    // data assignment and output buffer initialization.
-	for(i = 0; i < dim1(); i++){			//5
-		for(j = 0; j < dim2(); j++){		//10
-			data[i][j] = int( get(i, j) );
-		}
-	}
-
-	//observe original data
-	for(i = 0; i < dim1(); i++){
-		for(j = 0; j < dim2(); j++){
-			cout << "org: " << get(i, j) << " ";
-		}
-		cout << endl;
-	}
-	
-	//observe new data stream to be written
-	for(i = 0; i < dim1(); i++){
-		for(j = 0; j < dim2(); j++){
-			cout << "new: " << data[i][j] << " ";
-		}
-		cout << endl;
-	}
-	
-    // create file, ANTON_CHECK
-	// returns 'file' handler
-    fileID = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-	
-    
-	// create group "data", ANTON_CHECK
-	std::string groupname = "data";
-	groupID = H5Gcreate(fileID, groupname.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-	if (groupID < 0){
-		std::cerr << "Error in writeToHDF5. Couldn't create group " << groupname << endl;
-		H5Fclose(fileID);
-		return 1;
-	}
-	
-	
-	//describe dataspace dimensions, ANTON_CHECK
-    dimension[0] = dim1();
-    dimension[1] = dim2();
-    dataspaceID = H5Screate_simple(image_rank, dimension, NULL);
-	
-	
-	//create dataset, ANTON_CHECK (anton has H5T_STD_I16LE)
-    datasetID = H5Dcreate(groupID, dataset_name.c_str(), H5T_STD_I16LE, dataspaceID,
-						 H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-	if (datasetID < 0) {
-		cerr << "Error in writeToHDF5. Couldn't create dataset" << endl;
-		H5Fclose(fileID);
-	}
-	
-	
-	// write data to the dataset, ANTON_CHECK (anton has H5T_STD_I16LE)
-    status = H5Dwrite(datasetID, H5T_STD_I16LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
-	
-	
-    //close all open structures 
-    H5Dclose(datasetID);
-	H5Sclose(dataspaceID);
-	
-	H5Gclose(groupID);
-    H5Fclose(fileID);
-	
-		
-	return 0;
-}
-
 
 //------------------------------------------------------------- writeToASCII
 int array2D::writeToASCII( std::string filename ) const{
-	
 	ofstream fout( filename.c_str() );
 	fout << arraydata::getASCIIdataAsColumn();
 	fout.close();
-
 	return 0;
 }
 
-
-//--------------------------------------------------------------------arraydata::readFromHDF5
-void array2D::readFromHDF5( std::string rfilename ){
-	cout << "reading from HDF5 file " << rfilename << endl;
-	
-	hid_t       file;
-//    hid_t       space;
-    hid_t       dset;          /* Handles */
-    herr_t      status;
-//    hsize_t     dims[1] = { size() };
-	double		*rdata = new double[size()];
-	
-	string dataset = "data";
-	
-	/*
-	 * Get datatype and dataspace identifiers,  
-	 * then query datatype class, order, and size, and 
-	 * then query dataspace rank and dimensions.
-	 */
-	/*
-	 datatype  = H5Dget_type(dataset);     // datatype identifier
-	 class     = H5Tget_class(datatype);
-	 if (class == H5T_INTEGER) printf("Dataset has INTEGER type \n");
-	 order     = H5Tget_order(datatype);
-	 if (order == H5T_ORDER_LE) printf("Little endian order \n");
-	 
-	 size  = H5Tget_size(datatype);
-	 printf(" Data size is %d \n", size);
-	 
-	 dataspace = H5Dget_space(dataset);    // dataspace identifier
-	 rank      = H5Sget_simple_extent_ndims(dataspace);
-	 status_n  = H5Sget_simple_extent_dims(dataspace, dims_out);
-	 printf("rank %d, dimensions %d x %d \n", rank, dims_out[0], dims_out[1]);
-	 */
-	
-	
-	// open file and dataset using the default properties
-    file = H5Fopen (rfilename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-    dset = H5Dopen (file, dataset.c_str(), H5P_DEFAULT);
-	
-	
-    // read the data using the default properties.
-    status = H5Dread (dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-					  &rdata[0]);
-	
-    // close and release resources.
-    status = H5Dclose (dset);
-    status = H5Fclose (file);
-	
-	//put data into private variable
-	this->arraydata::copy( rdata, size() );
-	
-	delete []rdata;
-	//set dimension!!!!!
-}
 
 
 //-----------------------------------------------------setters & getters
@@ -1168,11 +927,9 @@ string array3D::getASCIIdata() const{
 
 //------------------------------------------------------------- writeToASCII
 int array3D::writeToASCII( std::string filename ) const{
-	
 	ofstream fout( filename.c_str() );
 	fout << arraydata::getASCIIdataAsColumn();
 	fout.close();
-    
     return 0;
 }
 

@@ -45,6 +45,7 @@ public:
     //helper functions
     void init();
     void copy( const double* src_data, const unsigned int size_val );
+    void copy( const float* src_data, const unsigned int size_val );
     void copy( const int* src_data, const unsigned int size_val );
     void copy( const arraydata& src );
     void copy( const array1D& src );
@@ -113,8 +114,6 @@ public:
 	double get( unsigned int i ) const;
 	void set( unsigned int i, double value );
     
-                                   
-    
     std::string getASCIIdata() const;
     int writeToASCII( std::string filename ) const;
 };
@@ -153,11 +152,6 @@ public:
     int getCol( int colnum, array1D *&col ) const;						//return value is 0 if successful
     void setRow( int rownum, const array1D *row );                              //sets a one-dimensional row
     void setCol( int colnum, const array1D *col );
-            
-	void readFromHDF5( std::string filename );
-	
-	int writeToTiff( std::string filename, int scaleFlag = 0, int verbose = 0 ) const;     //needs libtiff
-	int writeToHDF5( std::string filename ) const;
     
     std::string getASCIIdata() const;
 	int writeToASCII( std::string filename ) const;
