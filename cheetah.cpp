@@ -630,9 +630,9 @@ void endjob()
 	
 	
 	// Calculate angular average of powder pattern
-	if (global.powdersum && global.powderSAXS) {
-		calculatePowderSAXS(&global);
-		savePowderSAXS(&global);
+	if (global.powdersum && global.powderAngularAvg) {
+		calculatePowderAngularAvg(&global);
+		savePowderAngularAvg(&global);
 	}
 	
 	
@@ -697,6 +697,8 @@ void endjob()
 	delete[] global.totalThicknesses;
 	delete[] global.energies;
 	delete[] global.wavelengths;
+	delete[] global.angularAvgQ;
+	delete[] global.angularAvg_i;
 	delete[] global.correlationLUT;
 	
 	pthread_mutex_destroy(&global.nActiveThreads_mutex);

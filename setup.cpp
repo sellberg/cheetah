@@ -183,10 +183,11 @@ void cGlobal::defaultConfiguration(void) {
 	powderthresh = 0;
 	
 	// Angular averages of powder patterns
-	powderSAXS = 0;
-	powderStartQ = 0;
-	powderStopQ = 0;
-	deltaqSAXS = 1;
+	powderAngularAvg = 0;
+	hitAngularAvg = 0;
+	angularAvgStartQ = 0;
+	angularAvgStopQ = 0;
+	angularAvgDeltaQ = 1;
     
 	// Correlation analysis
 	useCorrelation = 0;
@@ -233,14 +234,15 @@ void cGlobal::setup() {
 	//initially, set everything to NULL, allocate only those that are actually needed below
 	powderRaw = NULL;
 	powderAssembled = NULL;
-	powderAverage = NULL;
-	powderQ = NULL;
 	iceRaw = NULL;
 	iceAssembled = NULL;
-	iceAverage = NULL;
 	waterRaw = NULL;
 	waterAssembled = NULL;		
+	powderAverage = NULL;
+	iceAverage = NULL;
 	waterAverage = NULL;
+	angularAvgQ = NULL;
+	angularAvg_i = NULL;
 	powderCorrelation = NULL;
 	iceCorrelation = NULL;
 	waterCorrelation = NULL;
@@ -270,7 +272,8 @@ void cGlobal::setup() {
 		startFrames = 0;
 		powdersum = 0;
 		powderthresh = 0;
-		powderSAXS = 0;
+		powderAngularAvg = 0;
+		hitAngularAvg = 0;
 		calculateCenterCorrectionPowder = 0;
 		calculateCenterCorrectionHit = 0;
 		refineMetrology = 0;
@@ -306,17 +309,36 @@ void cGlobal::setup() {
 			if (waterfinder.use) 
 				waterRaw = (double*) calloc(pix_nn, sizeof(double));
 		}
-		if (powderSAXS || refineMetrology) {
-			powderQ = (double*) calloc(powder_nn, sizeof(double));
-			if (hitfinder.use) 
-				powderAverage = (double*) calloc(powder_nn, sizeof(double));
-			if (icefinder.use) 
-				iceAverage = (double*) calloc(powder_nn, sizeof(double));
-			if (waterfinder.use) 
-				waterAverage = (double*) calloc(powder_nn, sizeof(double));
-		}
-	}//powdersum end
 		
+		if (powderAngularAvg || refineMetrology) {
+			if (hitfinder.use) 
+				powderAverage = (double*) calloc(angularAvg_nn, sizeof(double));
+			if (icefinder.use) 
+				iceAverage = (double*) calloc(angularAvg_nn, sizeof(double));
+			if (waterfinder.use) 
+				waterAverage = (double*) calloc(angularAvg_nn, sizeof(double));
+		}
+	}// powdersum end
+	
+	/*
+	 *	Setup global angular average variables
+	 */
+	if ((powdersum && (powderAngularAvg || refineMetrology)) || hitAngularAvg) {
+		angularAvgQ = new double[angularAvg_nn];
+		for (int i=0; i<angularAvg_nn; i++) {
+			angularAvgQ[i] = angularAvgStartQ + i*angularAvgDeltaQ;
+		}
+		// calculate index for each pixel with correct bin lengths in angular average array
+		angularAvg_i = new int[pix_nn];
+		for (int i=0; i<pix_nn; i++) {
+			angularAvg_i[i] = (int) round( (sqrt(((double) pix_x[i])*pix_x[i] + ((double) pix_y[i])*pix_y[i]) - angularAvgStartQ) / angularAvgDeltaQ );
+		}	
+	}
+	
+	/*
+	 *	Setup global cross correlation variables
+	 */
+	correlationLUT = new int[correlationLUTdim1*correlationLUTdim2];
 	if (useCorrelation) {
 		if (!correlationNumDelta) 
 			correlationNumDelta = (int) ceil(correlationNumPhi/2.0+1);
@@ -333,8 +355,7 @@ void cGlobal::setup() {
 			if (waterfinder.use) 
 				waterCorrelation = (double*) calloc(correlation_nn, sizeof(double));
 		}
-	}// useCorrelation end
-	
+	}// useCorrelation end	
 	
 	/*
 	 *	Set up thread management
@@ -443,12 +464,7 @@ void cGlobal::setup() {
 		Lmin = 100000;
 		Lmax = 0;
 	}
-	
-	/*
-	 *	Setup global cross correlation variables
-	 */
-	correlationLUT = new int[correlationLUTdim1*correlationLUTdim2];
-	
+		
 	// Make sure to use SLAC timezone!
 	setenv("TZ","US/Pacific",1);
 	
@@ -686,17 +702,20 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "powdersum")) {
 		powdersum = atoi(value);
 	}
-	else if (!strcmp(tag, "powdersaxs")) {
-		powderSAXS = atoi(value);
+	else if (!strcmp(tag, "powderangularavg")) {
+		powderAngularAvg = atoi(value);
 	}
-	else if (!strcmp(tag, "powderstartq")) {
-		powderStartQ = atof(value);
+	else if (!strcmp(tag, "hitangularavg")) {
+		hitAngularAvg = atoi(value);
 	}
-	else if (!strcmp(tag, "powderstopq")) {
-		powderStopQ = atof(value);
+	else if (!strcmp(tag, "angularavgstartq")) {
+		angularAvgStartQ = atof(value);
 	}
-	else if (!strcmp(tag, "deltaqsaxs")) {
-		deltaqSAXS = atof(value);
+	else if (!strcmp(tag, "angularavgstopq")) {
+		angularAvgStopQ = atof(value);
+	}
+	else if (!strcmp(tag, "angularavgdeltaq")) {
+		angularAvgDeltaQ = atof(value);
 	}
 	else if (!strcmp(tag, "usecorrelation")) {
 		useCorrelation = atoi(value);
@@ -1089,11 +1108,11 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	pix_ymax = ymax;
 	pix_ymin = ymin;
 	pix_rmax = rmax;
-	if (powderStopQ == 0 || powderStopQ < powderStartQ) {
-		powder_nn = (unsigned) round(rmax/deltaqSAXS)+1;
-		powderStartQ = 0;
+	if (angularAvgStopQ == 0 || angularAvgStopQ < angularAvgStartQ) {
+		angularAvg_nn = (unsigned) ceil(rmax/angularAvgDeltaQ)+1;
+		angularAvgStartQ = 0;
 	} else {
-		powder_nn = (unsigned) round((powderStopQ-powderStartQ)/deltaqSAXS)+1;
+		angularAvg_nn = (unsigned) ceil((angularAvgStopQ-angularAvgStartQ)/angularAvgDeltaQ)+1;
 	}
 	
 	//xmax = ceil(xmax);
