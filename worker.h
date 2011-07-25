@@ -60,6 +60,7 @@ typedef struct {
 	uint16_t	*raw_data;
 	float		*corrected_data;
 	float		*image;
+	double		*angularAvg;
 	double		*correlation;
 	int			nPeaks;
 	int			nHot;
@@ -158,6 +159,8 @@ void writeSimpleHDF5(const char *filename, const void *data, int width, int heig
 void saveRunningSums(cGlobal*);
 void calculatePowderAngularAvg(cGlobal *global);
 void savePowderAngularAvg(cGlobal *global);
+void calculateAngularAvg(tThreadInfo *threadInfo, cGlobal *global);
+void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global);
 void saveEnergies(cGlobal *global);
 void makeEnergyHistograms(cGlobal *global);
 void calculateCenterCorrection(cGlobal *global, double *intensities, double normalization);

@@ -78,6 +78,13 @@ void *worker(void *threadarg) {
 	
 	
 	/*
+	 *	Initialize pointers to analysis arrays to NULL
+	 */
+	threadInfo->angularAvg = NULL;
+	threadInfo->correlation = NULL;
+	
+	
+	/*
 	 *	Create a unique name for this event
 	 */
 	nameEvent(threadInfo, global);
@@ -215,7 +222,19 @@ void *worker(void *threadarg) {
 	if (global->useAttenuationCorrection > 0) {
 		applyAttenuationCorrection(threadInfo, global);
 	}
-
+	
+	
+	/*
+     *  Calculate angular averages
+     */
+	if (global->hitAngularAvg && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
+								   || (hit.water && global->waterfinder.savehits) 
+								   || (hit.ice && global->icefinder.savehits) 
+								   || (!hit.background && global->backgroundfinder.savehits) )) {
+		calculateAngularAvg(threadInfo, global);
+		saveAngularAvg(threadInfo, global);
+	}
+	
 	
 	/*
      *  Perform cross-correlation analysis
@@ -302,8 +321,10 @@ void *worker(void *threadarg) {
 	free(threadInfo->raw_data);
 	free(threadInfo->corrected_data);
 	free(threadInfo->image);
+	free(threadInfo->angularAvg);
+	free(threadInfo->correlation);
 	free(threadInfo);
-
+	
 	// Exit thread
 	pthread_exit(NULL);
 }
@@ -1301,6 +1322,68 @@ void savePowderAngularAvg(cGlobal *global) {
 		
 	}			
 
+}
+
+
+void calculateAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
+	
+	// allocate local & threadInfo arrays
+	unsigned *counter = (unsigned*) calloc(global->angularAvg_nn, sizeof(unsigned));
+	threadInfo->angularAvg = (double*) calloc(global->angularAvg_nn, sizeof(double));
+	
+	// angular average for each |q|
+	for (int i=0; i<global->pix_nn; i++) {
+		if ( global->angularAvg_i[i] < global->angularAvg_nn && global->angularAvg_i[i] >= 0 && (!global->useBadPixelMask || global->badpixelmask[i]) ) {
+			threadInfo->angularAvg[global->angularAvg_i[i]] += threadInfo->corrected_data[i];
+			counter[global->angularAvg_i[i]]++;
+		}
+	}
+	
+	for (int i=0; i<global->angularAvg_nn; i++) {
+		if (counter[i]) threadInfo->angularAvg[i] /= counter[i];
+	}
+	
+	// free memory of local variables
+	free(counter);
+	
+}
+
+
+void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
+	
+	// save angular average of hit without Q-scale (1D array)
+	if (global->hitAngularAvg) {
+		
+		char	filename[1024];
+		float *buffer = (float*) calloc(global->angularAvg_nn, sizeof(float));
+		sprintf(filename,"%s-angavg.h5",threadInfo->eventname);
+		
+		for(long i=0; i<global->angularAvg_nn; i++) {
+			buffer[i] = (float) threadInfo->angularAvg[i];
+		}
+		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 1, H5T_NATIVE_FLOAT);
+		
+		free(buffer);
+		
+	}
+	
+	// save angular average of hit with Q-scale (2D array)
+//	if (global->hitAngularAvg) {
+//		
+//		char	filename[1024];
+//		float *buffer = (float*) calloc(2*global->angularAvg_nn, sizeof(float));
+//		sprintf(filename,"%s-angavg.h5",threadInfo->eventname);
+//
+//		for(long i=0; i<global->angularAvg_nn; i++) {
+//			buffer[i] = (float) global->angularAvgQ[i];
+//			buffer[global->angularAvg_nn+i] = (float) threadInfo->angularAvg[i];
+//		}
+//		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
+//		
+//		free(buffer);
+//		
+//	}	
+	
 }
 
 

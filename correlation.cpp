@@ -188,7 +188,7 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	double samplingAngleD = (double) cc->samplingAngle();
 	double *buffer;
 	buffer = (double*) calloc(cc->samplingLength()*cc->samplingLength()*cc->samplingLag(), sizeof(double));
-	info->correlation = (double*) calloc(global->correlation_nn, sizeof(double));
+	if (global->sumCorrelation) info->correlation = (double*) calloc(global->correlation_nn, sizeof(double));
 	
 	if (global->autoCorrelateOnly){
 		sprintf(outfile,"%s-xaca.bin",eventname);
