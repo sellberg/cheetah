@@ -194,9 +194,22 @@ unsigned int arraydata::size() const{
 
 
 //--------------------------------------------------------------------
-void arraydata::zero(){				//set all elements to zero
+void arraydata::zero(){					//set all elements to zero
 	for (int i = 0; i < size(); i++) {
 		set_atAbsoluteIndex(i, 0);
+	}	
+}
+
+void arraydata::ones(){					//set all elements to one
+	for (int i = 0; i < size(); i++) {
+		set_atAbsoluteIndex(i, 1);
+	}	
+}
+
+void arraydata::range( double neg, double pos ){	//set elements to a range of values, given by the boundaries
+	double delta = (pos-neg)/(size()-1);
+	for (int i = 0; i < size(); i++) {
+		set_atAbsoluteIndex(i, neg+delta*i);
 	}	
 }
 
@@ -346,6 +359,20 @@ int arraydata::addArrayElementwise( const arraydata *secondArray ){
     
     for (int i = 0; i<this->size(); i++) {
         this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)+secondArray->get_atAbsoluteIndex(i));
+    }
+    return 0;
+}
+
+//subtract each element by an element from a second array
+int arraydata::subtractArrayElementwise( const arraydata *secondArray ){
+    if (this->size() != secondArray->size()){
+        cerr << "Error in arraydata::subtractArrayElementwise! Array sizes don't match. ";
+        cerr << "(" << this->size() << " != " << secondArray->size() << "). Operation not performed."<< endl;
+        return 1;
+    }
+    
+    for (int i = 0; i<this->size(); i++) {
+        this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)-secondArray->get_atAbsoluteIndex(i));
     }
     return 0;
 }
@@ -665,6 +692,41 @@ void array2D::setCol( const int colnum, const array1D *col ){
         }
     }
 }
+
+//------------------------------------------------------------- xrange
+// example of xrange(-2,2)
+//	 -2 -1  0  1  2
+//	 -2 -1  0  1  2
+//	 -2 -1  0  1  2
+//	 -2 -1  0  1  2
+//	 -2 -1  0  1  2
+//
+void array2D::xrange( double xneg, double xpos ){	//set elements to a range of values, given by the boundaries
+	double xdelta = (xpos-xneg)/(dim1()-1);
+	for (int j = 0; j < dim2(); j++) {
+		for (int i = 0; i < dim1(); i++) {
+			set(i, j, xneg+xdelta*i );
+		}
+	}
+}
+
+//------------------------------------------------------------- range2D
+// example of yrange(-2,2)
+//	  2  2  2  2  2
+//	  1  1  1  1  1
+//	  0  0  0  0  0
+//	 -1 -1 -1 -1 -1
+//	 -2 -2 -2 -2 -2
+//
+void array2D::yrange( double yneg, double ypos ){	//set elements to a range of values, given by the boundaries
+	double ydelta = (ypos-yneg)/(dim2()-1);
+	for (int j = 0; j < dim2(); j++) {
+		for (int i = 0; i < dim1(); i++) {
+			set(i, j, yneg+ydelta*j);
+		}
+	}
+}
+
     
 //------------------------------------------------------------- getASCIIdata
 std::string array2D::getASCIIdata() const{
