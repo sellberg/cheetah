@@ -142,11 +142,12 @@ public:
 	int			saveInterval;			 // powder pattern is repeatedly saved according to this interval
     
 	// Angular averages
-	int			powderSAXS;			// set to nonzero to calculate angular averages of the powder patterns
-	double		powderStartQ;		// start position for SAXS pattern calculated in pixel from the center
-	double		powderStopQ;			// end position for SAXS pattern calculated in pixel from the center
-	double		deltaqSAXS;			// binning of angular averages, DeltaQ currently determines step size in pixels
-    
+	int			powderAngularAvg;			// set to nonzero to calculate angular averages of the powder patterns
+	int			hitAngularAvg;			// set to nonzero to calculate angular averages of each hit
+	double		angularAvgStartQ;		// start position for angular average calculated in pixel from the center
+	double		angularAvgStopQ;			// end position for angular average calculated in pixel from the center
+	double		angularAvgDeltaQ;			// binning of angular averages, DeltaQ currently determines step size in pixels
+	
     // Correlation analysis
     int         useCorrelation;     // set to nonzero to turn on angular cross-correlation module, also controls what correlation algorithm to be used, 1: regular, 2: fast
 	int			sumCorrelation;		// set to nonzero to sum cross-correlation patterns for different hits
@@ -226,13 +227,18 @@ public:
 	float			pix_ymax;
 	float			pix_ymin;
 	float			pix_rmax;
-	unsigned		powder_nn;
 	unsigned		module_rows;
 	unsigned		module_cols;
 	long			image_nx;
 	long			image_nn;
 	float			*quad_dx;
 	float			*quad_dy;
+	
+	
+	// Angular average variables
+	unsigned	angularAvg_nn;	// length of angular average arrays
+	int			*angularAvg_i;	// stores index for each pixel in angular average array
+	double		*angularAvgQ;	// stores q-values for angular averages	
 	
 	
 	// Attenuation variables
@@ -267,7 +273,6 @@ public:
 	double			*powderRaw;		// stores powder pattern in raw format
 	double			*powderAssembled;	// stores the assembled powder pattern
 	double			*powderAverage;		// stores angular average of powder pattern
-	double			*powderQ;	// stores q-values for angular average of powder pattern
 	double			*powderCorrelation;	// stores correlation sum of regular hits
 	double			*waterRaw;		// stores powder pattern of water hits in raw format
 	double			*waterAssembled;	// stores the assembled powder pattern of water hits

@@ -78,6 +78,13 @@ void *worker(void *threadarg) {
 	
 	
 	/*
+	 *	Initialize pointers to analysis arrays to NULL
+	 */
+	threadInfo->angularAvg = NULL;
+	threadInfo->correlation = NULL;
+	
+	
+	/*
 	 *	Create a unique name for this event
 	 */
 	nameEvent(threadInfo, global);
@@ -215,7 +222,19 @@ void *worker(void *threadarg) {
 	if (global->useAttenuationCorrection > 0) {
 		applyAttenuationCorrection(threadInfo, global);
 	}
-
+	
+	
+	/*
+     *  Calculate angular averages
+     */
+	if (global->hitAngularAvg && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
+								   || (hit.water && global->waterfinder.savehits) 
+								   || (hit.ice && global->icefinder.savehits) 
+								   || (!hit.background && global->backgroundfinder.savehits) )) {
+		calculateAngularAvg(threadInfo, global);
+		saveAngularAvg(threadInfo, global);
+	}
+	
 	
 	/*
      *  Perform cross-correlation analysis
@@ -302,8 +321,10 @@ void *worker(void *threadarg) {
 	free(threadInfo->raw_data);
 	free(threadInfo->corrected_data);
 	free(threadInfo->image);
+	free(threadInfo->angularAvg);
+	free(threadInfo->correlation);
 	free(threadInfo);
-
+	
 	// Exit thread
 	pthread_exit(NULL);
 }
@@ -1189,79 +1210,90 @@ void saveRunningSums(cGlobal *global) {
 }
 
 
-void calculatePowderSAXS(cGlobal *global) {
+void calculatePowderAngularAvg(cGlobal *global) {
 	
 	// calculating SAXS average from the powder pattern 
 	DEBUGL1_ONLY printf("calculating angular average from powder pattern...\n");
 	
-	// allocate local arrays
-	double *pix_r = new double[global->pix_nn];
-	
-	// calculate |q| for each pixel and bin lengths with correct resolution
-	for (int i=0; i<global->pix_nn; i++) {
-		pix_r[i] = (double) round( (sqrt(((double) global->pix_x[i])*global->pix_x[i] + ((double) global->pix_y[i])*global->pix_y[i]) - global->powderStartQ) / global->deltaqSAXS ) * global->deltaqSAXS + global->powderStartQ;
+	// allocate local counter arrays
+	unsigned *counterp = NULL;
+	unsigned *counteri = NULL;
+	unsigned *counterw = NULL;
+	if (global->hitfinder.use) {
+		counterp = (unsigned*) calloc(global->angularAvg_nn, sizeof(unsigned));
 	}
-	
+	if (global->icefinder.use) {
+		counteri = (unsigned*) calloc(global->angularAvg_nn, sizeof(unsigned));
+	}
+	if (global->waterfinder.use) {
+		counterw = (unsigned*) calloc(global->angularAvg_nn, sizeof(unsigned));
+	}
+		
 	// angular average for each |q|
-	DEBUGL1_ONLY printf("# of steps: %d\n",global->powder_nn);
+	DEBUGL1_ONLY printf("# of steps: %d\n",global->angularAvg_nn);
 	DEBUGL2_ONLY printf("average SAXS intensity:\n");
 	
-	for (int i=0; i<global->powder_nn; i++) {
-		global->powderQ[i] = global->powderStartQ + i*global->deltaqSAXS;
-		int counterp = 0; // reset counter
-		int counteri = 0; // reset counter
-		int counterw = 0; // reset counter
-		for (int j=0; j<global->pix_nn; j++) {
-			if ( pix_r[j] == global->powderQ[i] && (!global->useBadPixelMask || global->badpixelmask[j]) ) {
-				if (global->hitfinder.use) {
-					global->powderAverage[i] += global->powderRaw[j];
-					counterp++;
-				}
-				if (global->icefinder.use) {
-					global->iceAverage[i] += global->iceRaw[j];
-					counteri++;
-				}
-				if (global->waterfinder.use) {
-					global->waterAverage[i] += global->waterRaw[j];
-					counterw++;
-				}
+	for (int i=0; i<global->pix_nn; i++) {
+		if ( global->angularAvg_i[i] < global->angularAvg_nn && global->angularAvg_i[i] >= 0 && (!global->useBadPixelMask || global->badpixelmask[i]) ) {
+			if (global->hitfinder.use) {
+				global->powderAverage[global->angularAvg_i[i]] += global->powderRaw[i];
+				counterp[global->angularAvg_i[i]]++;
+			}
+			if (global->icefinder.use) {
+				global->iceAverage[global->angularAvg_i[i]] += global->iceRaw[i];
+				counteri[global->angularAvg_i[i]]++;
+			}
+			if (global->waterfinder.use) {
+				global->waterAverage[global->angularAvg_i[i]] += global->waterRaw[i];
+				counterw[global->angularAvg_i[i]]++;
 			}
 		}
-		if (global->hitfinder.use) global->powderAverage[i] /= counterp;
-		if (global->icefinder.use) global->iceAverage[i] /= counteri;
-		if (global->waterfinder.use) global->waterAverage[i] /= counterw;
+	}
+	
+	for (int i=0; i<global->angularAvg_nn; i++) {
+		if (global->hitfinder.use) {
+			if (counterp[i]) global->powderAverage[i] /= counterp[i];
+		}
+		if (global->icefinder.use) {
+			if (counteri[i]) global->iceAverage[i] /= counteri[i];
+		}
+		if (global->waterfinder.use) {
+			if (counterw[i]) global->waterAverage[i] /= counterw[i];
+		}
 		
 		DEBUGL2_ONLY {
-			if (global->hitfinder.use) cout << "Q: " << global->powderQ[i] << ",   \t# pixels: " << counterp << ",\tI(powder): " << global->powderAverage[i] << endl;
-			if (global->icefinder.use) cout << "Q: " << global->powderQ[i] << ",   \t# pixels: " << counteri << ",\tI(water): " << global->iceAverage[i] << endl;
-			if (global->waterfinder.use) cout << "Q: " << global->powderQ[i] << ",   \t# pixels: " << counterw << ",\tI(ice): " << global->waterAverage[i] << endl;
+			if (global->hitfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterp << ",\tI(powder): " << global->powderAverage[i] << endl;
+			if (global->icefinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counteri << ",\tI(water): " << global->iceAverage[i] << endl;
+			if (global->waterfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterw << ",\tI(ice): " << global->waterAverage[i] << endl;
 		}
 	}
 	
 	// free memory of local variables
-	delete[] pix_r;
+	free(counterp);
+	free(counteri);
+	free(counterw);
 	
 }
 
 
-void savePowderSAXS(cGlobal *global) {
+void savePowderAngularAvg(cGlobal *global) {
 	
-	if (global->powdersum && global->powderSAXS) {
+	if (global->powdersum && global->powderAngularAvg) {
 		
 		char	filename[1024];		
-		float *buffer = (float*) calloc(2*global->powder_nn, sizeof(float));
-		for(long i=0; i<global->powder_nn; i++)
-			buffer[i] = (float) global->powderQ[i];
+		float *buffer = (float*) calloc(2*global->angularAvg_nn, sizeof(float));
+		for(long i=0; i<global->angularAvg_nn; i++)
+			buffer[i] = (float) global->angularAvgQ[i];
 		
 		/*
 		 *	Save powder SAXS pattern
 		 */
 		if (global->hitfinder.use) {
-			printf("Saving powder SAXS data to file\n");
+			printf("Saving powder angular average data to file\n");
 			sprintf(filename,"r%04u-SAXS.h5",global->runNumber);
-			for(long i=0; i<global->powder_nn; i++)
-				buffer[global->powder_nn+i] = (float) global->powderAverage[i]/global->npowder;
-			writeSimpleHDF5(filename, buffer, global->powder_nn, 2, H5T_NATIVE_FLOAT);
+			for(long i=0; i<global->angularAvg_nn; i++)
+				buffer[global->angularAvg_nn+i] = (float) global->powderAverage[i]/global->npowder;
+			writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
 		}
 		
 		/*
@@ -1270,9 +1302,9 @@ void savePowderSAXS(cGlobal *global) {
 		if (global->icefinder.use) {
 			printf("Saving ice SAXS data to file\n");
 			sprintf(filename,"r%04u-SAXS_ice.h5",global->runNumber);
-			for(long i=0; i<global->powder_nn; i++)
-				buffer[global->powder_nn+i] = (float) global->iceAverage[i]/global->nice;
-			writeSimpleHDF5(filename, buffer, global->powder_nn, 2, H5T_NATIVE_FLOAT);
+			for(long i=0; i<global->angularAvg_nn; i++)
+				buffer[global->angularAvg_nn+i] = (float) global->iceAverage[i]/global->nice;
+			writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
 		}
 		
 		/*
@@ -1281,15 +1313,77 @@ void savePowderSAXS(cGlobal *global) {
 		if (global->waterfinder.use) {
 			printf("Saving water SAXS data to file\n");
 			sprintf(filename,"r%04u-SAXS_water.h5",global->runNumber);
-			for(long i=0; i<global->powder_nn; i++)
-				buffer[global->powder_nn+i] = (float) global->waterAverage[i]/global->nwater;
-			writeSimpleHDF5(filename, buffer, global->powder_nn, 2, H5T_NATIVE_FLOAT);
+			for(long i=0; i<global->angularAvg_nn; i++)
+				buffer[global->angularAvg_nn+i] = (float) global->waterAverage[i]/global->nwater;
+			writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
 		}
 		
 		free(buffer);
 		
 	}			
 
+}
+
+
+void calculateAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
+	
+	// allocate local & threadInfo arrays
+	unsigned *counter = (unsigned*) calloc(global->angularAvg_nn, sizeof(unsigned));
+	threadInfo->angularAvg = (double*) calloc(global->angularAvg_nn, sizeof(double));
+	
+	// angular average for each |q|
+	for (int i=0; i<global->pix_nn; i++) {
+		if ( global->angularAvg_i[i] < global->angularAvg_nn && global->angularAvg_i[i] >= 0 && (!global->useBadPixelMask || global->badpixelmask[i]) ) {
+			threadInfo->angularAvg[global->angularAvg_i[i]] += threadInfo->corrected_data[i];
+			counter[global->angularAvg_i[i]]++;
+		}
+	}
+	
+	for (int i=0; i<global->angularAvg_nn; i++) {
+		if (counter[i]) threadInfo->angularAvg[i] /= counter[i];
+	}
+	
+	// free memory of local variables
+	free(counter);
+	
+}
+
+
+void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
+	
+	// save angular average of hit without Q-scale (1D array)
+	if (global->hitAngularAvg) {
+		
+		char	filename[1024];
+		float *buffer = (float*) calloc(global->angularAvg_nn, sizeof(float));
+		sprintf(filename,"%s-angavg.h5",threadInfo->eventname);
+		
+		for(long i=0; i<global->angularAvg_nn; i++) {
+			buffer[i] = (float) threadInfo->angularAvg[i];
+		}
+		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 1, H5T_NATIVE_FLOAT);
+		
+		free(buffer);
+		
+	}
+	
+	// save angular average of hit with Q-scale (2D array)
+//	if (global->hitAngularAvg) {
+//		
+//		char	filename[1024];
+//		float *buffer = (float*) calloc(2*global->angularAvg_nn, sizeof(float));
+//		sprintf(filename,"%s-angavg.h5",threadInfo->eventname);
+//
+//		for(long i=0; i<global->angularAvg_nn; i++) {
+//			buffer[i] = (float) global->angularAvgQ[i];
+//			buffer[global->angularAvg_nn+i] = (float) threadInfo->angularAvg[i];
+//		}
+//		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
+//		
+//		free(buffer);
+//		
+//	}	
+	
 }
 
 
@@ -1796,26 +1890,26 @@ void updateImageArrays(cGlobal *global, cHit *hit) {
 void updateSAXSArrays(cGlobal *global) {
 	// update size of SAXS arrays before they are filled
 	
-	if (global->powdersum && global->powderSAXS) {
-		if (global->powderStopQ == 0 || global->powderStopQ < global->powderStartQ) {
-			global->powder_nn = (unsigned) round(global->pix_rmax/global->deltaqSAXS)+1;
-			global->powderStartQ == 0;
+	if (global->powdersum && global->powderAngularAvg) {
+		if (global->angularAvgStopQ == 0 || global->angularAvgStopQ < global->angularAvgStartQ) {
+			global->angularAvg_nn = (unsigned) round(global->pix_rmax/global->angularAvgDeltaQ)+1;
+			global->angularAvgStartQ == 0;
 		} else {
-			global->powder_nn = (unsigned) round((global->powderStopQ-global->powderStartQ)/global->deltaqSAXS)+1;
+			global->angularAvg_nn = (unsigned) round((global->angularAvgStopQ-global->angularAvgStartQ)/global->angularAvgDeltaQ)+1;
 		}
-		free(global->powderQ);
-		global->powderQ = (double*) calloc(global->powder_nn, sizeof(double));
+		free(global->angularAvgQ);
+		global->angularAvgQ = (double*) calloc(global->angularAvg_nn, sizeof(double));
 		if (global->hitfinder.use) {
 			free(global->powderAverage);
-			global->powderAverage = (double*) calloc(global->powder_nn, sizeof(double));
+			global->powderAverage = (double*) calloc(global->angularAvg_nn, sizeof(double));
 		}
 		if (global->icefinder.use) {
 			free(global->iceAverage);
-			global->iceAverage = (double*) calloc(global->powder_nn, sizeof(double));
+			global->iceAverage = (double*) calloc(global->angularAvg_nn, sizeof(double));
 		}
 		if (global->waterfinder.use) {
 			free(global->waterAverage);
-			global->waterAverage = (double*) calloc(global->powder_nn, sizeof(double));
+			global->waterAverage = (double*) calloc(global->angularAvg_nn, sizeof(double));
 		}
 	}
 }
@@ -1878,11 +1972,11 @@ void translateQuads(cGlobal *global) {
 					}
 				}
 				
-				calculatePowderSAXS(global);
+				calculatePowderAngularAvg(global);
 				
 				// evaluate maximum intensity
 				double imaxtemp = 0;
-				for (int i=0; i<global->powder_nn; i++) {
+				for (int i=0; i<global->angularAvg_nn; i++) {
 					if (global->powderAverage[i] > imaxtemp) imaxtemp = global->powderAverage[i];
 					global->powderAverage[i] = 0;
 				}
