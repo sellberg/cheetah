@@ -11,7 +11,7 @@
 #define _crosscorrelator_h
 
 #include "arrayclasses.h"
-//#include "arraydataIO.h"				// can be used, but shouldn't be mandatory here
+
 
 #include <string>
 
@@ -51,7 +51,12 @@ private:
 	fftw_plan p_fplan;		//forward FFT plan
 	fftw_plan p_bplan;		//backward FFT plan
 
-	//arraydataIO *io;		(arraydataIO.h needed for this)
+	double p_qxmax;
+	double p_qymax;	
+	double p_qxmin;
+	double p_qymin;
+	double p_qxdelta;
+	double p_qydelta;
 
     //-----some debug features that can turned on via setDebug()
     int p_debug;
@@ -68,6 +73,7 @@ public:
 	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, int nq1, int nq2, int nphi ); // full xcca
 	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int16_t *maskCArray, int arraylength, int nq, int nphi ); // autocorrelation only
 	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int16_t *maskCArray, int arraylength, int nq1, int nq2, int nphi ); // full xcca
+	CrossCorrelator( array2D *dataArray, array2D *qxArray, array2D *qyArray, int nq, int nphi ); // autocorrelation only
 	
 	~CrossCorrelator();
 	
@@ -112,8 +118,8 @@ public:
 	// a lookup table can be created within this object, if none was available externally
 	// (for cheetah, performance is better if this is calculated once in advance 
 	// and then handed to the CrossCorrelator for each shot)
-	int createLookupTable(int Nx, int Ny);
-	void calcLUTvariables( int lutNx, int lutNy, double &qx_min, double &qx_stepsize, double &qy_min, double &qy_stepsize );
+	int createLookupTable( int Nx, int Ny );
+	void calcLUTvariables( int lutNx, int lutNy );
     
     //compute 1D correlations using FFT, the result is returned in f, respectively
     int correlateFFT( array1D *f, array1D *g );    // result of corr(f,g) -> f
