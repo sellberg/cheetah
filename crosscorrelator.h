@@ -111,6 +111,7 @@ public:
 	// sets the lookup table necessary for lookup() to work. this needs to be provided externally, (a default one is available)
 	void setLookupTable( array2D *LUT );
 	void setLookupTable( const int *cLUT, unsigned int LUT_dim1, unsigned int LUT_dim2 );
+	array2D *getLookupTable();
 	
 	// sets the two plans needed for forward and backward Fourier Transform --> correlation
 	void setFFTWPlans( fftw_plan forwardplan, fftw_plan backwardplan );

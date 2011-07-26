@@ -29,6 +29,9 @@ using std::endl;
 #include <string>
 using std::string;
 
+#include <vector>
+using std::vector;
+
 #include "arraydataIO.h"				// can be used, isn't be mandatory here
 
 
@@ -1055,6 +1058,10 @@ double CrossCorrelator::qmax1CArray( float *qCArray, int arraylength ) {
 }
 
 void CrossCorrelator::setOutputdir( std::string dir ){
+	const char lastchar = dir.at( dir.size()-1 );
+	if( lastchar != '/' ){		//if last character is not a slash, append one
+		dir += '/';
+	}
     p_outputdir = dir;
 }
 
@@ -1194,6 +1201,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D *&polar,
     double p = 0.;
     int qcounter = 0;
     int pcounter = 0;
+	int novalue = 0;
     
 	for(q = start_q, qcounter=0; qcounter < number_q; q+=step_q, qcounter++){                        // q: for all rings/q-values
         if(debug()){cout << "#" << qcounter << ",q=" << q << "  " << std::flush;}
@@ -1204,14 +1212,28 @@ int CrossCorrelator::calculatePolarCoordinates_FAST(array2D *&polar,
 			ycoord = q * sin(p*M_PI/180);
 
             //lookup that value in original scattering data
-            value = lookup( xcoord, ycoord );
-            
+			try {
+            	value = lookup( xcoord, ycoord );
+            } catch (int e) {
+				//cout << "Exception: " << e << endl;
+				value = 0;									//setting the 0 here will introduce false correlations!!!
+				novalue++;
+				if ( e == 10){
+					cout << "Exception " << e << ": interpolation in lookup failed." << endl;
+				}
+			}
+			
 			//assign the new values 
 			//polar->set(pcounter, qcounter, value * q);	//(functional determinant q to account for bins growing as q grows)
 			polar->set(pcounter, qcounter, value);
 		}
 	}
-    
+	
+	if ( novalue > 0 ){
+		cout << "Warning in calculatePolarCoordinates_FAST! Couldn't assign a value in " << novalue << " cases (" 
+			<< ((double)novalue)/number_q/number_phi*100 << "%)." << endl;
+    }
+	
     if (debug()) {
 		cout << "polarCoordinates done. dimensions=(" << polar->dim1() << " x " << polar->dim2() << ")" << endl;
 	    //write output of the intermediate files? (all zero by default, turn on for debugging or whatever)
@@ -1480,7 +1502,7 @@ int CrossCorrelator::autocorrelateFFT( array1D *f ){
 //----------------------------------------------------------------------------lookup
 double CrossCorrelator::lookup( double xcoord, double ycoord ) {
 
-    double val = 0.;    //return data value at the given coordinates
+    double value = 0.;    //return data value at the given coordinates
     int index = 0;      //to do that, the index in the data is determined first
 
     double xc = (xcoord-p_qxmin) / p_qxdelta;
@@ -1488,28 +1510,69 @@ double CrossCorrelator::lookup( double xcoord, double ycoord ) {
 
     int ix = (int) floor( xc + 0.5 );		// round to nearest integer
     int iy = (int) floor( yc + 0.5 );
-	    
+	
+	bool enable_warnings = false;
     if ( !table ){
         cerr << "Error in lookup! No lookup table was allocated." << endl;
+		throw 0;
     } else if ( ix < 0 ){
-        cerr << "Error in lookup! xcoord=" << xcoord << " is too small.";
-        cerr << "   ix=" << ix << " < 0)" << endl;
+        if (enable_warnings){
+			cerr << "Error in lookup! xcoord=" << xcoord << " is too small.";
+        	cerr << "   ix=" << ix << " < 0)" << endl;
+		}
+		throw 1;
     } else if ( ix >= table->dim1() ){
-        cerr << "Error in lookup! xcoord=" << xcoord << " is too large.";
-        cerr << "   ix=" << ix << " >= " << table->dim1() << " (table dimx)" << endl;
+        if (enable_warnings){
+	        cerr << "Error in lookup! xcoord=" << xcoord << " is too large.";
+	        cerr << "   ix=" << ix << " >= " << table->dim1() << " (table dimx)" << endl;
+		}
+		throw 2;
     } else if ( iy < 0 ){
-        cerr << "Error in lookup! ycoord=" << ycoord << " is too small.";
-        cerr << "   iy=" << iy << " < 0)" << endl;
+        if (enable_warnings){
+	        cerr << "Error in lookup! ycoord=" << ycoord << " is too small.";
+    	    cerr << "   iy=" << iy << " < 0)" << endl;
+		}
+		throw 3;
     } else if ( iy >= table->dim2() ){
-        cerr << "Error in lookup! ycoord=" << ycoord << " is too large.";
-        cerr << "   iy=" << iy << " >= " << table->dim2() << " (table dimy)" << endl;
-    } else {
+        if (enable_warnings){
+			cerr << "Error in lookup! ycoord=" << ycoord << " is too large.";
+			cerr << "   iy=" << iy << " >= " << table->dim2() << " (table dimy)" << endl;
+    	}
+		throw 4;
+	} else {
 	    //create lookup index from original coordinates (assuming the data is properly centered)
-	    //the add-one-half->floor trick is to achieve reasonable rounded integers
-        index = (int) floor( table->get(ix, iy) + 0.5 );
-        val = data->get( index );
-
-
+        index = (int) table->get(ix, iy);
+		if ( index > 0 ){
+			value = data->get( index );
+		} else {
+			// if the value returned was negative, that means there is no lookup value assigned to this pair of (ix, iy)
+			// this could be because the table is too large
+			// solution: create a binned value from the surrounding pixels
+			int valid = 0;			//number of valid indices
+			double sum = 0.;		//sum of retrieved values (at valid indices)
+			vector<int> indices;
+			indices.push_back( (int) table->get(ix+1, iy) );
+			indices.push_back( (int) table->get(ix-1, iy) );
+			indices.push_back( (int) table->get(ix, iy+1) );
+			indices.push_back( (int) table->get(ix, iy-1) );
+			for (int i = 0; i < indices.size(); i++){
+				int ndx = indices.at(i);
+				if ( ndx > 0 ){
+					valid++;
+					sum += data->get( ndx );
+				}
+			}
+			if ( valid > 0 ){
+				value = sum / valid;
+			} else {
+				cout << "WARNING in lookup()! Couldn't find a valid value for coordinates (" << xcoord << ", " << ycoord << "). " << endl;
+				// search region would have to be expanded in a complete implementation....... 
+				// the way it is should be enough for the moment, though, if the table isn't way too big......
+				throw 10;
+			}
+			
+		}
+		
 		//-----------------------!!!DEBUG!!!
 		//make a hot pixel out of the one that was just looked up
 		//careful! this actually changes the data in the input array!!
@@ -1523,10 +1586,10 @@ double CrossCorrelator::lookup( double xcoord, double ycoord ) {
         cout << "lookup (" << xcoord << ", " << ycoord 
             << ") --> LUT: (xc,yc)=(" << xc << ", " << yc 
             << ") ==> (" << ix << ", " << iy << ") "
-            << "--> index=" << index << ", --> val=" << val << endl;
+            << "--> index=" << index << ", --> val=" << value << endl;
     }
 
-    return val;
+    return value;
 }
 
 
@@ -1543,6 +1606,10 @@ void CrossCorrelator::setLookupTable( const int *cLUT, unsigned int LUT_dim1, un
 	table->setDim1(LUT_dim1);						//set dimensions
 	table->setDim2(LUT_dim2);
 	table->arraydata::copy(cLUT, tablelength);		//store a copy in 'table' locally
+}
+
+array2D *CrossCorrelator::getLookupTable(){
+	return table;
 }
 
 //----------------------------------------------------------------------------calcLUTvariables
@@ -1576,10 +1643,15 @@ int CrossCorrelator::createLookupTable( int lutNx, int lutNy ){
 	if (debug()){ cout << "CrossCorrelator::createLookupTable() begin." << endl; }
 
     int retval = 0;
+	
 	calcLUTvariables( lutNx, lutNy );
 	
 	array2D *myTable = new array2D( lutNx, lutNy );
     myTable->zero();
+	
+	//initialize table with -1, which can never be a real index
+	const double initval = -1;
+	myTable->addValue(initval);			
     
     if ( qx->size()!=qy->size() ) {
         cerr << "Error in createLookupTable! Array sizes don't match: " 
@@ -1588,7 +1660,7 @@ int CrossCorrelator::createLookupTable( int lutNx, int lutNy ){
     } else {
         double ix = 0;
         double iy = 0;
-        for (int i = 0; i < qx->size(); i++){           //go through all the data
+        for (double i = 0; i < qx->size(); i++){           //go through all the data
             //get q-values from qx and qy arrays
             //and determine at what index (ix, iy) to put them in the lookup table
 			double qxi = qx->get(i);
@@ -1599,7 +1671,7 @@ int CrossCorrelator::createLookupTable( int lutNx, int lutNy ){
             //and fill table at the found coordinates with the data index
             //overwriting whatever value it had before
 		    //(the add-one-half->floor trick is to achieve reasonable rounded integers)
-            myTable->set( (int) floor(ix+0.5), (int) floor(iy+0.5), i );
+            myTable->set( (int) floor(ix+0.5), (int) floor(iy+0.5), double(i) );
             
             /////////////////////////////////////////////////////////////////////////////////////////
             //ATTENTION: THIS METHOD WILL LEAD TO A LOSS OF DATA,
@@ -1623,7 +1695,21 @@ int CrossCorrelator::createLookupTable( int lutNx, int lutNy ){
 	if (debug()>1){ cout << "table = " << myTable->getASCIIdata() << endl; }
     if (debug()){ cout << "CrossCorrelator::createLookupTable() done." << endl; }
 	
-	//replace table
+	//sanity check: how many, if any places are still at the default value?
+	int initcount = 0;
+	for (int i = 0; i < myTable->size(); i++){
+		if ( myTable->get_atAbsoluteIndex(i) == initval ){
+			initcount++;
+		}
+	}
+	if (initcount > 0) {
+		cout << "==============================================================================================" << endl;
+		cout << "Warning in createLookupTable! There are still " << initcount << " unassigned values (" 
+			<< ((double)initcount)/myTable->size()*100 << "%) in the lookup table." << endl;
+		cout << "==============================================================================================" << endl;
+	}
+	
+	//replace current table
 	setLookupTable(myTable);
 	
 	delete myTable;	
