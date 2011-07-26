@@ -177,8 +177,8 @@ double arraydata::get_atAbsoluteIndex( unsigned int i) const{
 
 
 //--------------------------------------------------------------------
-void arraydata::set_atAbsoluteIndex( unsigned int i, double val){
-	if (i < size()) {
+void arraydata::set_atAbsoluteIndex( const unsigned int i, const double val){
+	if ( i < size() ) {
 		p_data[i] = val;
 	} else {									//fail 'silently', as in: don't do anything
 		std::cerr << "Error in arraydata::set_atAbsoluteIndex(" << i 
@@ -481,7 +481,7 @@ double array1D::get( unsigned int i ) const{
 	}
 }
 
-void array1D::set( unsigned int i, double value ){
+void array1D::set( const unsigned int i, const double value ){
 	if ( i < dim1() ) {
 		arraydata::set_atAbsoluteIndex(i, value);
 	} else {
@@ -599,7 +599,7 @@ double array2D::get( unsigned int i, unsigned int j ) const{
 	}
 }
 
-void array2D::set( unsigned int i, unsigned int j, double value ){
+void array2D::set( const unsigned int i, const unsigned int j, const double value ){
 	if ( i < dim1() && j < dim2()) {
 		arraydata::set_atAbsoluteIndex( j*dim1() + i, value);
 	} else {
@@ -927,7 +927,7 @@ double array3D::get( unsigned int i, unsigned int j, unsigned int k ) const{
 	}
 }
 
-void array3D::set( unsigned int i, unsigned int j, unsigned int k, double value ){
+void array3D::set( const unsigned int i, const unsigned int j, const unsigned int k, const double value ){
 	if ( i < dim1() && j < dim2() && k < dim3() ) {
 		arraydata::set_atAbsoluteIndex( k*dim1()*dim2() + j*dim1() + i, value);
 	} else {
