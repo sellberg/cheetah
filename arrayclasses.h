@@ -45,6 +45,7 @@ public:
     //helper functions
     void init();
     void copy( const double* src_data, const unsigned int size_val );
+    void copy( const float* src_data, const unsigned int size_val );
     void copy( const int* src_data, const unsigned int size_val );
     void copy( const arraydata& src );
     void copy( const array1D& src );
@@ -53,6 +54,7 @@ public:
     
     void zero();												//set all elements to zero
 	void ones();												//set all elements to 1
+	void range( double neg, double pos );						//set elements to a range of values, given by the boundaries
     
 	// 'atAbsoluteIndex' functions:
 	// the following functions change or return properties
@@ -78,6 +80,7 @@ public:
     int multiplyByFactor( double factor );
  
 	int addArrayElementwise( const arraydata *secondArray );
+	int subtractArrayElementwise( const arraydata *secondArray );
     int multiplyByArrayElementwise( const arraydata *secondFactor );
 
 //	int verbose() const;
@@ -112,8 +115,6 @@ public:
 	
 	double get( unsigned int i ) const;
 	void set( unsigned int i, double value );
-    
-                                   
     
     std::string getASCIIdata() const;
     int writeToASCII( std::string filename ) const;
@@ -153,11 +154,9 @@ public:
     int getCol( int colnum, array1D *&col ) const;						//return value is 0 if successful
     void setRow( int rownum, const array1D *row );                              //sets a one-dimensional row
     void setCol( int colnum, const array1D *col );
-            
-	void readFromHDF5( std::string filename );
 	
-	int writeToTiff( std::string filename, int scaleFlag = 0, int verbose = 0 ) const;     //needs libtiff
-	int writeToHDF5( std::string filename ) const;
+	void xrange( double xneg, double xpos );
+	void yrange( double yneg, double ypos );
     
     std::string getASCIIdata() const;
 	int writeToASCII( std::string filename ) const;

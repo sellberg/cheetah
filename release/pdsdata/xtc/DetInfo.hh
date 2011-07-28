@@ -50,7 +50,8 @@ namespace Pds {
       CxiDs2        = 33,
       CxiDsu        = 34,
       CxiSc1        = 35,
-      NumDetector   = 36
+      CxiDsd        = 36,
+      NumDetector   = 37
     };
 
     enum Device {
@@ -66,7 +67,8 @@ namespace Pds {
       Encoder   = 9,
       Cspad     = 10,
       AcqTDC    = 11,
-      NumDevice = 12
+      Xamps     = 12,
+      NumDevice = 13
     };
 
     DetInfo() {}

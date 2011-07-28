@@ -12,6 +12,7 @@
 
 #include "arrayclasses.h"
 
+
 #include <string>
 
 class CrossCorrelator {
@@ -50,6 +51,13 @@ private:
 	fftw_plan p_fplan;		//forward FFT plan
 	fftw_plan p_bplan;		//backward FFT plan
 
+	double p_qxmax;
+	double p_qymax;	
+	double p_qxmin;
+	double p_qymin;
+	double p_qxdelta;
+	double p_qydelta;
+
     //-----some debug features that can turned on via setDebug()
     int p_debug;
 //    array1D *check1D;
@@ -65,6 +73,7 @@ public:
 	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, int nq1, int nq2, int nphi ); // full xcca
 	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int16_t *maskCArray, int arraylength, int nq, int nphi ); // autocorrelation only
 	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int16_t *maskCArray, int arraylength, int nq1, int nq2, int nphi ); // full xcca
+	CrossCorrelator( array2D *dataArray, array2D *qxArray, array2D *qyArray, int nq, int nphi ); // autocorrelation only
 	
 	~CrossCorrelator();
 	
@@ -74,7 +83,7 @@ public:
 	void initFromFile( std::string filename, int type=0 );
     void initWithTestPattern( int sizex, int sizey, int type=0 );                           //generate some test patterns
 	void printRawData(uint16_t *buffer,long lSize);
-	void dumpResults( std::string filename );
+//	void dumpResults( std::string filename );				// (arraydataIO needed for this)
 	
 	//---------------------------------------------calculations (Jonas's way)
 	void calculatePolarCoordinates();
@@ -102,6 +111,7 @@ public:
 	// sets the lookup table necessary for lookup() to work. this needs to be provided externally, (a default one is available)
 	void setLookupTable( array2D *LUT );
 	void setLookupTable( const int *cLUT, unsigned int LUT_dim1, unsigned int LUT_dim2 );
+	array2D *getLookupTable();
 	
 	// sets the two plans needed for forward and backward Fourier Transform --> correlation
 	void setFFTWPlans( fftw_plan forwardplan, fftw_plan backwardplan );
@@ -109,8 +119,8 @@ public:
 	// a lookup table can be created within this object, if none was available externally
 	// (for cheetah, performance is better if this is calculated once in advance 
 	// and then handed to the CrossCorrelator for each shot)
-	int createLookupTable(int Nx, int Ny);
-	void calcLUTvariables( int lutNx, int lutNy, double &qx_min, double &qx_stepsize, double &qy_min, double &qy_stepsize );
+	int createLookupTable( int Nx, int Ny );
+	void calcLUTvariables( int lutNx, int lutNy );
     
     //compute 1D correlations using FFT, the result is returned in f, respectively
     int correlateFFT( array1D *f, array1D *g );    // result of corr(f,g) -> f

@@ -9,7 +9,7 @@
 #include "pdsdata/xtc/XtcIterator.hh"
 #include "pdsdata/xtc/XtcFileIterator.hh"
 #include "pdsdata/acqiris/ConfigV1.hh"
-#include "pdsdata/ipimb/ConfigV1.hh"
+#include "pdsdata/ipimb/ConfigV2.hh"
 #include "pdsdata/encoder/ConfigV1.hh"
 #include "pdsdata/camera/FrameFexConfigV1.hh"
 #include "pdsdata/camera/FrameFccdConfigV1.hh"
@@ -41,7 +41,7 @@ public:
   void process(const DetInfo&, const Acqiris::ConfigV1&) {
     printf("*** Processing Acqiris config object\n");
   }
-  void process(const DetInfo&, const Ipimb::ConfigV1&) {
+  void process(const DetInfo&, const Ipimb::ConfigV2&) {
     printf("*** Processing Ipimb config object\n");
   }
   void process(const DetInfo&, const Encoder::ConfigV1&) {
@@ -216,7 +216,7 @@ public:
       unsigned version = xtc->contains.version();
       switch (version) {
       case 1:
-        process(info,*(const Ipimb::ConfigV1*)(xtc->payload()));
+        process(info,*(const Ipimb::ConfigV2*)(xtc->payload()));
         break;
       default:
         printf("Unsupported ipimb configuration version %d\n",version);

@@ -2,7 +2,7 @@
 # 	Makefile for LCLS csPad detector version of myana
 #	Now morphed into Cheetah
 #	Anton Barty, CFEL, December 2010
-#
+#	
 #	Note: before this makefile will work it is necessary to compile 
 #	the LCLS libraries.  This is done as follows:
 #	> cd release/pdsdata
@@ -10,7 +10,9 @@
 #	(this creates the LCLS libraries necessary for compile to complete.
 #	if not done, you'll get an error such as 'can not find libacqdata.so'.
 #	Change the target CPU/OS combination if working on a different system, eg: OS-X)
-#
+#	
+#	the preprocessor flag CHEETAH is used to specify code that's compiled for the 
+#	use in cheetah specifically
 ###############################################
 
 
@@ -60,7 +62,7 @@ LIBRARIES		= -lacqdata \
 CPP				= g++ -c -g
 LD 				= g++
 CPP_LD_FLAGS	= -O4 -Wall
-CFLAGS			= $(INCLUDEDIRS)
+CFLAGS			= $(INCLUDEDIRS) -DCHEETAH
 
 LD_FLAGS		= -Wl,-rpath=$(LCLSDIR)/build/pdsdata/lib/$(ARCH)/:$(HDF5DIR)/lib
 CFLAGS_ROOT		= $(shell $(ROOTSYS)/bin/root-config --cflags)
@@ -164,6 +166,8 @@ crosscorrelator.o: crosscorrelator.cpp crosscorrelator.h \
 arrayclasses.o: arrayclasses.cpp arrayclasses.h
 	$(CPP) $(CFLAGS) $<
 
+arraydataIO.o: arraydataIO.cpp arraydataIO.h
+	$(CPP) $(CFLAGS) $<
 
 
 #--------------------------------------------------------------
@@ -181,6 +185,7 @@ cheetah: cheetah.o \
   correlation.o \
   crosscorrelator.o \
   arrayclasses.o \
+  arraydataIO.o \
   $(MYANADIR)/XtcRun.o \
   $(MYANADIR)/main.o \
   $(CSPADDIR)/CspadCorrector.o \
