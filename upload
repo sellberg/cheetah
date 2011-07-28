@@ -33,4 +33,8 @@ switch ($1)
 	rsync -r -a -v -e "ssh -l sellberg" --delete --exclude 'release' --exclude 'build' --exclude '.git' --exclude '*.o' --exclude 'cheetah' --exclude 'cheetah.xcodeproj' . psexport.slac.stanford.edu:/reg/d/psdm/cxi/cxi35711/scratch/cheetah/
 	breaksw
 	
+	case llcp:
+	rsync -r -a -v -e "ssh -l sellberg" --delete --exclude 'release' --exclude 'build' --exclude '.git' --exclude '*.o' --exclude 'cheetah' --exclude 'cheetah.xcodeproj' . psexport.slac.stanford.edu:/reg/d/psdm/cxi/cxi25410/scratch/cheetah/
+	breaksw
+	
 endsw

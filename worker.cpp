@@ -288,16 +288,31 @@ void *worker(void *threadarg) {
 			writeHDF5(threadInfo, global, eventname, global->backgroundfinder.cleanedfp);
 		}
 	}
-	if (global->icefinder.use) {
-		printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.ice, threadInfo->nPeaks);
-	} else if (global->waterfinder.use) {
-		printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.water, threadInfo->nPeaks);
-	} else if (global->hitfinder.use) {
-		printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.standard, threadInfo->nPeaks);
-	} else if ((global->nprocessedframes % 100) == 0) {
-		printf("r%04u:%i (%3.1f Hz): Processed %i events\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, global->nprocessedframes);
+	
+	
+	/*
+	 *	Write out diagnostics to screen
+	 */	
+	if (global->useAutoHotpixel) {
+		if (global->icefinder.use) {
+			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i, hot=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.ice, threadInfo->nPeaks, threadInfo->nHot);
+		} else if (global->waterfinder.use) {
+			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i, hot=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.water, threadInfo->nPeaks, threadInfo->nHot);
+		} else if (global->hitfinder.use) {
+			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i, hot=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.standard, threadInfo->nPeaks, threadInfo->nHot);
+		}
+	} else {
+		if (global->icefinder.use) {
+			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.ice, threadInfo->nPeaks);
+		} else if (global->waterfinder.use) {
+			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.water, threadInfo->nPeaks);
+		} else if (global->hitfinder.use) {
+			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.standard, threadInfo->nPeaks);
+		} else if ((global->nprocessedframes % 100) == 0) {
+			printf("r%04u:%i (%3.1f Hz): Processed %i events\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, global->nprocessedframes);
+		}
 	}
-
+	
 	/*
 	 *	Write out information on each frame to a log file
 	 */
