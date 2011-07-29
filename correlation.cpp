@@ -83,9 +83,6 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 	} else if (global->useCorrelation == 2) {					
 		DEBUGL2_ONLY cout << "XCCA fast" << endl;
 
-        array2D *polar = new array2D;
-        array2D *corr = new array2D;
-        
         //cc->createLookupTable( 100, 100 );		// lookup table should in general not be created here (i.e., shot-by-shot)
 		cc->setLookupTable( global->correlationLUT, global->correlationLUTdim1, global->correlationLUTdim2 );
 
@@ -94,20 +91,20 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
         double start_q = global->correlationStartQ;
         double stop_q = global->correlationStopQ;
         int number_q = global->correlationNumQ;
-        double start_phi = global->correlationStartPhi;
-        double stop_phi = global->correlationStopPhi;
+//        double start_phi = global->correlationStartPhi;
+//        double stop_phi = global->correlationStopPhi;
         int number_phi = global->correlationNumPhi;
 		
 
 		//calculate polar coordinates: returns an array2D in the first polar argument
-		int polar_fail = cc->calculatePolarCoordinates_FAST(polar, number_q, start_q, stop_q, number_phi, start_phi, stop_phi);
+		int polar_fail = cc->calculatePolarCoordinates_FAST(number_phi, number_q, start_q, stop_q);
 		if (polar_fail){
 			cout << "ERROR in correlate! Could not calculate polar coordinates!" << endl;
 		}
 
 		//perform the correlation
 		pthread_mutex_lock(&global->correlationFFT_mutex);			// need to protect the FFTW at the core, not thread-safe!!
-		int XCCA_fail = cc->calculateXCCA_FAST( polar, corr );
+		int XCCA_fail = cc->calculateXCCA_FAST();
 		if (XCCA_fail){
 			cout << "ERROR in correlate! Could not calculate XCCA!" << endl;
 		}
@@ -122,12 +119,8 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		std::ostringstream name_osst;
 		name_osst << threadInfo->eventname << "-xaca.tif";
 		arraydataIO *io = new arraydataIO;
-		io->writeToTiff( name_osst.str(), corr, 1 );            //dump scaled output from correlation
+		io->writeToTiff( name_osst.str(), cc->corr(), 1 );            //dump scaled output from correlation
 		delete io;
-		
-		//clean up
-        delete polar;
-        delete corr;
 		
 		DEBUGL2_ONLY cout << "XCCA done." << endl;
 
