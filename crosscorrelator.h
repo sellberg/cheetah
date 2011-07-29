@@ -18,38 +18,52 @@
 class CrossCorrelator {
 
 private:
+
+	//-------------------------------------------------required for both algorithms
 	int p_arraySize;
+	bool p_mask_enable;			// enables/disables masking of bad pixels
+	bool p_xcca_enable;			// enables/disables cross-correlations (if disabled only autocorrelations are calculated)
+    std::string p_outputdir;  	// the output directory if anything is dumped from withing this class (default is working dir)
+
+	array1D *p_data;			//data storage
+	array1D *p_qx;				//pixel x coordinate
+	array1D *p_qy;				//pixel y coordinate
+	array1D *p_mask;			//mask used to remove bad pixels
+
+	array2D *p_autoCorrelation;
+	array3D *p_crossCorrelation;
+	
+	int p_debug;		
+	
+	//-------------------------------------------------required for alg1
 	double p_qmin;
 	double p_qmax;
-	double p_deltaq;		// step size (bin length) in q-direction
+	double p_deltaq;			// step size (bin length) in q-direction
 	double p_phimin;
 	double p_phimax;
-	double p_deltaphi;		// step size (bin length) in phi direction
+	double p_deltaphi;			// step size (bin length) in phi direction
 	int p_samplingLength;
 	int p_samplingAngle;
 	int p_samplingLag;
-	bool p_mask;			// enables/disables masking of bad pixels
-	bool p_xcca;		// enables/disables cross-correlations (if disabled only autocorrelations are calculated)
-    std::string p_outputdir;  // the output directory if anything is dumped from withing this class (default is working dir)
 
-	array1D *data;			//data storage
-	array1D *qx;			//pixel x coordinate
-	array1D *qy;			//pixel y coordinate
-	array1D *mask;			//mask used to remove bad pixels
+	array1D *p_q;				//magnitude of q vector (1st dimension in correlation)
+	array1D *p_phi;				//angle (2nd dimension in correlation)
 	
-	array1D *q;				//magnitude of q vector (1st dimension in correlation)
-	array1D *phi;			//angle (2nd dimension in correlation)
-	
-	array1D *qave;
-	array1D *iave;
-	array1D *phiave;
-	array2D *autoCorrelation;
-	array3D *crossCorrelation;	
+	array1D *p_qave;
+	array1D *p_iave;
+	array1D *p_phiave;
 	void updateDependentVariables();
     
-    array2D *table;         //lookup table
-	fftw_plan p_fplan;		//forward FFT plan
-	fftw_plan p_bplan;		//backward FFT plan
+    
+	
+	//-------------------------------------------------required for alg2
+	array2D *p_polar;
+	array2D *p_corr;
+	array2D *p_mask_polar;
+	array2D *p_mask_corr;
+	array2D *p_table;			//lookup table
+	fftw_plan p_fplan;			//forward FFT plan
+	fftw_plan p_bplan;			//backward FFT plan
 
 	double p_qxmax;
 	double p_qymax;	
@@ -58,11 +72,9 @@ private:
 	double p_qxdelta;
 	double p_qydelta;
 
-    //-----some debug features that can turned on via setDebug()
-    int p_debug;
-//    array1D *check1D;
 	float *p_dataCArray; 	//!!!only temporary!!! keep the cheetah c-array to be able to write to it for debugging purposes
-    
+	//array1D *check1D;    
+
 public:
 	//---------------------------------------------constructors & destructor
     CrossCorrelator( int arraylength=1 );                                                           //init with 1D data size
@@ -97,21 +109,23 @@ public:
     // (for lack of a better name and in the hope that they may be fast. We'll see...)
     
     // 'calculatePolarCoordinates' returns a 2D pattern in polar coordinates (r vs. phi)
-    int calculatePolarCoordinates_FAST(array2D *&polar, int number_q=20, int number_phi=128); 
-    int calculatePolarCoordinates_FAST(array2D *&polar, int number_q, double start_q, double stop_q,
-                                                        int number_phi=128, double start_phi=0, double stop_phi=360 );
+	int calculatePolarCoordinates_FAST(int number_phi=512, int number_q=20 );
+    int calculatePolarCoordinates_FAST(int number_phi, int number_q, double start_q, double stop_q );
+	
+	int calculatePolarCoordinates_FAST( array1D* image, array2D* polar2D, 
+										int number_phi, int number_q, double start_q, double stop_q ); 
 
     
     // 'calculateXCCA' returns the autocorrelation function (r = const.)          
-    int calculateXCCA_FAST( array2D *&polar, array2D *&corr, int writeToInternalDataStructure=1 );
-    
+    int calculateXCCA_FAST();
+	
     // looks up the value closest to xcoord, ycoord in the data
-    double lookup( double xcoord, double ycoord );
+    double lookup( double xcoord, double ycoord, array1D *dataArray );
 	
 	// sets the lookup table necessary for lookup() to work. this needs to be provided externally, (a default one is available)
+	array2D *lookupTable();
 	void setLookupTable( array2D *LUT );
 	void setLookupTable( const int *cLUT, unsigned int LUT_dim1, unsigned int LUT_dim2 );
-	array2D *getLookupTable();
 	
 	// sets the two plans needed for forward and backward Fourier Transform --> correlation
 	void setFFTWPlans( fftw_plan forwardplan, fftw_plan backwardplan );
@@ -122,11 +136,45 @@ public:
 	int createLookupTable( int Nx, int Ny );
 	void calcLUTvariables( int lutNx, int lutNy );
     
+	//compute correlations in a 2D polar coordinate matrix
+	int autocorrelateFFT(array2D *polar2D, array2D *corr2D);
+	int crosscorrelateFFT(array2D *polar2D, array3D *corr3D);
+	
+	int normalizeToSAXS();
+	
     //compute 1D correlations using FFT, the result is returned in f, respectively
-    int correlateFFT( array1D *f, array1D *g );    // result of corr(f,g) -> f
-    int autocorrelateFFT( array1D *f );            // result of corr(f,f) -> f
+//    int correlateFFT( array1D *f, array1D *g );    // result of corr(f,g) -> f
+//    int autocorrelateFFT( array1D *f );            // result of corr(f,f) -> f
+//	int autocorrelateFFTwithMask( array1D *f, array1D *m );
         
 	//---------------------------------------------setters & getters
+	array1D *data() const;
+	void setData( array1D *data );
+	void setData( array2D *data );
+	void setData( float *dataCArray, unsigned int size );
+	
+	array1D *qx() const;
+	void setQx( array1D *qx );
+	void setQx( array2D *qx );
+	void setQx( float *qxCArray, unsigned int size );
+
+	array1D *qy() const;
+	void setQy( array1D *qy );
+	void setQy( array2D *qy );
+	void setQy( float *qyCArray, unsigned int size );
+
+	array1D *mask() const;
+	void setMask( array1D *mask );
+	void setMask( array2D *mask );	
+	void setMask( int16_t *maskCArray, unsigned int size );
+	void normalizeMask();
+	
+	array2D *polar() const;
+	array2D *corr() const;
+	array2D *mask_polar() const;
+	array2D *mask_corr() const;
+	
+	
 	int arraySize() const;                              // returns private variable p_arraySize
 	void setArraySize( int arraySize_val );
 	int matrixSize() const;                             // returns sqrt(p_arraySize)
@@ -175,3 +223,13 @@ public:
 
 
 #endif
+
+
+
+// call the functions below in a reasonable way (less fine-grained control, but less to worry about)
+//int performAnalysis_FAST();
+//    int calculatePolarCoordinates_FAST(array2D *&polar, int number_q=20, int number_phi=128); 
+//    int calculatePolarCoordinates_FAST(array2D *&polar, int number_q, double start_q, double stop_q,
+//                                                        int number_phi=128, double start_phi=0, double stop_phi=360 );
+//    int calculateXCCA_FAST( array2D *&polar, array2D *&corr, int writeToInternalDataStructure=1 );
+
