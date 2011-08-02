@@ -323,7 +323,7 @@ arraydataIO::~arraydataIO(){
 		int status_n = H5Sget_simple_extent_dims(dataspace, dims_out, NULL);
 		int nx = (int)(dims_out[0]);
 		int ny = (int)(dims_out[1]);
-		cout << "rank " << rank << ", dimensions " << nx << " x " << ny << endl;
+		cout << "rank " << rank << ", dimensions " << nx << " x " << ny << ", status " << status_n << endl;
 
 		//allocate data to hold what comes out of the file
 		void *buffer = NULL;
