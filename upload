@@ -26,7 +26,7 @@ switch ($1)
 	breaksw
 	
 	case sellberg:
-	rsync -r -a -v -e "ssh -l sellberg" --delete --exclude 'release' --exclude 'build' --exclude '.git' --exclude '*.o' --exclude 'cheetah' --exclude 'cheetah.xcodeproj' . psexport.slac.stanford.edu:/reg/neh/home/sellberg/source/cheetah/
+	rsync -r -a -v -e "ssh -l sellberg" --delete --exclude "release" --exclude '.git' --exclude '*.o' --exclude 'cheetah' --exclude 'cheetah.xcodeproj' . psexport.slac.stanford.edu:/reg/neh/home/sellberg/source/cheetah/
 	breaksw
 
 	case xcca:

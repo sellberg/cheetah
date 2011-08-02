@@ -193,7 +193,6 @@ public:
 	long			nThreads;
 	long			nActiveThreads;
 	long			threadCounter;
-	pthread_t		*threadID;
 	pthread_mutex_t	nActiveThreads_mutex;		// there should be one mutex variable for each global variable which threads write to.
 	pthread_mutex_t	hotpixel_mutex;
 	pthread_mutex_t	selfdark_mutex;

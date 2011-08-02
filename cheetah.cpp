@@ -679,11 +679,15 @@ void endjob()
 	free(global.waterRaw);
 	free(global.waterAverage);
 	free(global.waterCorrelation);
+	free(global.pix_x);
+	free(global.pix_y);
+	free(global.pix_z);	
 	free(global.quad_dx);
 	free(global.quad_dy);
 	free(global.hotpixelmask);
 	free(global.selfdark);
 	free(global.gaincal);
+	free(global.badpixelmask);
 	free(global.hitfinder.peakmask);
 	free(global.icefinder.peakmask);
 	free(global.waterfinder.peakmask);

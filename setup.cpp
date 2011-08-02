@@ -380,9 +380,7 @@ void cGlobal::setup() {
 	pthread_mutex_init(&image_mutex, NULL);
     pthread_mutex_init(&nhits_mutex, NULL);
 	pthread_mutex_init(&framefp_mutex, NULL);
-
-	threadID = (pthread_t*) calloc(nThreads, sizeof(pthread_t));
-
+	
 	
 	/*
 	 *	Other stuff

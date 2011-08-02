@@ -102,11 +102,7 @@ typedef struct {
 	
 	float		pixelCenterX;
 	float		pixelCenterY;
-	
-	// Thread management
-	int		threadID;
-	
-	
+		
 	
 } tThreadInfo;
 
