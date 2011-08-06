@@ -154,7 +154,7 @@ void beginjob() {
 	global.readWatermask(global.waterfinder.peaksearchFile);
 	global.readBackgroundmask(global.backgroundfinder.peaksearchFile);
 	if (global.useAttenuationCorrection >= 0) global.readAttenuations(global.attenuationFile);
-	global.createLookupTable();	// <-- important that this is done after detector geometry is determined
+	if (global.useCorrelation) global.createLookupTable();	// <-- important that this is done after detector geometry is determined
 }
 
 
@@ -422,7 +422,7 @@ void event() {
 	/*
 	 *	Energy calibration
 	 */
-	if (global.useEnergyCalibration) {
+	if (global.useEnergyCalibration && photonEnergyeV != std::numeric_limits<double>::quiet_NaN()) {
 		if (global.nEnergies >= global.energyCapacity) global.expandEnergyCapacity();
 		global.energies[global.nEnergies] = photonEnergyeV;
 		global.wavelengths[global.nEnergies++] = wavelengthA;
@@ -431,7 +431,7 @@ void event() {
 		if (wavelengthA > global.Lmax) global.Lmax = wavelengthA;
 		if (wavelengthA < global.Lmin) global.Lmin = wavelengthA;
 	}
-		
+	
 	
 	/*
 	 *	Create a new threadInfo structure in which to place all information
@@ -572,13 +572,26 @@ void event() {
 	
 	
 	/*
-	 *	Save periodic powder patterns
+	 *	Save periodic powder patterns and update log file
 	 */
 	if(global.saveInterval!=0 && (global.nprocessedframes%global.saveInterval)==0 && (global.nprocessedframes > global.startFrames+50) ){
 		saveRunningSums(&global);
 		global.updateLogfile();
 	}
 	
+	
+	/*
+	 *	Periodically flush all HDF5 data and memory
+	 */
+	if(global.flushInterval != 0 && (global.nprocessedframes%global.flushInterval) == 0) {
+		cout << "Preparing for HDF5 memory flush..." << endl;
+		// Wait for threads to finish before flushing
+		while(global.nActiveThreads > 0) {
+			printf("\twaiting for %i worker threads to terminate\n", (int)global.nActiveThreads);
+			usleep(100000);
+		}
+		flushHDF5();
+	}
 	
 }
 // End of event data processing block
@@ -629,6 +642,14 @@ void endjob()
 	}
 	
 	
+	// Save energy calibration
+	if (global.useEnergyCalibration) {
+		saveEnergies(&global);
+		makeEnergyHistograms(&global);
+		if (global.hitAngularAvg || (global.powdersum && global.powderAngularAvg)) makeQcalibration(&global);
+	}
+	
+	
 	// Calculate angular average of powder pattern
 	if (global.powdersum && global.powderAngularAvg) {
 		calculatePowderAngularAvg(&global);
@@ -638,13 +659,6 @@ void endjob()
 	
 	// Save powder patterns
 	saveRunningSums(&global);
-	
-	
-	// Save energy calibration
-	if (global.useEnergyCalibration) {
-		makeEnergyHistograms(&global);
-		saveEnergies(&global);
-	}
 	
 	
 	global.writeFinalLog();
@@ -701,8 +715,9 @@ void endjob()
 	delete[] global.totalThicknesses;
 	delete[] global.energies;
 	delete[] global.wavelengths;
-	delete[] global.angularAvgQ;
 	delete[] global.angularAvg_i;
+	delete[] global.angularAvgQ;
+	delete[] global.angularAvgQcal;
 	delete[] global.correlationLUT;
 	
 	pthread_mutex_destroy(&global.nActiveThreads_mutex);

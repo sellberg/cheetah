@@ -207,12 +207,13 @@ void cGlobal::defaultConfiguration(void) {
 	saveRaw = 0;
 	hdf5dump = 0;
 	saveInterval = 500;
+	flushInterval = 5000;
 	
 	// Verbosity
 	debugLevel = 0;
 	
 	// Default to only a few threads
-	nThreads = 16;
+	nThreads = 8;
 	
 	// Log files
 	strcpy(logfile, "log.txt");
@@ -241,12 +242,13 @@ void cGlobal::setup() {
 	powderAverage = NULL;
 	iceAverage = NULL;
 	waterAverage = NULL;
-	angularAvgQ = NULL;
 	angularAvg_i = NULL;
+	angularAvgQ = NULL;
+	angularAvgQcal = NULL;
 	powderCorrelation = NULL;
 	iceCorrelation = NULL;
 	waterCorrelation = NULL;
-	correlation_nn = 0;
+	correlationLUT = NULL;
 	
 	
 	/*
@@ -338,8 +340,8 @@ void cGlobal::setup() {
 	/*
 	 *	Setup global cross correlation variables
 	 */
-	correlationLUT = new int[correlationLUTdim1*correlationLUTdim2];
 	if (useCorrelation) {
+		correlationLUT = new int[correlationLUTdim1*correlationLUTdim2];
 		if (!correlationNumDelta) 
 			correlationNumDelta = (int) ceil(correlationNumPhi/2.0+1);
 		if (autoCorrelateOnly) {
@@ -439,28 +441,22 @@ void cGlobal::setup() {
 	/*
 	 *	Setup global energy calibration variables
 	 */
+	energies = NULL;
+	wavelengths = NULL;
+	Ehist = NULL;	// Histograms are allocated in makeEnergyHistograms()
+	Lhist = NULL;	// Histograms are allocated in makeEnergyHistograms()
+	energyCapacity = 0;
+	nEnergies = 0;
+	Emin = 100000;	// Lowest photon energy
+	Emax = 0;	// Highest photon energy
+	Emean = 0;	// Mean photon energy
+	Lmin = 100000;	// Lowest wavelength
+	Lmax = 0;	// Highest wavelength
+	Lmean = 0;	// Mean wavelength
 	if (useEnergyCalibration) {
 		energyCapacity = 1000; // Starting capacity of dynamic arrays
 		energies = new double[energyCapacity]; // Dynamics array of all photon energies (eV)
 		wavelengths = new double[energyCapacity]; // Dynamics array of all wavelengths (Å)
-		nEnergies = 0;
-		Emin = 100000;	// Lowest photon energy
-		Emax = 0;	// Highest photon energy
-		Lmin = 100000;	// Lowest wavelength
-		Lmax = 0;	// Highest wavelength
-		Ehist = NULL;	// Histograms are allocated in makeEnergyHistograms()
-		Lhist = NULL;	// Histograms are allocated in makeEnergyHistograms()
-	} else {
-		energies = NULL;
-		wavelengths = NULL;
-		Ehist = NULL;
-		Lhist = NULL;
-		energyCapacity = 0;
-		nEnergies = 0;
-		Emin = 100000;
-		Emax = 0;
-		Lmin = 100000;
-		Lmax = 0;
 	}
 		
 	// Make sure to use SLAC timezone!
@@ -759,6 +755,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "saveinterval")) {
 		saveInterval = atoi(value);
+	}
+	else if (!strcmp(tag, "flushinterval")) {
+		flushInterval = atoi(value);
 	}
 	else if (!strcmp(tag, "useautohotpixel")) {
 		useAutoHotpixel = atoi(value);
@@ -1546,7 +1545,7 @@ void cGlobal::createLookupTable(){
 	
 	
 	//explicit output to test...
-	if (debugLevel>1) {
+	if (debugLevel>2) {
 		std::ostringstream osst;
 		osst << "-------------------LUT begin---------------------------------" << endl;
 			for (int j = 0; j<lutNy; j++){

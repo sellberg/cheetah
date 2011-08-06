@@ -127,6 +127,9 @@ public:
 	// Energy calibration
 	int			useEnergyCalibration;		// Save histogram of energies and wavelengths for energy calibration
 	
+	// Save and flush settings
+	int			saveInterval;			 // powder pattern and log is repeatedly saved according to this interval
+	int			flushInterval;			// HDF5 data and memory is repeatedly flushed according to this interval
 	int			startFrames;			 // number of frames to use for forming initial background and hot pixel estimate (no frames outputed; digesting)
 	
 	// Hitfinding
@@ -139,8 +142,7 @@ public:
 	// Powder pattern generation
 	int			powdersum;			 // set to calculate powder pattern
 	int			powderthresh;			 // pixels with an ADC value above this threshold will be added to the powder
-	int			saveInterval;			 // powder pattern is repeatedly saved according to this interval
-    
+	    
 	// Angular averages
 	int			powderAngularAvg;			// set to nonzero to calculate angular averages of the powder patterns
 	int			hitAngularAvg;			// set to nonzero to calculate angular averages of each hit
@@ -237,7 +239,8 @@ public:
 	// Angular average variables
 	unsigned	angularAvg_nn;	// length of angular average arrays
 	int			*angularAvg_i;	// stores index for each pixel in angular average array
-	double		*angularAvgQ;	// stores q-values for angular averages	
+	double		*angularAvgQ;	// stores q-values (in pixels) for angular averages	
+	double		*angularAvgQcal;	// stores absolute q-values calibrated from the mean photon energy of the run
 	
 	
 	// Attenuation variables
@@ -261,8 +264,10 @@ public:
 	unsigned		nEnergies;	// Number of energies saved in dynamic array
 	double			Emin;	// Lowest photon energy
 	double			Emax;	// Highest photon energy
+	double			Emean;	// Mean photon energy
 	double			Lmin;	// Lowest wavelength
 	double			Lmax;	// Highest wavelength
+	double			Lmean;	// Mean wavelength
 	unsigned		*Ehist;	// Histogram of energies
 	unsigned		*Lhist;	// Histogram of wavelengths
 	

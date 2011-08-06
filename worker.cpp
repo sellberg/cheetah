@@ -1026,6 +1026,17 @@ void writeSimpleHDF5(const char *filename, const void *data, int width, int heig
 }
 
 
+void flushHDF5() {
+	herr_t fail;
+	
+	// Flush all HDF5 data to disk, close all open identifies, and clean up memory
+	cout << "Flushing HDF5 data and memory..." << endl;
+	fail = H5close();
+	if (fail < 0) cout << "\tError flushing HDF5 data and memory" << endl;
+	else cout << "\tFlushing finished successfully!" << endl;
+}
+
+
 void saveRunningSums(cGlobal *global) {
 	char	filename[1024];
 
@@ -1227,7 +1238,7 @@ void saveRunningSums(cGlobal *global) {
 
 void calculatePowderAngularAvg(cGlobal *global) {
 	
-	// calculating SAXS average from the powder pattern 
+	// calculating angular average from the powder pattern 
 	DEBUGL1_ONLY printf("calculating angular average from powder pattern...\n");
 	
 	// allocate local counter arrays
@@ -1297,37 +1308,39 @@ void savePowderAngularAvg(cGlobal *global) {
 		
 		char	filename[1024];		
 		float *buffer = (float*) calloc(2*global->angularAvg_nn, sizeof(float));
-		for(long i=0; i<global->angularAvg_nn; i++)
-			buffer[i] = (float) global->angularAvgQ[i];
+		for (long i=0; i<global->angularAvg_nn; i++) {
+			if (global->useEnergyCalibration) buffer[i] = (float) global->angularAvgQcal[i];
+			else buffer[i] = (float) global->angularAvgQ[i];
+		}
 		
 		/*
-		 *	Save powder SAXS pattern
+		 *	Save angular average of powder pattern
 		 */
 		if (global->hitfinder.use) {
-			printf("Saving powder angular average data to file\n");
-			sprintf(filename,"r%04u-SAXS.h5",global->runNumber);
+			printf("Saving angular average of powder data to file\n");
+			sprintf(filename,"r%04u-angavg.h5",global->runNumber);
 			for(long i=0; i<global->angularAvg_nn; i++)
 				buffer[global->angularAvg_nn+i] = (float) global->powderAverage[i]/global->npowder;
 			writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
 		}
 		
 		/*
-		 *	Save ice SAXS pattern
+		 *	Save angualar average of ice powder pattern
 		 */
 		if (global->icefinder.use) {
-			printf("Saving ice SAXS data to file\n");
-			sprintf(filename,"r%04u-SAXS_ice.h5",global->runNumber);
+			printf("Saving angular average of powder ice data to file\n");
+			sprintf(filename,"r%04u-angavg_ice.h5",global->runNumber);
 			for(long i=0; i<global->angularAvg_nn; i++)
 				buffer[global->angularAvg_nn+i] = (float) global->iceAverage[i]/global->nice;
 			writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
 		}
 		
 		/*
-		 *	Save water SAXS pattern
+		 *	Save angular average of water powder pattern
 		 */
 		if (global->waterfinder.use) {
-			printf("Saving water SAXS data to file\n");
-			sprintf(filename,"r%04u-SAXS_water.h5",global->runNumber);
+			printf("Saving angular average of powder water data to file\n");
+			sprintf(filename,"r%04u-angavg_water.h5",global->runNumber);
 			for(long i=0; i<global->angularAvg_nn; i++)
 				buffer[global->angularAvg_nn+i] = (float) global->waterAverage[i]/global->nwater;
 			writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
@@ -1432,13 +1445,19 @@ void makeEnergyHistograms(cGlobal *global) {
 	if (Ebins > 1) {
 		global->Ehist = (unsigned*) calloc(Ebins, sizeof(float));
 		global->Lhist = (unsigned*) calloc(Ebins, sizeof(float));
-		for (int i=0; i<global->nEnergies; i++) {
+		for (long i=0; i<global->nEnergies; i++) {
 			global->Ehist[int(round((global->energies[i]-global->Emin)/deltaE))]++;
 			global->Lhist[int(round((global->wavelengths[i]-global->Lmin)/deltaL))]++;
+			global->Emean += global->energies[i];
+			global->Lmean += global->wavelengths[i];
 		}
+		global->Emean /= global->nEnergies;
+		global->Lmean /= global->nEnergies;
 		char	filename[1024];
 		float *buffer = (float*) calloc(4*Ebins, sizeof(float));
 		printf("Saving histograms of energies and wavelengths to file\n");
+		printf("\tMean photon energy: %f eV\n",global->Emean);
+		printf("\tMean wavelength: %f A\n",global->Lmean);
 		sprintf(filename,"r%04u-energy_histograms.h5",global->runNumber);
 		for(int i=0; i<Ebins; i++) {
 			buffer[i] = (float) global->Ehist[i];
@@ -1452,6 +1471,30 @@ void makeEnergyHistograms(cGlobal *global) {
 		free(global->Ehist);
 		free(global->Lhist);
 	}		
+	
+}
+
+
+void makeQcalibration(cGlobal *global) {
+	
+	// allocate arrays
+	global->angularAvgQcal = new double[global->angularAvg_nn];
+	float *buffer = (float*) calloc(global->angularAvg_nn, sizeof(float));
+	// calculate Q-calibration
+	for (int i=0; i<global->angularAvg_nn; i++) {
+		global->angularAvgQcal[i] = 4*M_PI*sin(atan(global->pixelSize*global->angularAvgQ[i]*1000/global->detectorZ)/2)/global->Lmean;
+	}
+	// write data to buffer
+	char	filename[1024];
+	printf("Saving Q-calibration to file\n");
+	sprintf(filename,"r%04u-angavg_Q.h5",global->runNumber);
+	for(int i=0; i<global->angularAvg_nn; i++) {
+		buffer[i] = (float) global->angularAvgQcal[i];
+	}	
+	// write buffer to HDF5
+	writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 1, H5T_NATIVE_FLOAT);
+	// free local arrays
+	free(buffer);
 	
 }
 

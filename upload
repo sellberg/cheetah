@@ -26,18 +26,18 @@ switch ($1)
 	breaksw
 	
 	case sellberg:
-	rsync -r -a -v -e "ssh -l sellberg" --delete --exclude "release" --exclude '.git' --exclude '*.o' --exclude 'cheetah' --exclude 'cheetah.xcodeproj' . psexport.slac.stanford.edu:/reg/neh/home/sellberg/source/cheetah/
+	rsync -r -a -v -e "ssh -l sellberg" --delete --exclude 'release' --exclude '.git' --exclude '*.o' --exclude 'cheetah' --exclude 'cheetah.xcodeproj' . psexport.slac.stanford.edu:/reg/neh/home/sellberg/source/cheetah/
 	breaksw
 
 	case xcca:
-	rsync -r -a -v -e "ssh -l sellberg" --delete --exclude 'release' --exclude 'build' --exclude '.git' --exclude '*.o' --exclude 'cheetah' --exclude 'cheetah.xcodeproj' . psexport.slac.stanford.edu:/reg/d/psdm/cxi/cxi35711/scratch/cheetah/
+	rsync -r -a -v -e "ssh -l sellberg" --delete --exclude 'release' --exclude '.git' --exclude '*.o' --exclude 'cheetah' --exclude 'cheetah.xcodeproj' . psexport.slac.stanford.edu:/reg/d/psdm/cxi/cxi35711/scratch/cheetah/
 	breaksw
 
+	case llcp:
+	rsync -r -a -v -e "ssh -l sellberg" --delete --exclude 'release' --exclude '.git' --exclude '*.o' --exclude 'cheetah' --exclude 'cheetah.xcodeproj' . psexport.slac.stanford.edu:/reg/d/psdm/cxi/cxi25410/scratch/cheetah/
+	breaksw
+	
 	case duaneloh:
 	rsync -rav --exclude '.git' --exclude '*.o' --exclude 'cheetah' --exclude 'cheetah.xcworkspace' . -e ssh duaneloh@psexport.slac.stanford.edu:working_dir/cheetah_hitfinder/cheetah/
-	
-	case llcp:
-	rsync -r -a -v -e "ssh -l sellberg" --delete --exclude 'release' --exclude 'build' --exclude '.git' --exclude '*.o' --exclude 'cheetah' --exclude 'cheetah.xcodeproj' . psexport.slac.stanford.edu:/reg/d/psdm/cxi/cxi25410/scratch/cheetah/
-	breaksw
 	
 endsw
