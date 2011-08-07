@@ -422,7 +422,7 @@ void event() {
 	/*
 	 *	Energy calibration
 	 */
-	if (global.useEnergyCalibration && photonEnergyeV != std::numeric_limits<double>::quiet_NaN()) {
+	if (global.useEnergyCalibration && photonEnergyeV == photonEnergyeV) { // Check if photonEnergyeV is NAN
 		if (global.nEnergies >= global.energyCapacity) global.expandEnergyCapacity();
 		global.energies[global.nEnergies] = photonEnergyeV;
 		global.wavelengths[global.nEnergies++] = wavelengthA;
