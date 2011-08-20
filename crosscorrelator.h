@@ -28,7 +28,6 @@ public:
 	//   nq1: number of q values for which to calculate correlation
 	//   nq2 (optional): causes computation of full 3D cross-correlation of nphi*nq1*nq2 values
 	//   mask(C)Array: array that contains a mask of pixels to use or disregard
-	CrossCorrelator();
 	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, 
 						int nphi, int nq1, int nq2 = 0, int16_t *maskCArray = NULL );
 	CrossCorrelator( array2D *dataArray, array2D *qxArray, array2D *qyArray, 
@@ -156,9 +155,9 @@ public:
 	//---------------------------------------------getters for dependent variables
 	double deltaq() const;
 	double deltaphi() const;
-	int samplingLength() const;
-	int samplingAngle() const;
-	int samplingLag() const;
+	int nQ() const;
+	int nPhi() const;
+	int nLag() const;
 	
 	//---------------------------------------------getters for calculated arrays
 	double getQave(unsigned index) const;
@@ -192,9 +191,9 @@ private:
 	double p_phimin;
 	double p_phimax;
 	double p_deltaphi;			// step size (bin length) in phi direction
-	int p_samplingLength;
-	int p_samplingAngle;
-	int p_samplingLag;
+	int p_nQ;					// formerly samplingLength
+	int p_nPhi;					// formerly samplingAngle
+	int p_nLag;					// formerly samplingLag
 
 	array1D *p_q;				//magnitude of q vector (1st dimension in correlation)
 	array1D *p_phi;				//angle (2nd dimension in correlation)
