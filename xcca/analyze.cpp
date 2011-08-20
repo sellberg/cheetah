@@ -70,6 +70,8 @@ int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, i
 	array2D *polaravg = new array2D( num_phi, num_q );
 	array2D *corravg = new array2D( num_phi, num_q );
 	
+	array2D *mask_polar, *mask_corr = NULL;
+	
 	//make a centered q-range
 	int detX = detavg->dim1();		//detector size	(for example, pilatus = 487 * 619)
 	int detY = detavg->dim2();
@@ -83,7 +85,7 @@ int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, i
 
 
 	//prepare lookup table once, so it doesn't have to be done every time
-	CrossCorrelator *lutcc = new CrossCorrelator(detavg, qx, qy, num_q, num_phi);
+	CrossCorrelator *lutcc = new CrossCorrelator(detavg, qx, qy, num_phi, num_q);
 	lutcc->createLookupTable(LUTx, LUTy);
 	array2D *LUT = new array2D( *(lutcc->lookupTable()) );
 	io->writeToEDF( outputDirectory()+"LUT.edf", LUT );
@@ -93,7 +95,7 @@ int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, i
 	background()->multiplyByValue( backgroundWeight() );
 	
 	//process all files
-	int num_files = files.size();
+	unsigned int num_files = files.size();
 	for (int k = 0; k < num_files; k++){
 		std::ostringstream osst_num;
 		osst_num << k;
@@ -106,7 +108,7 @@ int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, i
 		array2D *image_copy = new array2D( *image );
 		
 		
-		CrossCorrelator *cc = new CrossCorrelator(image, qx, qy, num_q, num_phi);
+		CrossCorrelator *cc = new CrossCorrelator(image, qx, qy, num_phi, num_q);
 		cc->setOutputdir( outputDirectory() );
 
 		if (flag_subtract_background){
@@ -133,7 +135,7 @@ int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, i
 				cout << "XCCA FAST" << endl;
 
 				cc->setLookupTable( LUT );
-				cc->calculatePolarCoordinates_FAST( num_phi, num_q, start_q, stop_q );
+				cc->calculatePolarCoordinates_FAST( start_q, stop_q );
 				cc->calculateXCCA_FAST();
 
 
@@ -149,17 +151,14 @@ int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, i
 			break;
 		}
 		
-		if ( flag_use_mask ){
-			//debug: write to disk last mask that was used 
-			array2D *mask_imported = new array2D( cc->mask(), this->mask()->dim1(), this->mask()->dim2() );
-			io->writeToEDF( cc->outputdir()+"mask_imported.edf", mask_imported );
-			delete mask_imported;
-			io->writeToEDF( cc->outputdir()+"mask_polar.edf", cc->mask_polar() );           		
-			io->writeToEDF( cc->outputdir()+"mask_corr.edf", cc->mask_corr() );
-		}
-		
 		detavg->addArrayElementwise( image );			//sum up
 		detavg_copy->addArrayElementwise( image_copy );
+		
+		if ( flag_use_mask ){
+			//debug: at the end, write to disk the last mask that was used 
+			mask_polar = new array2D( *(cc->mask_polar()) );
+			mask_corr = new array2D( *(cc->mask_corr()) );
+		}
 		
 		delete image;
 		delete image_copy;
@@ -182,8 +181,13 @@ int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, i
 	io->writeToEDF( outputDirectory()+"polar_avg.edf", polaravg);		// average image in polar coordinates
 	io->writeToEDF( outputDirectory()+"corr_avg.edf", corravg);			// average autocorrelation
 	if ( flag_subtract_background ){
-		io->writeToEDF( outputDirectory()+"det_avg_original.edf", detavg_copy);		// no background subtraction
-		io->writeToEDF( outputDirectory()+"back_avg.edf", backavg);					// just the background
+//		io->writeToEDF( outputDirectory()+"det_avg_original.edf", detavg_copy);		// no background subtraction
+		io->writeToEDF( outputDirectory()+"det_background_avg.edf", backavg);					// just the background
+	}
+	
+	if ( flag_use_mask ){
+		io->writeToEDF( outputDirectory()+"mask_polar.edf", mask_polar );           		
+		io->writeToEDF( outputDirectory()+"mask_corr.edf", mask_corr );
 	}
 
 	delete qx;
@@ -192,9 +196,11 @@ int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, i
 	delete detavg_copy;
 	delete backavg;
 	delete polaravg;
-	delete corravg;
+	delete corravg;		
+	delete mask_corr;
 	delete LUT;
 	delete io;
+	if (flag_use_mask){delete mask_polar;}
 	
 	return 0;
 }
@@ -278,6 +284,9 @@ int Test::testCrossCorrelator( int alg ){
     
 
     CrossCorrelator *cc = new CrossCorrelator();
+	int number_q = 200;
+	int number_phi = 256;
+
     cc->setOutputdir( base() );
     cc->initWithTestPattern(500, 500, 4 );		//cases 0 - 4 available
 //	cc->initFromFile(base()+"/LCLS_2011_Feb27_r0079_054306_2e71_cspad.h5");
@@ -298,10 +307,8 @@ int Test::testCrossCorrelator( int alg ){
             cc->createLookupTable(500, 500);
             double start_q = 5*cc->deltaq();
             double stop_q = cc->qmax();
-            int number_q = 200;
-            int number_phi = 256;
 
-			cc->calculatePolarCoordinates_FAST(number_phi, number_q, start_q, stop_q);
+			cc->calculatePolarCoordinates_FAST(start_q, stop_q);
 			cc->calculateXCCA_FAST();
 
 			arraydataIO *io = new arraydataIO;
