@@ -197,7 +197,17 @@ unsigned int arraydata::size() const{
 void arraydata::zero(){					//set all elements to zero
 	for (int i = 0; i < size(); i++) {
 		set_atAbsoluteIndex(i, 0);
-	}	
+	}
+}
+
+void arraydata::zero( unsigned int start, unsigned int stop ){
+	if ( start >= stop || stop > size() ){
+		cerr << "Error in arraydata::zero("<< start << ", " << stop << "). Check boundaries." << endl;
+		return;
+	}
+	for (int i = start; i < stop; i++) {
+		set_atAbsoluteIndex(i, 0);
+	}
 }
 
 void arraydata::ones(){					//set all elements to one
@@ -205,6 +215,17 @@ void arraydata::ones(){					//set all elements to one
 		set_atAbsoluteIndex(i, 1);
 	}	
 }
+
+void arraydata::ones( unsigned int start, unsigned int stop ){
+	if ( start >= stop || stop > size() ){
+		cerr << "Error in arraydata::ones("<< start << ", " << stop << "). Check boundaries." << endl;
+		return;
+	}
+	for (int i = start; i < stop; i++) {
+		set_atAbsoluteIndex(i, 1);
+	}
+}
+
 
 void arraydata::range( double neg, double pos ){	//set elements to a range of values, given by the boundaries
 	double delta = (pos-neg)/(size()-1);

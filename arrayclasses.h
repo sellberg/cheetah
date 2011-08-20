@@ -50,10 +50,12 @@ public:
     void copy( const arraydata& src );
     void copy( const array1D& src );
     void destroy();
-    double *data() const;                                         //return pointer to internal raw data array
+    double *data() const;                            			//return pointer to internal raw data array
     
-    void zero();												//set all elements to zero
+    void zero();												//set all elements to 0
+    void zero( unsigned int start, unsigned int stop );			//set all elements between start and stop to 0 (incl. start, excl. stop)
 	void ones();												//set all elements to 1
+    void ones( unsigned int start, unsigned int stop );			//set all elements between start and stop to 1 (incl. start, excl. stop)
 	void range( double neg, double pos );						//set elements to a range of values, given by the boundaries
     
 	// 'atAbsoluteIndex' functions:
