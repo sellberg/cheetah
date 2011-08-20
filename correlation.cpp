@@ -54,18 +54,32 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 	
     //create cross correlator object that takes care of the computations
+	//the arguments that are passed to the constructor determine 2D/3D calculations with/without mask
 	CrossCorrelator *cc = NULL;
 	if (global->autoCorrelateOnly) {
-		if (global->useBadPixelMask) cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, global->badpixelmask, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
-		else cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
+		if (global->useBadPixelMask) 
+			cc = new CrossCorrelator( //auto-correlation 2D case, with mask
+						threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+						global->correlationNumPhi, global->correlationNumQ, 0, global->badpixelmask );
+		else 
+			cc = new CrossCorrelator( //auto-correlation 2D case, no mask
+						threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+						global->correlationNumPhi, global->correlationNumQ );
 	} else {
-		if (global->useBadPixelMask) cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, global->badpixelmask, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );
-		else cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );	
+		if (global->useBadPixelMask) 
+			cc = new CrossCorrelator( //full cross-correlation 3D case, with mask
+						threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+						global->correlationNumPhi, global->correlationNumQ, global->correlationNumQ, global->badpixelmask );
+		else 
+			cc = new CrossCorrelator( //full cross-correlation 3D case, no mask
+						threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+						global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );	
 	}
 	
-    DEBUGL1_ONLY cc->setDebug(1);                           //turn on debug level inside the CrossCorrelator, if needed
-    DEBUGL2_ONLY cc->setDebug(2);                           //turn on debug level inside the CrossCorrelator, if needed
-
+	//turn on debug level inside the CrossCorrelator, if needed
+    DEBUGL1_ONLY cc->setDebug(1); 
+	DEBUGL2_ONLY cc->setDebug(2);
+	
 	//--------------------------------------------------------------------------------------------alg1
 	if (global->useCorrelation == 1) {					
 		
@@ -88,16 +102,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 
 		//transform data to polar coordinates as determined by the cheetah ini file	(in detector pixels)
 		//to the q-calibrated values the cross-correlator expects
-        double start_q = global->correlationStartQ;
-        double stop_q = global->correlationStopQ;
-        int number_q = global->correlationNumQ;
-//        double start_phi = global->correlationStartPhi;
-//        double stop_phi = global->correlationStopPhi;
-        int number_phi = global->correlationNumPhi;
-		
-
-		//calculate polar coordinates: returns an array2D in the first polar argument
-		int polar_fail = cc->calculatePolarCoordinates_FAST(number_phi, number_q, start_q, stop_q);
+		int polar_fail = cc->calculatePolarCoordinates_FAST(global->correlationStartQ, global->correlationStopQ);
 		if (polar_fail){
 			cout << "ERROR in correlate! Could not calculate polar coordinates!" << endl;
 		}
