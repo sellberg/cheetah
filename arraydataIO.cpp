@@ -136,7 +136,7 @@ arraydataIO::~arraydataIO(){
 
 		if(tiff){
 			uint32 width, height;
-			size_t npixels;
+			int npixels;
 			uint32* raster;
 
 			TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &width);
@@ -150,7 +150,7 @@ arraydataIO::~arraydataIO(){
 				<< ", dimensions (" << dest->dim1() << ", " << dest->dim2() << ")" << endl;
 
 			npixels = width * height;
-			raster = (uint32*) _TIFFmalloc(npixels * sizeof (uint32));
+			raster = (uint32*) _TIFFmalloc( npixels * sizeof(uint32) );
 			if (raster != NULL){
 				if ( TIFFReadRGBAImage(tiff, width, height, raster, 0) ){
 					dest->setDim1(width);
