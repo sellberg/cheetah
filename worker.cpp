@@ -309,7 +309,7 @@ void *worker(void *threadarg) {
 		} else if (global->hitfinder.use) {
 			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.standard, threadInfo->nPeaks);
 		} else if ((global->nprocessedframes % 100) == 0) {
-			printf("r%04u:%i (%3.1f Hz): Processed %i events\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, global->nprocessedframes);
+			printf("r%04u:%i (%3.1f Hz): Processed %ld events\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, global->nprocessedframes);
 		}
 	}
 	
@@ -1951,7 +1951,7 @@ void updateSAXSArrays(cGlobal *global) {
 	if (global->powdersum && global->powderAngularAvg) {
 		if (global->angularAvgStopQ == 0 || global->angularAvgStopQ < global->angularAvgStartQ) {
 			global->angularAvg_nn = (unsigned) round(global->pix_rmax/global->angularAvgDeltaQ)+1;
-			global->angularAvgStartQ == 0;
+			global->angularAvgStartQ = 0;
 		} else {
 			global->angularAvg_nn = (unsigned) round((global->angularAvgStopQ-global->angularAvgStartQ)/global->angularAvgDeltaQ)+1;
 		}
