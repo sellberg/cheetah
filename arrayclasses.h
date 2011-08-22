@@ -13,14 +13,10 @@
 
 #include <string>
 
-#include <fftw3.h>
-
-//tell the compiler that these classes are going to be defined
+//tell the compiler that these classes are going to be defined below (needed for copy constructors in arraydata)
 class array1D;
 class array2D;
 class array3D;
-class FourierTransformer;
-
 
 
 //=================================================================================
@@ -50,10 +46,12 @@ public:
     void copy( const arraydata& src );
     void copy( const array1D& src );
     void destroy();
-    double *data() const;                                         //return pointer to internal raw data array
+    double *data() const;                            			//return pointer to internal raw data array
     
-    void zero();												//set all elements to zero
+    void zero();												//set all elements to 0
+    void zero( unsigned int start, unsigned int stop );			//set all elements between start and stop to 0 (incl. start, excl. stop)
 	void ones();												//set all elements to 1
+    void ones( unsigned int start, unsigned int stop );			//set all elements between start and stop to 1 (incl. start, excl. stop)
 	void range( double neg, double pos );						//set elements to a range of values, given by the boundaries
     
 	// 'atAbsoluteIndex' functions:
@@ -203,87 +201,6 @@ public:
     std::string getASCIIdata() const;
     int writeToASCII( std::string filename ) const;
 };
-
-
-
-
-
-//=================================================================================
-//
-// FourierTransformer. helper class. it does the Fourier transform
-//
-//=================================================================================
-class FourierTransformer{
-
-private:
-    int verbose;
-	fftw_complex *p_in;				//internal complex input array
-	fftw_complex *p_out;			//internal complex output array
-	fftw_plan p_forward_plan;
-	fftw_plan p_backward_plan;
-	int p_n;						//size of the input (and output) arrays
-	
-	bool p_create_new_plans;		//default: new plans are created every time
-									//alternatively, the user could be enabled to set plans manually (not implemented currently)
-	
-	void setData( const array1D *real, const array1D *imag );
-	
-	void createPlans();
-	void destroyPlans();
-	void deallocateVectors();
-
-    //wrappers for the FFTW discrete Fourier Transform
-	int forwardFFT();					// == transform(1)
-	int inverseFFT();					// == transform(-1)
-	int transform( int direction=1 );
-	
-	void getData( array1D *&real, array1D *&imag ) const;		// return within passed arguments
-
-	//after the transform, use these functions to ask for the transformed data
-	array1D getReal() const;									// return by copy (may be slower)
-	array1D getImag() const;									// return by copy (may be slower)
-			
-public:
-    FourierTransformer();	//initialize with data
-    ~FourierTransformer();	
-
-	int transformForward( array1D *&f_real, array1D *&f_imag );					
-	int transformInverse( array1D *&f_real, array1D *&f_imag );					// includes 1/N normalization
-	int magnitudeSquared( array1D *&f_real, array1D *&f_imag );
-	int autocorrelation( array1D *&f_real, array1D *&f_imag );
-	int crosscorrelation( array1D *&f_real, array1D *&f_imag, array1D *&g_real, array1D *&g_imag );
-};
-
-
-//class FourierTransformer{
-//
-//private:
-//    int verbose;
-//	fftw_complex *p_in;				//internal complex input array
-//	fftw_complex *p_out;			//internal complex output array
-//	fftw_plan p_forward_plan;
-//	fftw_plan p_backward_plan;
-//	int p_n;						//size of the input (and output) arrays
-//	
-//	void createPlans();
-//	void destroyPlans();	
-//	
-//public:
-//    FourierTransformer( const array1D *real, const array1D *imag );	//initialize with data
-//    ~FourierTransformer();	
-//
-//    //wrappers for the FFTW discrete Fourier Transform
-//	int forwardTransform();					// == transform(1)
-//	int inverseTransform();					// == transform(-1)
-//
-//	int transform( int direction=1 );
-//	int transformWithNewPlans( int direction=1 );
-//
-//	//after the transform, use these functions to ask for the transformed data
-//	void getData( array1D *&real, array1D *&imag ) const;		// return within passed arguments
-//	array1D getReal() const;									// return by copy (may be slower)
-//	array1D getImag() const;									// return by copy (may be slower)
-//};
 
 
 #endif
