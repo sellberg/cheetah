@@ -1,12 +1,11 @@
 //
-//  FourierTransformer.cpp
-//  speed_comparison
+//  fouriertransformer.cpp
 //
 //  Created by Feldkamp on 8/20/11.
 //  Copyright 2011 SLAC National Accelerator Laboratory. All rights reserved.
 //
 
-#include "FourierTransformer.h"
+#include "fouriertransformer.h"
 
 #include <iostream>
 using std::cout;
