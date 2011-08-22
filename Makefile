@@ -154,21 +154,28 @@ attenuation.o: attenuation.cpp attenuation.h \
 
 correlation.o: correlation.cpp correlation.h \
   arrayclasses.h \
+  arraydataIO.h \
   crosscorrelator.h \
   setup.h \
   worker.h
 	$(CPP) $(CFLAGS) $<
 
 crosscorrelator.o: crosscorrelator.cpp crosscorrelator.h \
-  arrayclasses.h
+  arrayclasses.h \
+  arraydataIO.h \
+  fouriertransformer.h 
 	$(CPP) $(CFLAGS) $<
 
 arrayclasses.o: arrayclasses.cpp arrayclasses.h
 	$(CPP) $(CFLAGS) $<
 
-arraydataIO.o: arraydataIO.cpp arraydataIO.h
+arraydataIO.o: arraydataIO.cpp arraydataIO.h \
+  arrayclasses.h
 	$(CPP) $(CFLAGS) $<
 
+fouriertransformer.o: fouriertransformer.cpp fouriertransformer.h \
+  arrayclasses.h
+	$(CPP) $(CFLAGS) $<
 
 #--------------------------------------------------------------
 #compile the different parts of the cheetah and link them together
@@ -186,6 +193,7 @@ cheetah: cheetah.o \
   crosscorrelator.o \
   arrayclasses.o \
   arraydataIO.o \
+  fouriertransformer.o \
   $(MYANADIR)/XtcRun.o \
   $(MYANADIR)/main.o \
   $(CSPADDIR)/CspadCorrector.o \
