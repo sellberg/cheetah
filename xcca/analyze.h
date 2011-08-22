@@ -55,7 +55,7 @@ class Test {
 		string base();
 
 		int testArrayClasses();
-		int testCrossCorrelator( int alg = 1 );
+		int testCrossCorrelator( int alg = 1, int testpattern = 1 );
 		int testFourierTrafo();
 		int testIO();
 		int testDataTypes();

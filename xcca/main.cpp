@@ -25,7 +25,6 @@ void usage(){
 	cout << " -b<filename>   : subtract background file " << endl;
 	cout << " -m<filename>   : use mask file " << endl;
 	cout << " -B<factor>     : weighting of background" << endl;
-	cout << " -b<filename>   : use mask file " << endl;
 	cout << "-----------------------------------------------------" << endl;
 	cout << " -t<num>        : test different features" << endl;
 	cout << "                      num=1 : testCrossCorrelator" << endl;	
@@ -92,12 +91,22 @@ int main (int argc, char * const argv[]) {
 					}
 				}else{
 					cerr << "Could not open file '" << list_fn << "'" << endl;
+					exit( 1 );
 				}
 				fin.close();
 				
 
 				cout << "--> using file list in " << list_fn << endl;
-			
+
+			}else if (argv[i][1] == 'o'){
+				string outdir = argToString(argv[i]);
+				ana->setOutputDirectory( outdir );
+				cout << "--> using output directory " << outdir << endl;	
+				
+			}else if (argv[i][1] == 's'){
+				ana->flag_single_correlation_output = true;
+				cout << "--> using single image output " << endl;
+				
 			} else if (argv[i][1] == 'b') {				
 				string back_fn = argToString(argv[i]);
 				
@@ -132,15 +141,6 @@ int main (int argc, char * const argv[]) {
 				delete io;
 				delete mask;
 				cout << "--> using mask file " << mask_fn << endl;
-							
-			}else if (argv[i][1] == 'o'){
-				string outdir = argToString(argv[i]);
-				ana->setOutputDirectory( outdir );
-				cout << "--> using output directory " << outdir << endl;	
-			
-			}else if (argv[i][1] == 's'){
-				cout << "--> using single image output " << endl;				
-				ana->flag_single_correlation_output = true;
 				
 			} else if (argv[i][1] == 't') {
 				cout << "---- testing option '" << argv[i][2] << "' ----" << endl;
