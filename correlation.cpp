@@ -34,11 +34,7 @@ using std::endl;
 
 #include <cmath>
 
-#include "setup.h"
-#include "worker.h"
 #include "correlation.h"
-#include "crosscorrelator.h"
-
 #include "arrayclasses.h"
 #include "arraydataIO.h"
 
@@ -54,18 +50,32 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 	
     //create cross correlator object that takes care of the computations
+	//the arguments that are passed to the constructor determine 2D/3D calculations with/without mask
 	CrossCorrelator *cc = NULL;
 	if (global->autoCorrelateOnly) {
-		if (global->useBadPixelMask) cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, global->badpixelmask, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
-		else cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumPhi );
+		if (global->useBadPixelMask) 
+			cc = new CrossCorrelator( //auto-correlation 2D case, with mask
+						threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+						global->correlationNumPhi, global->correlationNumQ, 0, global->badpixelmask );
+		else 
+			cc = new CrossCorrelator( //auto-correlation 2D case, no mask
+						threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+						global->correlationNumPhi, global->correlationNumQ );
 	} else {
-		if (global->useBadPixelMask) cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, global->badpixelmask, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );
-		else cc = new CrossCorrelator( threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );	
+		if (global->useBadPixelMask) 
+			cc = new CrossCorrelator( //full cross-correlation 3D case, with mask
+						threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+						global->correlationNumPhi, global->correlationNumQ, global->correlationNumQ, global->badpixelmask );
+		else 
+			cc = new CrossCorrelator( //full cross-correlation 3D case, no mask
+						threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+						global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );	
 	}
 	
-    DEBUGL1_ONLY cc->setDebug(1);                           //turn on debug level inside the CrossCorrelator, if needed
-    DEBUGL2_ONLY cc->setDebug(2);                           //turn on debug level inside the CrossCorrelator, if needed
-
+	//turn on debug level inside the CrossCorrelator, if needed
+    DEBUGL1_ONLY cc->setDebug(1); 
+	DEBUGL2_ONLY cc->setDebug(2);
+	
 	//--------------------------------------------------------------------------------------------alg1
 	if (global->useCorrelation == 1) {					
 		
@@ -88,16 +98,7 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 
 		//transform data to polar coordinates as determined by the cheetah ini file	(in detector pixels)
 		//to the q-calibrated values the cross-correlator expects
-        double start_q = global->correlationStartQ;
-        double stop_q = global->correlationStopQ;
-        int number_q = global->correlationNumQ;
-//        double start_phi = global->correlationStartPhi;
-//        double stop_phi = global->correlationStopPhi;
-        int number_phi = global->correlationNumPhi;
-		
-
-		//calculate polar coordinates: returns an array2D in the first polar argument
-		int polar_fail = cc->calculatePolarCoordinates_FAST(number_phi, number_q, start_q, stop_q);
+		int polar_fail = cc->calculatePolarCoordinates_FAST(global->correlationStartQ, global->correlationStopQ);
 		if (polar_fail){
 			cout << "ERROR in correlate! Could not calculate polar coordinates!" << endl;
 		}
@@ -142,9 +143,9 @@ void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	DEBUGL1_ONLY cout << "writing SAXS to file..." << std::flush;
 	FILE *filePointerWrite;
 	char outfile[1024];
-	double samplingLengthD = (double) cc->samplingLength(); // save everything as doubles
+	double nQD = (double) cc->nQ(); // save everything as doubles
 	double *buffer;
-	buffer = (double*) calloc(cc->samplingLength(), sizeof(double));
+	buffer = (double*) calloc(cc->nQ(), sizeof(double));
 	
 	sprintf(outfile,"%s-saxs.bin",eventname);
 	DEBUGL1_ONLY printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)global->runNumber, (int)info->threadNum, global->datarate, outfile);
@@ -152,18 +153,18 @@ void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	filePointerWrite = fopen(outfile,"w+");
 
 	// angular averages
-	for (int i=0; i<cc->samplingLength(); i++) {
+	for (int i=0; i<cc->nQ(); i++) {
 		buffer[i] = cc->getIave(i);
 	}
-	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
-	fwrite(&buffer[0],sizeof(double),cc->samplingLength(),filePointerWrite);
+	fwrite(&nQD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
+	fwrite(&buffer[0],sizeof(double),cc->nQ(),filePointerWrite);
 	
 	// q binning
-	for (int i=0; i<cc->samplingLength(); i++) {
+	for (int i=0; i<cc->nQ(); i++) {
 		buffer[i] = cc->getQave(i);
 	}
-	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-	fwrite(&buffer[0],sizeof(double),cc->samplingLength(),filePointerWrite);
+	fwrite(&nQD,sizeof(double),1,filePointerWrite);
+	fwrite(&buffer[0],sizeof(double),cc->nQ(),filePointerWrite);
 	
 	fclose(filePointerWrite);
 	free(buffer);
@@ -181,11 +182,11 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	DEBUGL1_ONLY cout << "writing XCCA to file..." << std::flush;
 	FILE *filePointerWrite;
 	char outfile[1024];
-	double samplingLengthD = (double) cc->samplingLength(); // save everything as doubles
-	double samplingLagD = (double) cc->samplingLag();
-	double samplingAngleD = (double) cc->samplingAngle();
+	double nQD = (double) cc->nQ(); // save everything as doubles
+	double nLagD = (double) cc->nLag();
+	double nPhiD = (double) cc->nPhi();
 	double *buffer;
-	buffer = (double*) calloc(cc->samplingLength()*cc->samplingLength()*cc->samplingLag(), sizeof(double));
+	buffer = (double*) calloc(cc->nQ()*cc->nQ()*cc->nLag(), sizeof(double));
 	if (global->sumCorrelation) info->correlation = (double*) calloc(global->correlation_nn, sizeof(double));
 	
 	if (global->autoCorrelateOnly){
@@ -198,54 +199,54 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	filePointerWrite = fopen(outfile,"w+");
 	
 	// angular averages
-	for (int i=0; i<cc->samplingLength(); i++) {
+	for (int i=0; i<cc->nQ(); i++) {
 		buffer[i] = cc->getIave(i);
 	}
-	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
-	fwrite(&buffer[0],sizeof(double),cc->samplingLength(),filePointerWrite);
+	fwrite(&nQD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
+	fwrite(&buffer[0],sizeof(double),cc->nQ(),filePointerWrite);
 	
 	// q binning
-	for (int i=0; i<cc->samplingLength(); i++) {
+	for (int i=0; i<cc->nQ(); i++) {
 		buffer[i] = cc->getQave(i);
 	}
-	fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-	fwrite(&buffer[0],sizeof(double),cc->samplingLength(),filePointerWrite);
+	fwrite(&nQD,sizeof(double),1,filePointerWrite);
+	fwrite(&buffer[0],sizeof(double),cc->nQ(),filePointerWrite);
 	
 	// angle binning
-	for (int i=0; i<cc->samplingAngle(); i++) {
+	for (int i=0; i<cc->nPhi(); i++) {
 		buffer[i] = cc->getPhiave(i);
 	}
-	fwrite(&samplingAngleD,sizeof(double),1,filePointerWrite);
-	fwrite(&buffer[0],sizeof(double),cc->samplingAngle(),filePointerWrite);
+	fwrite(&nPhiD,sizeof(double),1,filePointerWrite);
+	fwrite(&buffer[0],sizeof(double),cc->nPhi(),filePointerWrite);
 	
 	// cross-correlation
 	if (global->useCorrelation) {
 		if (global->autoCorrelateOnly) {
 			// autocorrelation only (q1=q2)
-			for (int i=0; i<cc->samplingLength(); i++) {
-				for (int k=0; k<cc->samplingLag(); k++) {
+			for (int i=0; i<cc->nQ(); i++) {
+				for (int k=0; k<cc->nLag(); k++) {
 					if (global->sumCorrelation)
-						info->correlation[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,k);
-					else buffer[i*cc->samplingLag()+k] = cc->getCrossCorrelation(i,k);
+						info->correlation[i*cc->nLag()+k] = cc->getCrossCorrelation(i,k);
+					else buffer[i*cc->nLag()+k] = cc->getCrossCorrelation(i,k);
 				}
 			}
-			fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-			fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
+			fwrite(&nQD,sizeof(double),1,filePointerWrite);
+			fwrite(&nLagD,sizeof(double),1,filePointerWrite);
 			
 		} else {
 			// full version
-			for (int i=0; i<cc->samplingLength(); i++) {
-				for (int j=0; j<cc->samplingLength(); j++) {
-					for (int k=0; k<cc->samplingLag(); k++) {
+			for (int i=0; i<cc->nQ(); i++) {
+				for (int j=0; j<cc->nQ(); j++) {
+					for (int k=0; k<cc->nLag(); k++) {
 						if (global->sumCorrelation)
-							info->correlation[i*cc->samplingLength()*cc->samplingLag()+j*cc->samplingLag()+k] = cc->getCrossCorrelation(i,j,k);
-						else buffer[i*cc->samplingLength()*cc->samplingLag()+j*cc->samplingLag()+k] = cc->getCrossCorrelation(i,j,k);
+							info->correlation[i*cc->nQ()*cc->nLag()+j*cc->nLag()+k] = cc->getCrossCorrelation(i,j,k);
+						else buffer[i*cc->nQ()*cc->nLag()+j*cc->nLag()+k] = cc->getCrossCorrelation(i,j,k);
 					}
 				}
 			}
-			fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-			fwrite(&samplingLengthD,sizeof(double),1,filePointerWrite);
-			fwrite(&samplingLagD,sizeof(double),1,filePointerWrite);
+			fwrite(&nQD,sizeof(double),1,filePointerWrite);
+			fwrite(&nQD,sizeof(double),1,filePointerWrite);
+			fwrite(&nLagD,sizeof(double),1,filePointerWrite);
 			
 		}
 		if (global->sumCorrelation)
