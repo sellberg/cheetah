@@ -1158,7 +1158,7 @@ namespace matlibutil
 	//--------------------------------------------------------------------------
 	int toInt(string number)
 	{
-		return atol(number.c_str()); // calls cstdlib's atol (ascii to long int)
+		return (int)atol(number.c_str()); // calls cstdlib's atol (ascii to long int)
 	}
 
 	//----------------------------------------------------------------- toDouble
@@ -3629,7 +3629,7 @@ namespace matlibutil
 
 	void Queue::add(double val)
 	{
-    	for (int i = length-2; i >= 0; i--)
+    	for (long int i = length-2; i >= 0; i--)
 		{
 			value[i+1] = value[i];
 		}

@@ -882,6 +882,7 @@ namespace ns_edf
 		p_scaledFlag			= SF_SCALED;
 		p_verbose				= true;
 		p_newFlag				= false;
+		p_matlibFlag			= false;
 		p_tags_builtin.clear();
 		p_tags_userdef.clear();
 		p_tags_loaded.clear();
@@ -1261,7 +1262,11 @@ namespace ns_edf
 		p_newFlag = newFlag;
 	}
 
-
+	void edf::set_MatlibFlag(bool matlibFlag)
+	{
+		p_matlibFlag = matlibFlag;
+	}
+	
 	//---------------------------------------------------------------------- get
 	//
 	//
@@ -1834,6 +1839,11 @@ namespace ns_edf
 	bool edf::get_NewFlag() const
 	{
 		return p_newFlag;
+	}
+
+	bool edf::get_MatlibFlag() const
+	{
+		return p_matlibFlag;
 	}
 
 	C_Taglist edf::get_tags_builtin() const
@@ -2411,12 +2421,20 @@ namespace ns_edf
 		// The funtion get_NewFlag returns true if one of the folloeng headaer
 		// tags have been found when reading the header:
 		// TAG_TUD_DATE_ORIG, TAG_TUD_DATE_PREV, TAG_TUD_DATE_CURR.
-		// 2009-09-02: Pay attention to the fact that complex data types need
+		// (2009-09-02, JP)
+		// Pay attention to the fact that complex data types need
 		// not to be considered, bacause they have been introduced after the
 		// bug removal.
+		// (2011-05-19, JP)
+		// Bad bug: The absence of the tags TAG_TUD_DATE_ORIG, etc. does NOT
+		// necessarily mean, that the edf was written by an old tomo edf engine.
+		// The file could have also been written by some other software (like
+		// PyMca, for example ;-)). In this case, the byte order must not be
+		// changed. To distinguish between the two cases, I introduced the
+		// flag 'matlibFlag'.
 		if ( ( get_DataType() == DT_FLOAT ||
 			   get_DataType() == DT_DOUBLE ) &&
-			   !get_NewFlag() )
+			   !get_NewFlag() && get_MatlibFlag() )
 		{
 			reverse_ByteOrder = !reverse_ByteOrder;
 			cout << "WARNING. You are loading an edf file which had been written" << endl;
@@ -3612,6 +3630,7 @@ namespace ns_edf
 		// and the new (correct) byteorder specification. If old then byteorder
 		// must be flipped in case of double or float.
 		set_NewFlag( newflag && matlibflag );
+		set_MatlibFlag( matlibflag );
 
 		return (int )!check_consistency();
 	}

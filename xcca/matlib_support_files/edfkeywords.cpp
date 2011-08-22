@@ -2,14 +2,13 @@
 
 #include <sstream>
 
-//***commented out the following 2 lines for the use in the cross correlator project, matlib needs this
-//#include "util.h"
-//using matlibutil::equal;
+#include "util.h"
 
 using std::vector;
 using std::string;
 using std::ostringstream;
 using std::ostream;
+using matlibutil::equal;
 
 namespace ns_key
 {
@@ -183,23 +182,9 @@ namespace ns_key
 
 	bool operator==( const string a, const C_Keyword B )
 	{
-		//convert a to upper case
-		string aUpper;
-		for ( string::const_iterator j=a.begin(); j!=a.end(); j++ )
-		{
-			aUpper.append( 1, (char)std::toupper(*j) );
-		}
-		
 		for ( vector<string>::const_iterator i = B.begin(); i != B.end(); i++ )
 		{
-			//convert *i to upper case
-			string iUpper;
-			for ( string::const_iterator j=(*i).begin(); j!=(*i).end(); j++ )
-			{
-				iUpper.append( 1, (char)std::toupper(*j) );
-			}
-		
-			if ( aUpper == iUpper )
+			if ( equal( a, *i ) )
 			{
 				return true;
 			}

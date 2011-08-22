@@ -15,17 +15,17 @@
 
 #ifndef edf_h_flag
 #define edf_h_flag
-#endif
 
 #include <string>
 #include <sstream>
 #include <vector>
 
 #include "edfkeywords.h"
-
 #include "timer.h"
 
 #ifndef tomo_version
+#define tomo_version "tomo_version_9.0"
+#endif
 
 namespace ns_edf
 {
@@ -35,11 +35,19 @@ namespace ns_edf
 	//
 	//const char EDF_VERSION_NUMBER[] = "edf_version_10.0";
 	//
+	// (by JP)
 	// Bug removal: difference between 32bit and 64bit machines.
 	//const char EDF_VERSION_NUMBER[] = "edf_version_10.1"; 
 	//
-	// (JP, 2009-09-02) Implementation of complex data types and (c)volumedata.
-	const char EDF_VERSION_NUMBER[] = "edf_version_10.2"; 
+	// (2009-09-02, JP) Implementation of complex data types and (c)volumedata.
+	//const char EDF_VERSION_NUMBER[] = "edf_version_10.2"; 
+	//
+	// (2011-05-19, JP)
+	// Bug removal: Introduction of matlibFlag in order to distinguish between
+	// old matlib edf files and non-matlib edf files which is relevant for
+	// backward compatibility (errornous byte order handling of old matlib edf
+	// files).
+	const char EDF_VERSION_NUMBER[] = "edf_version_10.3";
 	
 	
 	//------------------------------------------------------------------------------
@@ -473,6 +481,7 @@ namespace ns_edf
 			void set_ScaledFlag( scaled_t scaledFlag );
 			void setVerbosity( bool verbose);		//no underscore by matlib convention
 			void set_NewFlag( bool newFlag );
+			void set_MatlibFlag( bool newFlag );
 
 			//------------------------------------------------------- Get values
 			//
@@ -519,6 +528,7 @@ namespace ns_edf
 			scaled_t get_ScaledFlag() const;
 			bool getVerbosity() const;		// no underscore by matlib convention
 			bool get_NewFlag() const;
+			bool get_MatlibFlag() const;
 			
 			C_Taglist get_tags_builtin() const;
 			C_Taglist get_tags_userdef() const;
@@ -619,7 +629,8 @@ namespace ns_edf
 			scaled_t		p_scaledFlag; 	// For writing data to file; depends on user request.
 		                					// and must be treated independently from 'p_scaleIn'.
 			bool 			p_verbose;		// Print information to console if true.
-			bool			p_newFlag;		// True, if byteorder of loaded file is correct; else false.
+			bool			p_newFlag;		// True, if one of tags {TAG_TUD_DATE_ORIG, TAG_TUD_DATE_PREV, TAG_TUD_DATE_CURR} is found. Used to determine, whether byte order of float/double was handled correclty.
+			bool			p_matlibFlag;	// True, if file was written by matlib edf engine.
 
 			C_Taglist		p_tags_builtin;		// List of built-in tags (those being interpreted by edf).
 			C_Taglist		p_tags_userdef;		// List of user-defined tags (without interpreted ones).
