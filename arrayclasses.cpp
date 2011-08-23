@@ -157,7 +157,7 @@ double *arraydata::data() const{
 
 
 //--------------------------------------------------------------------
-double arraydata::get_atAbsoluteIndex( unsigned int i) const{
+double arraydata::get_atAbsoluteIndex(unsigned int i) const{
 	//check for errors, but fail 'silently', 
 	//i.e., return a valid numeric value 0,
 	//instead of exiting or throwing an exception
@@ -168,7 +168,7 @@ double arraydata::get_atAbsoluteIndex( unsigned int i) const{
 	} else if (i >= size()) {
 		std::cerr << "Error in arraydata::get_atAbsoluteIndex(" << i 
 			<< "). Index is larger than absolute dimension " << size() << "." << endl;
-		return 0.;
+		throw;
 	} else {
 		return p_data[i];
 	}
@@ -182,6 +182,7 @@ void arraydata::set_atAbsoluteIndex( const unsigned int i, const double val){
 	} else {									//fail 'silently', as in: don't do anything
 		std::cerr << "Error in arraydata::set_atAbsoluteIndex(" << i 
 			<< ", " << val <<  "). Index is larger than absolute dimension " << size() << "." << endl;
+		throw;
 	}
 }
 
@@ -202,7 +203,7 @@ void arraydata::zero(){					//set all elements to zero
 void arraydata::zero( unsigned int start, unsigned int stop ){
 	if ( start >= stop || stop > size() ){
 		cerr << "Error in arraydata::zero("<< start << ", " << stop << "). Check boundaries." << endl;
-		return;
+		throw;
 	}
 	for (int i = start; i < stop; i++) {
 		set_atAbsoluteIndex(i, 0);
@@ -218,7 +219,7 @@ void arraydata::ones(){					//set all elements to one
 void arraydata::ones( unsigned int start, unsigned int stop ){
 	if ( start >= stop || stop > size() ){
 		cerr << "Error in arraydata::ones("<< start << ", " << stop << "). Check boundaries." << endl;
-		return;
+		throw;
 	}
 	for (int i = start; i < stop; i++) {
 		set_atAbsoluteIndex(i, 1);
@@ -671,7 +672,7 @@ int array2D::getRow( int rownum, array1D *&row ) const{
 		return 2;
 	}
 	
-	// create new array if 'row' doesn't have right size
+	// create new array if 'row' doesn't have right size, otherwise, just overwrite data
 	if (row->size() != this->dim1()) {
 		delete row;
 		row = new array1D( this->dim1() );
@@ -689,7 +690,7 @@ int array2D::getRow( int rownum, array1D *&row ) const{
 }
 
 
-int array2D::getCol( int colnum, array1D *&col ) const{
+int array2D::getCol( int colnum, array1D *&col) const{
     if (colnum >= dim1() || colnum < 0){ 
 		cerr << "Error in array2D::getCol. column number " << colnum << " too big or below zero." << endl; 
 		return 1;
@@ -699,7 +700,7 @@ int array2D::getCol( int colnum, array1D *&col ) const{
 		return 2;
 	}
 
-	// create new array if 'col' doesn't have right size
+	// create new array if 'col' doesn't have right size, otherwise, just overwrite data
 	if (col->size() != this->dim2()) {		
     	delete col;
     	col = new array1D( this->dim2() );
@@ -718,30 +719,43 @@ int array2D::getCol( int colnum, array1D *&col ) const{
 
 
 //-----------------------------------------------------setRow/setCol
+// note: there is no check for the dimensions
+// the array2D is updated as long as there is data in the passed array1D
+// therefore, if dim(1D) < dim(2D), there will be old data, which is not overwritten
+//       and, if dim(1D) > dim(2D), not all data from 1D will be present in the 2D
 void array2D::setRow( const int rownum, const array1D *row ){
-    if (!row){
-        cerr << "Error in array2D::setRow. Row not allocated." << endl;
-    }else if (row->size() != dim1()){
-        cerr << "Error in array2D::setRow. Dimensions don't match. (row size="
-			<< row->size() << ", internal dim1=" << dim1() << ")" << endl;
-    }else{
-        for (int i = 0; i < row->size(); i++){			//for a fixed row, i goes through columns (x-values)
-            this->set( i, rownum, row->get(i) );		// copy values of row to this array2D
-        }
-    }
+	if (!row){
+		cerr << "Error in array2D::setRow. Row not allocated." << endl;
+	}else{
+		for (int i = 0; i < row->size(); i++){			//for a fixed row, i goes through columns (x-values)
+			this->set( i, rownum, row->get(i) );		// copy values of row to this array2D
+		}
+	}
 }
 
+// see note for setRow,
 void array2D::setCol( const int colnum, const array1D *col ){
-    if (!col){
-        cerr << "Error in array2D::setRow. Row not allocated." << endl;
-    }else if (col->size() != dim2()){
-        cerr << "Error in array2D::setRow. Dimensions don't match. (col size="
-			<< col->size() << ", internal dim1=" << dim2() << ")" << endl;
-    }else{
+	if (!col){
+		cerr << "Error in array2D::setRow. Row not allocated." << endl;
+	}else{
         for (int j = 0; j < col->size(); j++){			//for a fixed column number, j goes through the rows (y-values)
-            this->set( colnum, j, col->get(j) );
-        }
-    }
+			this->set( colnum, j, col->get(j) );
+		}
+	}
+}
+
+//------------------------------------------------------------- transpose
+void array2D::transpose(){
+	array2D *old = new array2D(*this);
+	//swap dimensions, total arraydata length stays the same
+	setDim1(old->dim2());
+	setDim2(old->dim1());
+	for ( int i = 0; i < dim1(); i++ ){
+		for ( int j = 0; j < dim2(); j++ ){
+			set( i, j, old->get(j,i) );
+		}
+	}
+	delete old;
 }
 
 //------------------------------------------------------------- xrange

@@ -155,6 +155,7 @@ public:
     int getCol( int colnum, array1D *&col ) const;						//return value is 0 if successful
     void setRow( int rownum, const array1D *row );                              //sets a one-dimensional row
     void setCol( int colnum, const array1D *col );
+	void transpose();
 	
 	void xrange( double xneg, double xpos );
 	void yrange( double yneg, double ypos );
