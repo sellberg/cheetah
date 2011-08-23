@@ -95,20 +95,21 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 
         //cc->createLookupTable( 100, 100 );		// lookup table should in general not be created here (i.e., shot-by-shot)
 		cc->setLookupTable( global->correlationLUT, global->correlationLUTdim1, global->correlationLUTdim2 );
+		array1D *mask = new array1D(RAW_DATA_LENGTH);
+		mask->ones();
+		cc->setMask(mask);		
+		cc->setMaskEnable(false);   //use no mask for the moment
+		delete mask;
 
 		//transform data to polar coordinates as determined by the cheetah ini file	(in detector pixels)
 		//to the q-calibrated values the cross-correlator expects
 		int polar_fail = cc->calculatePolarCoordinates_FAST(global->correlationStartQ, global->correlationStopQ);
-		if (polar_fail){
-			cout << "ERROR in correlate! Could not calculate polar coordinates!" << endl;
-		}
+		if (polar_fail){ cout << "ERROR in correlate! Could not calculate polar coordinates!" << endl; }
 
 		//perform the correlation
 		pthread_mutex_lock(&global->correlationFFT_mutex);			// need to protect the FFTW at the core, not thread-safe!!
 		int XCCA_fail = cc->calculateXCCA_FAST();
-		if (XCCA_fail){
-			cout << "ERROR in correlate! Could not calculate XCCA!" << endl;
-		}
+		if (XCCA_fail){ cout << "ERROR in correlate! Could not calculate XCCA!" << endl; }
 		pthread_mutex_unlock(&global->correlationFFT_mutex);
 		
 		//write output
@@ -116,11 +117,14 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 		writeXCCA(threadInfo, global, cc, threadInfo->eventname); // writes XCCA+SAXS to binary
 		pthread_mutex_unlock(&global->correlation_mutex);
 		
-		//writing Tiff is not explicitly thread-safe... is this a problem for the cheetah?
-		std::ostringstream name_osst;
-		name_osst << threadInfo->eventname << "-xaca.tif";
+		//writing files is not explicitly thread-safe... is this a problem for the cheetah? ...right now, it doesn't seem like it
+		std::ostringstream polar_osst, corr_osst;
+		int verbose = 1;
 		arraydataIO *io = new arraydataIO;
-		io->writeToTiff( name_osst.str(), cc->corr(), 1 );            //dump scaled output from correlation
+		polar_osst << threadInfo->eventname << "-polar.tif";
+		io->writeToTiff( polar_osst.str(), cc->polar(), 1, verbose );		//0: not scaled
+		corr_osst << threadInfo->eventname << "-xaca.tif";
+		io->writeToTiff( corr_osst.str(), cc->autoCorr(), 1, verbose );		//1: scaled
 		delete io;
 		
 		DEBUGL2_ONLY cout << "XCCA done." << endl;
@@ -182,11 +186,17 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	DEBUGL1_ONLY cout << "writing XCCA to file..." << std::flush;
 	FILE *filePointerWrite;
 	char outfile[1024];
+	
 	double nQD = (double) cc->nQ(); // save everything as doubles
 	double nLagD = (double) cc->nLag();
 	double nPhiD = (double) cc->nPhi();
+	
+	const int nQ = cc->nQ();
+	const int nPhi = cc->nPhi();
+	const int nLag = cc->nLag();
+	
 	double *buffer;
-	buffer = (double*) calloc(cc->nQ()*cc->nQ()*cc->nLag(), sizeof(double));
+	buffer = (double*) calloc(nQ*nQ*nLag, sizeof(double));
 	if (global->sumCorrelation) info->correlation = (double*) calloc(global->correlation_nn, sizeof(double));
 	
 	if (global->autoCorrelateOnly){
@@ -199,35 +209,36 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	filePointerWrite = fopen(outfile,"w+");
 	
 	// angular averages
-	for (int i=0; i<cc->nQ(); i++) {
+	for (int i=0; i<nQ; i++) {
 		buffer[i] = cc->getIave(i);
 	}
 	fwrite(&nQD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
-	fwrite(&buffer[0],sizeof(double),cc->nQ(),filePointerWrite);
+	fwrite(&buffer[0],sizeof(double),nQ,filePointerWrite);
 	
 	// q binning
-	for (int i=0; i<cc->nQ(); i++) {
+	for (int i=0; i<nQ; i++) {
 		buffer[i] = cc->getQave(i);
 	}
 	fwrite(&nQD,sizeof(double),1,filePointerWrite);
-	fwrite(&buffer[0],sizeof(double),cc->nQ(),filePointerWrite);
+	fwrite(&buffer[0],sizeof(double),nQ,filePointerWrite);
 	
 	// angle binning
-	for (int i=0; i<cc->nPhi(); i++) {
+	for (int i=0; i<nPhi; i++) {
 		buffer[i] = cc->getPhiave(i);
 	}
 	fwrite(&nPhiD,sizeof(double),1,filePointerWrite);
-	fwrite(&buffer[0],sizeof(double),cc->nPhi(),filePointerWrite);
+	fwrite(&buffer[0],sizeof(double),nPhi,filePointerWrite);
 	
 	// cross-correlation
 	if (global->useCorrelation) {
 		if (global->autoCorrelateOnly) {
 			// autocorrelation only (q1=q2)
-			for (int i=0; i<cc->nQ(); i++) {
-				for (int k=0; k<cc->nLag(); k++) {
+			for (int i=0; i < nQ; i++) {
+				for (int k=0; k < nLag; k++) {
 					if (global->sumCorrelation)
-						info->correlation[i*cc->nLag()+k] = cc->getCrossCorrelation(i,k);
-					else buffer[i*cc->nLag()+k] = cc->getCrossCorrelation(i,k);
+						info->correlation[i*nLag + k] = cc->getAutoCorrelation(i,k);
+					else 
+						buffer[i*nLag + k] = cc->getAutoCorrelation(i,k);
 				}
 			}
 			fwrite(&nQD,sizeof(double),1,filePointerWrite);
@@ -235,12 +246,13 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 			
 		} else {
 			// full version
-			for (int i=0; i<cc->nQ(); i++) {
-				for (int j=0; j<cc->nQ(); j++) {
-					for (int k=0; k<cc->nLag(); k++) {
+			for (int i=0; i < nQ; i++) {
+				for (int j=0; j < nQ; j++) {
+					for (int k=0; k < nLag; k++) {
 						if (global->sumCorrelation)
-							info->correlation[i*cc->nQ()*cc->nLag()+j*cc->nLag()+k] = cc->getCrossCorrelation(i,j,k);
-						else buffer[i*cc->nQ()*cc->nLag()+j*cc->nLag()+k] = cc->getCrossCorrelation(i,j,k);
+							info->correlation[i*nQ*nLag + j*nLag + k] = cc->getCrossCorrelation(i,j,k);
+						else 
+							buffer[i*nQ*nLag + j*nLag + k] = cc->getCrossCorrelation(i,j,k);
 					}
 				}
 			}
