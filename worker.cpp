@@ -186,7 +186,7 @@ void *worker(void *threadarg) {
 	 *	Are we still in 'frame digesting' mode?
 	 */
 	if(threadInfo->threadNum < global->startFrames) {
-		printf("r%04u:%i (%3.1f Hz): Digesting initial frames\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate);
+		printf("r%04u:%i (%3.1f Hz): Digesting initial frames\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate);
 		threadInfo->image = NULL;
 		goto cleanup;
         //ATTENTION! goto should not be used at all ( see http://www.cplusplus.com/forum/general/29190/ )
@@ -295,21 +295,21 @@ void *worker(void *threadarg) {
 	 */	
 	if (global->useAutoHotpixel) {
 		if (global->icefinder.use) {
-			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i, hot=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.ice, threadInfo->nPeaks, threadInfo->nHot);
+			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i, hot=%i)\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, hit.ice, threadInfo->nPeaks, threadInfo->nHot);
 		} else if (global->waterfinder.use) {
-			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i, hot=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.water, threadInfo->nPeaks, threadInfo->nHot);
+			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i, hot=%i)\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, hit.water, threadInfo->nPeaks, threadInfo->nHot);
 		} else if (global->hitfinder.use) {
-			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i, hot=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.standard, threadInfo->nPeaks, threadInfo->nHot);
+			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i, hot=%i)\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, hit.standard, threadInfo->nPeaks, threadInfo->nHot);
 		}
 	} else {
 		if (global->icefinder.use) {
-			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.ice, threadInfo->nPeaks);
+			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, hit.ice, threadInfo->nPeaks);
 		} else if (global->waterfinder.use) {
-			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.water, threadInfo->nPeaks);
+			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, hit.water, threadInfo->nPeaks);
 		} else if (global->hitfinder.use) {
-			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, hit.standard, threadInfo->nPeaks);
+			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, hit.standard, threadInfo->nPeaks);
 		} else if ((global->nprocessedframes % 100) == 0) {
-			printf("r%04u:%i (%3.1f Hz): Processed %ld events\n", (int)global->runNumber, (int)threadInfo->threadNum, global->datarate, global->nprocessedframes);
+			printf("r%04u:%i (%3.1f Hz): Processed %ld events\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, global->nprocessedframes);
 		}
 	}
 	
@@ -643,7 +643,7 @@ void nameEvent(tThreadInfo *info, cGlobal *global){
 	timestatic=localtime_r( &eventTime, &timelocal );	
 	strftime(buffer1,80,"%Y_%b%d",&timelocal);
 	strftime(buffer2,80,"%H%M%S",&timelocal);
-	sprintf(info->eventname,"LCLS_%s_r%04u_%s_%x_cspad",buffer1,global->runNumber,buffer2,info->fiducial);
+	sprintf(info->eventname,"LCLS_%s_r%04u_%s_%x_cspad",buffer1,info->runNumber,buffer2,info->fiducial);
 }
 	
 	
@@ -664,14 +664,14 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	//timestatic=localtime_r( &eventTime, &timelocal );	
 	//strftime(buffer1,80,"%Y_%b%d",&timelocal);
 	//strftime(buffer2,80,"%H%M%S",&timelocal);
-	//sprintf(outfile,"LCLS_%s_r%04u_%s_%x_cspad.h5",buffer1,global->runNumber,buffer2,info->fiducial);
+	//sprintf(outfile,"LCLS_%s_r%04u_%s_%x_cspad.h5",buffer1,info->runNumber,buffer2,info->fiducial);
 
 	sprintf(outfile,"%s.h5",eventname);
 	//strcpy(outfile, info->eventname);
-	DEBUGL1_ONLY printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)global->runNumber, (int)info->threadNum, global->datarate, outfile);
+	DEBUGL1_ONLY printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)info->runNumber, (int)info->threadNum, global->datarate, outfile);
 
 	pthread_mutex_lock(&global->framefp_mutex);
-	fprintf(hitfp, "r%04u/%s, %i\n", (int)global->runNumber, info->eventname, info->nPeaks);
+	fprintf(hitfp, "r%04u/%s, %i\n", (int)info->runNumber, info->eventname, info->nPeaks);
 	pthread_mutex_unlock(&global->framefp_mutex);
 	
 		
