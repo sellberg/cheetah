@@ -49,7 +49,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	
 	// Create histogram array
 	long		nhist = 131071;
-	uint16_t	*histogram, *histograms;
+	uint16_t	*histograms;
 	//histogram = (uint16_t*) calloc(nhist, sizeof(uint16_t));
 	histograms = (uint16_t*) calloc(32*nhist, sizeof(uint16_t));
 	

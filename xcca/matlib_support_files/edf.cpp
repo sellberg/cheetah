@@ -2302,7 +2302,7 @@ namespace ns_edf
 
 		// Now we are able to calculate the headersize.
 		numCharsEndl = (int )string( HEADER_TOKEN_ENDLINE ).length();
-		headersize = calculate_headersize( text, numCharsEndl, numSpacePadding );
+		headersize = (unsigned int)calculate_headersize( text, numCharsEndl, numSpacePadding );
 
 		//cout << "DEBUGINFO: edf::write_header() - numSpacePadding = " << numSpacePadding << endl;
 
@@ -2537,7 +2537,7 @@ namespace ns_edf
 				{
 					// Attention: reversing the byte order of complex data types
 					// must NOT flip the order of real part and imaginary part.
-					reverseByteOrder( data, sizeDataType1, numPixels2 );
+					reverseByteOrder( data, sizeDataType1, (int)numPixels2 );
 				}
 
 				if ( get_ScaleIn() )
@@ -2606,7 +2606,7 @@ namespace ns_edf
 
 				if ( flipByteOrder )
 				{
-					reverseByteOrder( data, sizeDataType1, numPixels2 );
+					reverseByteOrder( data, sizeDataType1, (int)numPixels2 );
 				}
 
 				if ( get_ScaleIn() )
@@ -3723,7 +3723,7 @@ namespace ns_edf
 
 		if ( b < HEADER_WIDTH_VALUE )
 		{
-			numSpacePadding = c - HEADER_WIDTH_VALUE + b; // new
+			numSpacePadding = (int)(c - HEADER_WIDTH_VALUE + b); // new
 			
 			// 01.12.2007 3:00, bug fix at bw4
 			while ( numSpacePadding < 0 )
@@ -3733,7 +3733,7 @@ namespace ns_edf
 		}
 		else
 		{
-			numSpacePadding = c;
+			numSpacePadding = (int)c;
 		}
 		
 		return headersize;

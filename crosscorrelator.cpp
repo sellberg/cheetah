@@ -50,20 +50,20 @@ CrossCorrelator::CrossCorrelator( float *dataCArray, float *qxCArray, float *qyC
 	
 	//check, user wants to run in 2D xaca or full 3D xcca mode
 	if (nq2 == 0){
-		p_xcca_enable = false;
+		setXccaEnable(false);
 		p_nQ = nq1;
 		p_autoCorrelation = new array2D( nQ(), nLag() );
 	} else {
-		p_xcca_enable = true;
+		setXccaEnable(true);
 		p_nQ = (nq1 > nq2) ? nq1 : nq2;
 		p_crossCorrelation = new array3D( nQ(), nQ(), nLag() );
 	}
 
 	//check, if a mask was given
 	if (maskCArray == NULL){
-		p_mask_enable = false;
+		setMaskEnable( false );
 	}else{
-		p_mask_enable = true;
+		setMaskEnable( true );
 		setMask(maskCArray, arraylength);	
 	}
 	
@@ -102,20 +102,20 @@ CrossCorrelator::CrossCorrelator( array2D *dataArray, array2D *qxArray, array2D 
 	
 	//check, user wants to run in 2D xaca or full 3D xcca mode
 	if (nq2 == 0){
-		p_xcca_enable = false;
+		setXccaEnable(false);
 		p_nQ = nq1;
 		p_autoCorrelation = new array2D( nQ(), nLag() );
 	} else {
-		p_xcca_enable = true;
+		setXccaEnable(true);
 		p_nQ = (nq1 > nq2) ? nq1 : nq2;
 		p_crossCorrelation = new array3D( nQ(), nQ(), nLag() );
 	}
 
 	//check, if a mask was given
 	if (maskCArray == NULL){
-		p_mask_enable = false;
+		setMaskEnable( false );
 	}else{
-		p_mask_enable = true;
+		setMaskEnable( true );
 		setMask(maskCArray, dataArray->size());	
 	}
 	
@@ -143,9 +143,7 @@ CrossCorrelator::~CrossCorrelator(){
 	delete p_mask;
 	
     delete p_polar;
-	delete p_corr;
 	delete p_mask_polar;
-	delete p_mask_corr;
 	delete p_table;
 	
 	delete p_q;
@@ -190,9 +188,7 @@ void CrossCorrelator::initPrivateVariables(){
 	p_mask = NULL;
 
 	p_polar = NULL;
-	p_corr = NULL;
 	p_mask_polar = NULL;
-	p_mask_corr = NULL;
     p_table = NULL;
 
 	p_q = NULL;
@@ -416,7 +412,7 @@ void CrossCorrelator::calculateSAXS() {
 		double itot = 0; // reset summed intensity
 		int counter = 0; // reset counter
 		for (int j=0; j<arraySize(); j++) {
-			if ( p_q->get(j) == p_qave->get(i) && (!p_mask_enable || mask()->get(j))) {
+			if ( p_q->get(j) == p_qave->get(i) && (!maskEnable() || mask()->get(j))) {
 				itot += data()->get(j);
 				counter++;
 			}
@@ -447,7 +443,7 @@ void CrossCorrelator::calculateXCCA(){
 	if (p_debug >= 1) printf("calculating speckle arrays...\n");
 
 	for (int i=0; i<arraySize(); i++) {
-		if (!p_mask_enable || mask()->get(i)) {
+		if (!maskEnable() || mask()->get(i)) {
 			int qIndex = (int) round((p_q->get(i)-qmin())/deltaq()); // the index in qave[] that corresponds to q[i]
 			int phiIndex = (int) round((p_phi->get(i)-phimin())/deltaphi()); // the index in phiave[] that corresponds to phi[i]
 			if (p_debug >= 3) printf("qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
@@ -477,7 +473,7 @@ void CrossCorrelator::calculateXCCA(){
 	// calculate cross-correlation array and normalization array for cross-correlation
 	if (p_debug >= 1) cout << "# of angular lags: " << nLag() << endl;
 	
-	if (p_xcca_enable) {
+	if (xccaEnable()) {
 		
 		if (p_debug >= 1) printf("starting main loop to calculate cross-correlation...\n");
 		
@@ -487,16 +483,16 @@ void CrossCorrelator::calculateXCCA(){
 					double norm = 0;
 					for (int l=0; l<nPhi(); l++) { // phi1 index
 						int phi2_index = (l+k)%nPhi();
-						p_crossCorrelation->set(i,j,k, p_crossCorrelation->get(i,j,k) + speckleNorm->get(i,l)*speckleNorm->get(j, phi2_index) );
+						crossCorr()->set(i,j,k, crossCorr()->get(i,j,k) + speckleNorm->get(i,l)*speckleNorm->get(j, phi2_index) );
 						norm += pixelBool->get(i,l)*pixelBool->get(j, phi2_index);
 					}
 			
 					if (norm) {
 						// normalize the cross-correlation array with the average SAXS intensity and the calculated normalization constant					
-						// p_crossCorrelation->set(i, j, k, p_crossCorrelation->get(i,j,k) / ( norm*p_iave->get(i)*p_iave->get(j)) );
+						// crossCorr()->set(i, j, k, crossCorr()->get(i,j,k) / ( norm*p_iave->get(i)*p_iave->get(j)) );
 					
 						//normalize by standard deviation (or the zeroth element of the correlation)
-						p_crossCorrelation->set(i, j, k, p_crossCorrelation->get(i,j,k) / ( norm*p_crossCorrelation->get(i, j, 0)) );
+						crossCorr()->set(i, j, k, crossCorr()->get(i,j,k) / ( norm*crossCorr()->get(i, j, 0)) );
 					}
 				}
 			}
@@ -511,19 +507,19 @@ void CrossCorrelator::calculateXCCA(){
 				double norm = 0;
 				for (int l=0; l<nPhi(); l++) { // phi1 index
 					int phi2_index = (l+k)%nPhi();
-					p_autoCorrelation->set(i,k, p_autoCorrelation->get(i,k) + speckleNorm->get(i,l)*speckleNorm->get(i, phi2_index) );
+					autoCorr()->set(i,k, autoCorr()->get(i,k) + speckleNorm->get(i,l)*speckleNorm->get(i, phi2_index) );
 					norm += pixelBool->get(i,l)*pixelBool->get(i, phi2_index);
 				}
 				if (norm != 0) {
 					if (k == 0) {
-						stdev = p_autoCorrelation->get(i, 0)/norm;
+						stdev = autoCorr()->get(i, 0)/norm;
 					}
 					if (stdev != 0) {
-						//p_autoCorrelation->set(i, k, p_autoCorrelation->get(i,k) / (norm*p_iave->get(i)*p_iave->get(i)) );
-						p_autoCorrelation->set(i, k, p_autoCorrelation->get(i,k) / (norm*stdev) );
+						//autoCorr()->set(i, k, autoCorr()->get(i,k) / (norm*p_iave->get(i)*p_iave->get(i)) );
+						autoCorr()->set(i, k, autoCorr()->get(i,k) / (norm*stdev) );
 					}
 				} else {
-					p_autoCorrelation->set(i, k, -2);
+					autoCorr()->set(i, k, -2);
 				}
 			}		
 		}
@@ -548,6 +544,7 @@ void CrossCorrelator::calculateXACA() {
 	for (int i=0; i<nPhi(); i++) {
 		p_phiave->set( i, phimin()+i*deltaphi() );
 	}
+
 	
 	// create array of the speckle pattern with the correct binning
 	array2D *speckle = new array2D( nQ(), nPhi() );
@@ -559,7 +556,7 @@ void CrossCorrelator::calculateXACA() {
 	if (p_debug >= 1) printf("calculating speckle arrays...\n");
 	
 	for (int i=0; i<arraySize(); i++) {
-		if (!p_mask_enable || mask()->get(i)) {
+		if (!maskEnable() || mask()->get(i)) {
 			int qIndex = (int) round((p_q->get(i)-qmin())/deltaq()); // the index in qave[] that corresponds to q[i]
 			int phiIndex = (int) round((p_phi->get(i)-phimin())/deltaphi()); // the index in phiave[] that corresponds to phi[i]
 			if (p_debug >= 3) printf("qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
@@ -596,7 +593,7 @@ void CrossCorrelator::calculateXACA() {
 	for (int i=0; i<nQ(); i++) { // q index
 		for (int k=0; k<nLag(); k++) { // phi lag => phi2 index = (l+k)%nPhi
 			for (int l=0; l<nPhi(); l++) { // phi1 index
-				p_crossCorrelation->set(i,i,k, p_crossCorrelation->get(i,i,k) + speckleNorm->get(i,l)*speckleNorm->get(i, (l+k)%nPhi()) );
+				crossCorr()->set(i,i,k, crossCorr()->get(i,i,k) + speckleNorm->get(i,l)*speckleNorm->get(i, (l+k)%nPhi()) );
 				normalization->set(i, k, normalization->get(i, k) + pixelBool->get(i,l)*pixelBool->get(i, (l+k)%nPhi()) );
 			}
 		}		
@@ -606,7 +603,7 @@ void CrossCorrelator::calculateXACA() {
 	for (int i=0; i<nQ(); i++) {
 		for (int k=0; k<nLag(); k++) {
 			if (normalization->get(i,k) != 0) {
-				p_crossCorrelation->set(i, i, k, p_crossCorrelation->get(i,i,k) / (normalization->get(i,k)*p_iave->get(i)*p_iave->get(i)) );
+				crossCorr()->set(i, i, k, crossCorr()->get(i,i,k) / (normalization->get(i,k)*p_iave->get(i)*p_iave->get(i)) );
 			}
 		}
 	}
@@ -640,6 +637,17 @@ void CrossCorrelator::printRawData(uint16_t *buffer,long lSize) {
 // setters and getters for private variables
 //
 //=================================================================================
+
+//----------------------------------------------------------------------------autoCorrelation
+array2D *CrossCorrelator::autoCorr() const {
+	return p_autoCorrelation;
+}
+
+//----------------------------------------------------------------------------crossCorrelation
+array3D *CrossCorrelator::crossCorr() const {
+	return p_crossCorrelation;
+}
+
 
 //----------------------------------------------------------------------------data
 array1D *CrossCorrelator::data() const {
@@ -728,31 +736,43 @@ array1D *CrossCorrelator::mask() const {
 	return p_mask;
 }
 
-void CrossCorrelator::setMask( array1D *mask ) {
+void CrossCorrelator::setMask( array1D *maskOneDArray ) {
 	if (p_mask) {
 		delete p_mask;
 	}
-	p_mask = new array1D( *mask );
-	p_mask_enable = true;
-	normalizeMask();
+	if (maskOneDArray) {
+		p_mask = new array1D( *maskOneDArray );
+		setMaskEnable( true );
+		normalizeMask();
+	}else{
+		setMaskEnable( false );
+	}
 }
 
-void CrossCorrelator::setMask( array2D *mask ) {
+void CrossCorrelator::setMask( array2D *maskTwoDArray ) {
 	if (p_mask) {
 		delete p_mask;
 	}
-	p_mask = new array1D( mask );
-	p_mask_enable = true;
-	normalizeMask();
+	if (maskTwoDArray) {
+		p_mask = new array1D( maskTwoDArray );
+		setMaskEnable( true );
+		normalizeMask();
+	}else{
+		setMaskEnable( false );
+	}
 }
 
 void CrossCorrelator::setMask(int16_t *maskCArray, unsigned int size){
 	if (p_mask) {
 		delete p_mask;
 	}
-	p_mask = new array1D( maskCArray, size );
-	p_mask_enable = true;
-	normalizeMask();
+	if (maskCArray) {
+		p_mask = new array1D( maskCArray, size );
+		setMaskEnable( true );
+		normalizeMask();
+	}else{
+		setMaskEnable( false );
+	}
 }
 
 void CrossCorrelator::normalizeMask(){
@@ -785,16 +805,9 @@ array2D *CrossCorrelator::polar() const {
 	return p_polar;
 }
 
-array2D *CrossCorrelator::corr() const {
-	return p_corr;
-}
 
 array2D *CrossCorrelator::mask_polar() const {
 	return p_mask_polar;
-}
-
-array2D *CrossCorrelator::mask_corr() const {
-	return p_mask_corr;
 }
 
 array2D *CrossCorrelator::lookupTable() const{
@@ -881,6 +894,24 @@ double CrossCorrelator::qmax1CArray( float *qCArray, int arraylength ) {
 	return qmax;
 }
 
+//----------------------------------------------------------------------------maskEnable
+bool CrossCorrelator::maskEnable() const {
+    return p_mask_enable;
+}
+
+void CrossCorrelator::setMaskEnable( bool enable ){
+	p_mask_enable = enable;
+}
+
+//----------------------------------------------------------------------------maskEnable
+bool CrossCorrelator::xccaEnable() const {
+    return p_xcca_enable;
+}
+
+void CrossCorrelator::setXccaEnable( bool enable ){
+	p_xcca_enable = enable;
+}
+
 //----------------------------------------------------------------------------outputdir
 string CrossCorrelator::outputdir(){
     return p_outputdir;
@@ -958,7 +989,7 @@ double CrossCorrelator::getIave(unsigned index) const {
 	return p_iave->get(index);
 }
 
-double CrossCorrelator::getCrossCorrelation(unsigned index1, unsigned index2) const {
+double CrossCorrelator::getAutoCorrelation(unsigned index1, unsigned index2) const {
 	return p_autoCorrelation->get(index1,index2);
 }
 
@@ -1106,7 +1137,7 @@ int CrossCorrelator::normalizeToSAXS(){
 
 		//calculate average intensity in that row
 		double avg = 0;
-		if (!p_mask_enable){			//no bad pixels --> just take the average of the row
+		if (!maskEnable()){			//no bad pixels --> just take the average of the row
 			avg = row->calcAvg();
 		}else{							//mask --> leave out bad pixels
 			double sum = 0.;
@@ -1162,7 +1193,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( double start_q, double stop
 	//apply mask, if there is one
 	//mask should be a map of ones (good pixels) and zeros (bad pixels)
 	//multiplication with the real data then represents masking
-	if ( p_mask_enable ){
+	if ( maskEnable() ){
 		data()->multiplyByArrayElementwise( mask() );
 	}
 
@@ -1175,7 +1206,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( double start_q, double stop
 		return 1;
 	}
 	
-	if (p_mask_enable) {
+	if ( maskEnable() ) {
 		//create new array2D to store polar coordinate representation
 		delete p_mask_polar;
 		p_mask_polar = new array2D( number_phi, number_q );
@@ -1192,7 +1223,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( double start_q, double stop
 			<< number_phi << " x " << number_q << " pixels." << endl;
     }
 	
-	if (p_mask_enable) {
+	if ( maskEnable() ) {
 		calculatePolarCoordinates_FAST( mask(), mask_polar(), number_phi, number_q, start_q, stop_q  );
 	}
 
@@ -1248,15 +1279,15 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( array1D* cartesian1D, array
 				//cout << "Exception: " << e << endl;
 				data_value = 0;									//setting the 0 here will introduce false correlations!!!
 				novalue_count++;
-				if ( e == -1){
-					cout << "Exception " << e << ": interpolation in lookup failed." << endl;
-				}else if ( e == 0){
-					cout << "Exception " << e << ": table not allocated." << endl;
+				if ( e == 0){
+					cerr << "Exception " << e << ": table not allocated." << endl;
 				}else{					
+					//if (e == -1){ cerr << "Exception " << e << ": either interpolation in lookup failed or missing data." << endl; }
+					
 					//cases e = 1-4: asked for (x,y) values that are larger or smaller than the actual image
 					//fail silently... data value remains zero. 
 					
-					if (p_mask_enable){
+					if ( maskEnable() ){
 						//additionally, include this point in the mask to ignore it later in the analysis
 						mask_polar()->set(pcounter, qcounter, 1);
 					}
@@ -1330,8 +1361,8 @@ double CrossCorrelator::lookup( double xcoord, double ycoord, array1D *dataArray
 			value = dataArray->get( index );
 		} else {
 			// if the value returned was negative, that means there is no lookup value assigned to this pair of (ix, iy)
-			// this could be because the table is too large
-			// solution: create a binned value from the surrounding pixels
+			// this could be (1) because the table is too large, (2) because there are gaps in the data, e.g. CSPAD
+			// solution for (1): create a binned value from the surrounding pixels
 			int valid = 0;			//number of valid indices
 			double sum = 0.;		//sum of retrieved values (at valid indices)
 			vector<int> indices;
@@ -1349,7 +1380,9 @@ double CrossCorrelator::lookup( double xcoord, double ycoord, array1D *dataArray
 			if ( valid > 0 ){
 				value = sum / ((double)valid);
 			} else {
-				cout << "WARNING in lookup()! Couldn't find a valid value in LUT for coordinates (" << xcoord << ", " << ycoord << "). " << endl;
+				if (debug()){
+					cout << "WARNING in lookup()! Couldn't find a value in LUT for coordinates (" << xcoord << ", " << ycoord << "). " << endl;
+				}
 				// search region would have to be expanded in a complete implementation....... 
 				// the way it is should be enough for the moment, though, if the table isn't way too big......
 				throw -1;
@@ -1397,47 +1430,28 @@ int CrossCorrelator::calculateXCCA_FAST(){
 		cerr << "No polar coordinate representation found. Call calculatePolarCoordinates_FAST() first." << endl; 
 		throw 1; 
 	}
-	if (polar()->dim1()==0 || polar()->dim2()==0) { throw 2; }
 	
-	//create a new output array 'corr'
-	delete p_corr;
-	p_corr = new array2D( polar()->dim1(), polar()->dim2() );
-	if (!p_corr) { throw 3; }
-	
-	//create a new output array 'mask_corr', if needed
-	if ( p_mask_enable ){
-		delete p_mask_corr;
-		p_mask_corr = new array2D( polar()->dim1(), polar()->dim2() );
-		if (!p_mask_corr) { throw 4; }
+	if (polar()->dim1()==0 || polar()->dim2()==0) {
+		cerr << "Polar coordinate array has ill dimensions! x: " << polar()->dim1() << ", y: " << polar()->dim2() << endl;
+		throw 2; 
 	}
 	
 	//correlate data in polar, write result to corr
 	try {
-		if (!p_xcca_enable){		// autocorrelation only
-			autocorrelateFFT( polar(), corr() );
-			
-			//write to 2D dataset: only auto-correlation output
-			for (int i=0; i<nQ(); i++) { 			// q1 index 
-				for (int k=0; k<nLag(); k++) { 			// phi lag => phi2 index = (l+k)%nPhi
-					p_autoCorrelation->set(i, k, corr()->get(k, i) );
-				}
-			}
-		}else{						// full-blown cross-correlation
-			array3D *corr3D = new array3D;
-			crosscorrelateFFT( polar(), corr3D );
-			
-			//write to 3D dataset: full cross-correlation output (WARNING!!! NOT TESTED YET!!!)
-			for (int i=0; i<nQ(); i++) { 			// q1 index
-				for (int j=0; i<nQ(); i++) { 		// q2 index
-					for (int k=0; k<nLag(); k++) { 		// phi lag => phi2 index = (l+k)%nPhi
-						p_crossCorrelation->set(i, j, k, corr3D->get(k, j, i) );
-					}
-				}
-			}
-			delete corr3D;
-		}
+		if (!xccaEnable()){											
+			// autocorrelation only
+			autoCorr()->transpose();						// transpose needed to be conform with Jonas' nomenclature
+			autocorrelateFFT( polar(), autoCorr() );
+			autoCorr()->transpose();					
+		}else{														
+			// full-blown cross-correlationp
+			delete p_crossCorrelation;
+			p_crossCorrelation = new array3D( polar()->dim1(), polar()->dim2(), polar()->dim2() );
+			crosscorrelateFFT( polar(), crossCorr() );
+			throw "THIS IS NOT IMPLEMENTED YET!!!!";
+		}//if
 	} catch(int e) {
-		cerr << "Exception " << e << " thrown by autocorrelateFFT_usingArrays: ";
+		cerr << "Exception " << e << " thrown: ";
 		switch (e) {
 			case 1:
 				cerr << "Single row 'f' could not be allocated.";
@@ -1454,18 +1468,7 @@ int CrossCorrelator::calculateXCCA_FAST(){
 		cerr << " Aborting. " << endl;
 		throw e;	//re-throw
 	}
-	
-	//---------------------------------debug: this if-loop is unneccessary and is just for academic purposes right now
-	if ( p_mask_enable ){
-		//correlate mask, write result to mask_corr
-		try {
-			autocorrelateFFT( mask_polar(), mask_corr() );
-		} catch(int e) {
-			cerr << "Exception caught in autocorrelateFFT_usingArrays (mask enabled)" << endl;
-			throw e;	//re-throw
-		}
-	}
-	
+
 	if(debug()){ cout << endl << "CrossCorrelator::calculateXCCA_FAST done." << endl; }			
     return 0;
 }
@@ -1490,7 +1493,7 @@ int CrossCorrelator::autocorrelateFFT(array2D *polar2D, array2D *corr2D) const {
 		if (debug()){ cout << q_ct << " " << std::flush; }
 		
 		//perform autocorrelation --> compute via FFT
-		if ( !p_mask_enable ){												// no mask
+		if ( !maskEnable() ){												// no mask
 
 			// initialize imaginary part to zero --> f is real
 		    array1D *f_imag = new array1D(f->size());						
@@ -1524,10 +1527,11 @@ int CrossCorrelator::autocorrelateFFT(array2D *polar2D, array2D *corr2D) const {
 			
 			//-----prepare for back transform
 			array1D *filter = new array1D( f->size() );
-			int maxorder = 700;
+			int maxorder = 100;
 			int winstart = int( f->size()/2. - maxorder - 1 );
 			int winstop = int( f->size()/2. + maxorder + 1 );
-			filter->zero();
+			if (winstart<=0){ winstart = 0; }
+			if (winstop>=f->size()){ winstop = f->size(); }
 			filter->ones( winstart, winstop );
 			//cout << "filter: " << filter->getASCIIdata();
 			f->multiplyByArrayElementwise( filter );	//apply filter in Fourier space

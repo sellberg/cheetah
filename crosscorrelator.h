@@ -59,7 +59,10 @@ public:
 	// and then handed to the CrossCorrelator for each shot)
 	int createLookupTable( int Nx, int Ny );
 	void calcLUTvariables( int lutNx, int lutNy );
-	
+	array2D *lookupTable() const;  
+	void setLookupTable( array2D *LUT );
+	void setLookupTable( const int *cLUT, unsigned int LUT_dim1, unsigned int LUT_dim2 );
+		
     // looks up the value closest to xcoord, ycoord in the data
     double lookup( double xcoord, double ycoord, array1D *dataArray ) const;
 	
@@ -69,6 +72,10 @@ public:
     // 'calculatePolarCoordinates' creates a 2D pattern in polar coordinates (r vs. phi)
     int calculatePolarCoordinates_FAST();
     int calculatePolarCoordinates_FAST(double start_q, double stop_q );
+	
+	//getter for the polar pattern(s) produced by calculatePolarCoordinates
+	array2D *polar() const;
+	array2D *mask_polar() const;
 	
 	// "worker" function for the one above
 	int calculatePolarCoordinates_FAST( array1D* image, array2D* polar2D, 
@@ -80,10 +87,29 @@ public:
 	// "worker" functions for the one above:	
 	// compute correlations in a 2D polar coordinate matrix
 	// both functions do not change internal data in the class
-	int autocorrelateFFT(array2D *polar2D, array2D *corr2D) const ;
-	int crosscorrelateFFT(array2D *polar2D, array3D *corr3D) const ;
-    
+	int autocorrelateFFT(array2D *polar2D, array2D *corr2D) const;
+	int crosscorrelateFFT(array2D *polar2D, array3D *corr3D) const;
+	
+	
 	//---------------------------------------------setters & getters
+
+	//---------------------------------------------getters for dependent variables
+	int nQ() const;
+	int nPhi() const;
+	int nLag() const;
+	double deltaq() const;
+	double deltaphi() const;	
+	
+	//---------------------------------------------getters for calculated arrays
+	double getQave(unsigned index) const;
+	double getPhiave(unsigned index) const;
+	double getIave(unsigned index) const;
+	array2D *autoCorr() const;
+	double getAutoCorrelation(unsigned index1, unsigned index2) const;
+	array3D *crossCorr() const;	
+	double getCrossCorrelation(unsigned index1, unsigned index2, unsigned index3) const;
+	
+	//---------------------------------------------setters & getters for input data
 	array1D *data() const;
 	void setData( array1D *data );
 	void setData( array2D *data );
@@ -104,17 +130,7 @@ public:
 	void setMask( array2D *mask );	
 	void setMask( int16_t *maskCArray, unsigned int size );
 	void normalizeMask();
-	
-	void setLookupTable( array2D *LUT );
-	void setLookupTable( const int *cLUT, unsigned int LUT_dim1, unsigned int LUT_dim2 );
-	
-	
-	array2D *polar() const;
-	array2D *corr() const;
-	array2D *mask_polar() const;
-	array2D *mask_corr() const;
-	array2D *lookupTable() const;
-	
+
 	
 	int arraySize() const;                              // returns private variable p_arraySize
 	void setArraySize( int arraySize_val );
@@ -123,12 +139,12 @@ public:
                                                         // matrixSize is just a little helper for now
                                                         // to come up with a q-calibration
                                                         // need to change this soon...
-	
-	void setQmaxmin( double qmax_val, double qmin_val );	
 	double qmax() const;
 	void setQmax( double qmax_val );
 	double qmin() const;
 	void setQmin( double qmin_val );
+	void setQmaxmin( double qmax_val, double qmin_val );	
+	
 	double phimin() const;
 	void setPhimin( double phimin_val );
 	double phimax() const;
@@ -138,27 +154,20 @@ public:
 	double qmax2CArray( float *qxCArray, float *qyCArray, int arraylength ); // calculates qmax from 2 CArrays
     double qmax1CArray( float *qCArray, int arraylength ); // calculates qmax from 1 CArray
 	
-	// set the general output directory for the class
-    void setOutputdir( std::string dir );
+    bool maskEnable() const;	
+	void setMaskEnable( bool enable );
+	
+    bool xccaEnable() const;
+	void setXccaEnable( bool enable );
+	
+	// general output directory for the class
     std::string outputdir();
+    void setOutputdir( std::string dir );
 
 	// control the amount of (commandline) talking while running, default: 0
     int debug() const;
     void setDebug( int debuglevel );
 
-	//---------------------------------------------getters for dependent variables
-	double deltaq() const;
-	double deltaphi() const;
-	int nQ() const;
-	int nPhi() const;
-	int nLag() const;
-	
-	//---------------------------------------------getters for calculated arrays
-	double getQave(unsigned index) const;
-	double getPhiave(unsigned index) const;
-	double getIave(unsigned index) const;
-	double getCrossCorrelation(unsigned index1, unsigned index2) const;
-	double getCrossCorrelation(unsigned index1, unsigned index2, unsigned index3) const;
 	
 	
 private:
@@ -172,7 +181,7 @@ private:
 	array1D *p_qx;				//pixel x coordinate
 	array1D *p_qy;				//pixel y coordinate
 	array1D *p_mask;			//mask used to remove bad pixels
-
+	
 	array2D *p_autoCorrelation;
 	array3D *p_crossCorrelation;
 	
@@ -201,10 +210,8 @@ private:
 	
 	//-------------------------------------------------required for alg2
 	array2D *p_polar;
-	array2D *p_corr;
 	array2D *p_mask_polar;
-	array2D *p_mask_corr;
-	array2D *p_table;			//lookup table
+	array2D *p_table;					//lookup table
 
 	double p_qxmax;
 	double p_qymax;	
