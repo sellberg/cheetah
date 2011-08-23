@@ -112,11 +112,11 @@ arraydataIO::~arraydataIO(){
 
 #else
 	int arraydataIO::readFromEDF( string filename, array2D *&dest ) const{
-		cout << "WARNING! Dummy function. Nothing read from EDF." << endl; 
+		cout << "======== WARNING! Dummy function. Nothing read from EDF. ======== " << endl; 
 		return 1;
 	}
 	int arraydataIO::writeToEDF( string filename, array2D *src ) const {
-		cout << "WARNING! Dummy function. Nothing written to EDF." << endl; 
+		cout << "======== WARNING! Dummy function. Nothing written to EDF.======== " << endl; 
 		return 1;
 	}
 #endif
@@ -197,25 +197,19 @@ arraydataIO::~arraydataIO(){
 		TIFF *out = TIFFOpen(filename.c_str() ,"w");
 		if(out)
 		{
-			uint32 width = (uint32) src->dim1();
-			uint32 height = (uint32) src->dim2();
+			const uint32 width = (uint32) src->dim1();
+			const uint32 height = (uint32) src->dim2();
 			
-			//int imagesize = i_width * i_height;
-			// float xRes, yRes;
-			// uint16 res_unit;
-			uint16 spp, bpp, photo;
-			
-			double MaxValue = src->calcMax();
-			double MinValue = src->calcMin();
-			double MaxMinRange = MaxValue - MinValue;
+			const double MaxValue = src->calcMax();
+			const double MinValue = src->calcMin();
+			const double MaxMinRange = MaxValue - MinValue;
 			
 			uint16 *tifdata = new uint16[width];
 			
-			
 			// define tif-parameters
-			spp = 1;      // Samples per pixel
-			bpp = 16;     // Bits per sample
-			photo = PHOTOMETRIC_MINISBLACK;
+			const uint16 spp = 1;      // Samples per pixel
+			const uint16 bpp = 16;     // Bits per sample
+			const uint16 photo = PHOTOMETRIC_MINISBLACK;
 			
 			// set the width of the image
 			TIFFSetField(out, TIFFTAG_IMAGEWIDTH, width/spp);  
@@ -243,18 +237,18 @@ arraydataIO::~arraydataIO(){
 			{
 				for (unsigned int j = 0; j < width; j++)
 				{
-					if (scaleFlag) {								//scale image to full range
-						tifdata[j] = (uint16) floor(65535.* (src->get(j,i)-MinValue)/MaxMinRange);
+					if (scaleFlag) {										//scale image to full range
+						tifdata[j] = (uint16) floor( 65535.* (src->get(j,i)-MinValue) / MaxMinRange );
 					} 
-					else {											//direct output, cut off larger values
+					else {										
 						if( src->get(j,i) < 0 ) {
-							tifdata[j] = 0;
+							tifdata[j] = 0;									// cut off values smaller than 0
 						}
 						else if ( src->get(j,i) > 65535 ) {
-							tifdata[j] = 65535;
+							tifdata[j] = 65535;								// ...and values larger than 2^16-1
 						}
 						else{ 
-							tifdata[j] = (uint16) floor(src->get(j,i));
+							tifdata[j] = (uint16) floor(src->get(j,i));		// ... force everything else to be integer
 						}
 					}
 				}
@@ -264,7 +258,9 @@ arraydataIO::~arraydataIO(){
 			
 			
 			if (verbose){
-				cout << "Tiff image '" << filename << "' written to disc!" << endl;
+				cout << "Tiff image '" << filename << "' written to disc." << endl;
+				if (scaleFlag) cout << "Scaled output. "; else cout << "Unscaled output. ";
+				cout << "Data min: " << MinValue << ", max: " << MaxValue << ", range: " << MaxMinRange << endl;
 			}
 			
 			delete[] tifdata;
@@ -278,11 +274,11 @@ arraydataIO::~arraydataIO(){
 
 #else
 	int arraydataIO::readFromTiff( string filename, array2D *&dest ) const {
-		cout << "WARNING! Dummy function. Nothing read from Tiff." << endl; 
+		cout << "======== WARNING! Dummy function. Nothing read from Tiff. ======== " << endl; 
 		return 1;
 	}
 	int arraydataIO::writeToTiff( string filename, array2D *src, int scaleFlag, int verbose ) const {
-		cout << "WARNING! Dummy function. Nothing written to Tiff." << endl; 
+		cout << "======== WARNING! Dummy function. Nothing written to Tiff. ======== " << endl; 
 		return 1;
 	}
 #endif
@@ -519,11 +515,11 @@ arraydataIO::~arraydataIO(){
 	}
 #else //define empty dummy functions
 	int arraydataIO::readFromHDF5( string filename, array2D *&dest ) const { 
-		cout << "WARNING! Dummy function. Nothing read from HDF5." << endl;
+		cout << "======== WARNING! Dummy function. Nothing read from HDF5. ======== " << endl;
 		return 1;
 	}
 	int arraydataIO::writeToHDF5( string filename, array2D *src, int type, int debug ) const { 
-		cout << "WARNING! Dummy function. Nothing written to HDF5." << endl; 
+		cout << "======== WARNING! Dummy function. Nothing written to HDF5. ======== " << endl; 
 		return 1;
 	}
 #endif
