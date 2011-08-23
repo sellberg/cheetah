@@ -143,22 +143,16 @@ int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, i
 //					io->writeToTiff( cc->outputdir()+"polar"+single_desc+".tif", polar, 1 );		//dump scaled output from correlation			
 //					io->writeToTiff( cc->outputdir()+"corr"+single_desc+".tif", corr, 1 );			//dump scaled output from correlation
 					io->writeToEDF( cc->outputdir()+"polar"+single_desc+".edf", cc->polar() );           		
-					io->writeToEDF( cc->outputdir()+"corr"+single_desc+".edf", cc->corr() );
+					io->writeToEDF( cc->outputdir()+"corr"+single_desc+".edf", cc->autoCorr() );
 				}
 				
 				polaravg->addArrayElementwise( cc->polar() );
-				corravg->addArrayElementwise( cc->corr() );
+				corravg->addArrayElementwise( cc->autoCorr() );
 			break;
 		}
 		
 		detavg->addArrayElementwise( image );			//sum up
 		detavg_copy->addArrayElementwise( image_copy );
-		
-		if ( flag_use_mask ){
-			//debug: at the end, write to disk the last mask that was used 
-			mask_polar = new array2D( *(cc->mask_polar()) );
-			mask_corr = new array2D( *(cc->mask_corr()) );
-		}
 		
 		delete image;
 		delete image_copy;
@@ -177,7 +171,7 @@ int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, i
 //	io->writeToTiff("outputDirectory()+"polar"+fileinfo+"_avg.edf", polaravg, 1);
 //	io->writeToTiff("outputDirectory()+"corr"+fileinfo+"_avg.edf", corravg, 1);
 
-	io->writeToEDF( outputDirectory()+"det_avg.edf", detavg);						// average background-subtracted detector image
+	io->writeToEDF( outputDirectory()+"det_avg.edf", detavg);			// average background-subtracted detector image
 	io->writeToEDF( outputDirectory()+"polar_avg.edf", polaravg);		// average image in polar coordinates
 	io->writeToEDF( outputDirectory()+"corr_avg.edf", corravg);			// average autocorrelation
 	if ( flag_subtract_background ){
@@ -317,7 +311,7 @@ int Test::testCrossCorrelator( int alg, int testpattern ){
 
 			arraydataIO *io = new arraydataIO;
 			io->writeToTiff( cc->outputdir()+"polar.tif", cc->polar(), 1 );            //dump scaled output from correlation			
-			io->writeToTiff( cc->outputdir()+"corr.tif", cc->corr(), 1 );            //dump scaled output from correlation
+			io->writeToTiff( cc->outputdir()+"corr.tif", cc->autoCorr(), 1 );            //dump scaled output from correlation
 			delete io;
 			
         break;
@@ -357,6 +351,10 @@ int Test::testArrayClasses(){
 		}
 	}	
 	cout << my2Darray->getASCIIdata();
+	
+	my2Darray->transpose();
+	cout << "after transposing --- " << my2Darray->getASCIIdata();
+	
 	my2Darray->addValue(-1.5);
 	cout << "after adding -1.5 --- " << my2Darray->getASCIIdata();
 	my2Darray->multiplyByValue(1/2.);
