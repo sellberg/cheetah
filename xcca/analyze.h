@@ -45,23 +45,4 @@ private:
 	string p_out_dir;
 };
 
-class Test {
-	public:
-		Test();
-		Test( string base );
-		~Test();
-		
-		void setBase( string base );
-		string base();
-
-		int testArrayClasses();
-		int testCrossCorrelator( int alg = 1, int testpattern = 1 );
-		int testFourierTrafo();
-		int testIO();
-		int testDataTypes();
-		
-	private:
-		string p_base;
-};
-
 #endif

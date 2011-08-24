@@ -25,14 +25,6 @@ void usage(){
 	cout << " -b<filename>   : subtract background file " << endl;
 	cout << " -m<filename>   : use mask file " << endl;
 	cout << " -B<factor>     : weighting of background" << endl;
-	cout << "-----------------------------------------------------" << endl;
-	cout << " -t<num>        : test different features" << endl;
-	cout << "                      num=1 : testCrossCorrelator" << endl;	
-	cout << "                      num=2 : testArrayClasses" << endl;	
-	cout << "                      num=3 : testFourierTrafo" << endl;	
-	cout << "                      num=4 : testIO" << endl;	
-	cout << "                      num=5 : testDataTypes" << endl;	
-	cout << "                      num=0 : test all" << endl;	
 	cout << "=====================================================" << endl;
 }
 
@@ -142,44 +134,6 @@ int main (int argc, char * const argv[]) {
 				delete mask;
 				cout << "--> using mask file " << mask_fn << endl;
 				
-			} else if (argv[i][1] == 't') {
-				cout << "---- testing option '" << argv[i][2] << "' ----" << endl;
-				//---------------------------------------------------
-				//run various tests
-				//---------------------------------------------------
-				string base = "/Users/feldkamp/Desktop/test/";
-				cout << "output directory '" << base << "'" << endl;
-				Test *t = new Test();
-				t->setBase(base);
-				
-				switch(argv[i][2]){
-					case '1':
-						t->testCrossCorrelator( 1 );					
-						break;
-					case '2':
-						t->testArrayClasses();
-						break;
-					case '3':
-						t->testFourierTrafo();
-						break;
-					case '4':
-						t->testIO();
-						break;
-					case '5':
-						t->testDataTypes();					
-						break;
-					case '0':							// fall through to default
-					default:
-						t->testCrossCorrelator( 1 );
-						t->testArrayClasses();
-						t->testFourierTrafo();
-						t->testIO();
-						t->testDataTypes();
-						break;
-				}//end switch
-				cout << "---- testing done ----" << endl;
-				delete t;
-				return 0;
 			} else {
 				cout << "-" << argv[i][1] << " is not a valid option." << endl;
 				usage();
