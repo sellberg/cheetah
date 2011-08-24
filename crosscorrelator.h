@@ -34,9 +34,10 @@ public:
 						int nphi, int nq1, int nq2 = 0, int16_t *maskCArray = NULL  );
 	~CrossCorrelator();
 	
-	//---------------------------------------------input/output
+
     void initPrivateVariables();
 	void initInternalArrays();
+	void destroyInternalArrays();
     void initDefaultQ();
 	void initFromFile( std::string filename, int type=0 );
 	void printRawData(uint16_t *buffer,long lSize);
@@ -67,7 +68,7 @@ public:
     double lookup( double xcoord, double ycoord, array1D *dataArray ) const;
 	
 	//normalize the scattering data with the average for that specific q
-	int normalizeToSAXS();
+	int subtractSAXSmean();
 
     // 'calculatePolarCoordinates' creates a 2D pattern in polar coordinates (r vs. phi)
     int calculatePolarCoordinates_FAST();
@@ -185,7 +186,8 @@ private:
 	array2D *p_autoCorrelation;
 	array3D *p_crossCorrelation;
 	
-	int p_debug;		
+	int p_debug;
+	clock_t p_creation_time;
 	
 	//-------------------------------------------------required for alg1
 	double p_qmin;
@@ -218,9 +220,7 @@ private:
 	double p_qxmin;
 	double p_qymin;
 	double p_qxdelta;
-	double p_qydelta;
-
-	//array1D *check1D; 
+	double p_qydelta; 
 };
 
 

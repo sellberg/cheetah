@@ -27,6 +27,8 @@ using std::string;
 #include <vector>
 using std::vector;
 
+#include <cassert>
+
 #include "fouriertransformer.h"
 #include "arraydataIO.h"				// can be used, isn't be mandatory here
 
@@ -136,24 +138,10 @@ CrossCorrelator::CrossCorrelator( array2D *dataArray, array2D *qxArray, array2D 
 
 //----------------------------------------------------------------------------destructor
 CrossCorrelator::~CrossCorrelator(){
-	//free memory for objects
-	delete p_data;
-	delete p_qx;
-	delete p_qy;
-	delete p_mask;
-	
-    delete p_polar;
-	delete p_mask_polar;
-	delete p_table;
-	
-	delete p_q;
-	delete p_phi;	
-	delete p_qave;
-	delete p_iave;
-	delete p_phiave;
-	
-	delete p_crossCorrelation;
-	delete p_autoCorrelation;
+	destroyInternalArrays();
+	if (debug()){ 
+		cout << "CrossCorrelator done after " << (clock()-p_creation_time)/(double)CLOCKS_PER_SEC << " seconds." << endl; 
+	}
 }
 
 
@@ -205,8 +193,8 @@ void CrossCorrelator::initPrivateVariables(){
 	p_qxdelta = 0;
 	p_qydelta = 0;
 	
-    p_debug = 0;      
-	//check1D = NULL;
+    p_debug = 0;
+	p_creation_time = clock();
 }
 
 void CrossCorrelator::initInternalArrays(){
@@ -219,6 +207,27 @@ void CrossCorrelator::initInternalArrays(){
 	p_qave = new array1D(nQ());
 	p_iave = new array1D(nQ());
 	p_phiave = new array1D(nPhi());
+}
+
+void CrossCorrelator::destroyInternalArrays(){
+	//free memory for objects
+	delete p_data;
+	delete p_qx;
+	delete p_qy;
+	delete p_mask;
+	
+    delete p_polar;
+	delete p_mask_polar;
+	delete p_table;
+	
+	delete p_q;
+	delete p_phi;	
+	delete p_qave;
+	delete p_iave;
+	delete p_phiave;
+	
+	delete p_crossCorrelation;
+	delete p_autoCorrelation;
 }
 
 
@@ -1123,7 +1132,7 @@ void CrossCorrelator::calcLUTvariables( int lutNx, int lutNy ){
 
 
 //---------------------------------------------------------------------------- normalizeToSAXS
-int CrossCorrelator::normalizeToSAXS(){
+int CrossCorrelator::subtractSAXSmean(){
 	for(int ct=0; ct < polar()->dim2(); ct++){
 		
 		//get one row out of the polar coordinates
@@ -1131,7 +1140,7 @@ int CrossCorrelator::normalizeToSAXS(){
 		polar()->getRow( ct, row );		
 		
 		if (row->size() == 0) { 
-			cerr << "ERROR in CrossCorrelator::normalizeToSAXS. Row has size zero." << endl; 
+			cerr << "ERROR in CrossCorrelator::subtractSAXSmean. Row has size zero." << endl; 
 			return 1; 
 		}
 
@@ -1148,18 +1157,9 @@ int CrossCorrelator::normalizeToSAXS(){
 			}
 			avg = (valid > 0) ? (sum/((double)valid)) : 0;
 		}
-		
-					
-		row->subtractValue(avg);				//subtract
-		
-//		if (avg != 0){
-//			//row->multiplyByValue(1/avg/avg);		
-//			row->divideByValue(avg);				//divide
-//		} else {
-//			row->zero();							//set to zero (harsh, but avoids catastrophe)
-//		}
+	
+		row->subtractValue(avg);
 		polar()->setRow(ct, row);
-		
 		delete row;
 	}
 	return 0;
@@ -1189,14 +1189,6 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( double start_q, double stop
 			<< "and angle phi full circle in " << number_phi << " steps." << endl;
 	}
     int retval = 0;
-	
-	//apply mask, if there is one
-	//mask should be a map of ones (good pixels) and zeros (bad pixels)
-	//multiplication with the real data then represents masking
-	if ( maskEnable() ){
-		data()->multiplyByArrayElementwise( mask() );
-	}
-
 
 	//create new array2D to store polar coordinate representation
 	delete p_polar;
@@ -1214,6 +1206,9 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( double start_q, double stop
 			cerr << "Error in CrossCorrelator::calculatePolarCoordinates_FAST. p_mask_polar couldn't be allocated." << endl;
 			return 1;
 		}
+		setMaskEnable(false);	//disable mask feature for the purpose of treating the mask itself...
+		calculatePolarCoordinates_FAST( mask(), mask_polar(), number_phi, number_q, start_q, stop_q  );
+		setMaskEnable(true);	// ...turn back on
 	}
 	
 	int novalue_count = calculatePolarCoordinates_FAST( data(), polar(), number_phi, number_q, start_q, stop_q );
@@ -1222,14 +1217,8 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( double start_q, double stop
 			<< ((double)novalue_count)/number_q/number_phi*100 << "%) in the polar coordinate image of " 
 			<< number_phi << " x " << number_q << " pixels." << endl;
     }
-	
-	if ( maskEnable() ) {
-		calculatePolarCoordinates_FAST( mask(), mask_polar(), number_phi, number_q, start_q, stop_q  );
-	}
 
-	//normalize data
-	normalizeToSAXS();
-
+//	subtractSAXSmean();
 	return retval;
 }
 
@@ -1244,9 +1233,9 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( array1D* cartesian1D, array
     double data_value = 0.;
     double q = 0.;
     double p = 0.;
-    int qcounter = 0;
-    int pcounter = 0;
-	int novalue_count = 0;
+    int q_ct = 0;
+    int p_ct = 0;
+	int novalue_ct = 0;
  	
 	//in principle, these could be arbitrary, but the FFT approach currently assumes wrap-around data
 	const int start_phi = 0;
@@ -1263,10 +1252,9 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( array1D* cartesian1D, array
         cerr << "Error in CrossCorrelator::calculatePolarCoordinates_FAST -- step_phi value " 
             << step_phi << " is smaller than zero." << endl;
     
-	
-	for(q = start_q, qcounter=0; qcounter < number_q; q+=step_q, qcounter++){                        // q: for all rings/q-values
-        if(debug()){cout << "#" << qcounter << ",q=" << q << "  " << std::flush;}
-		for(p = start_phi, pcounter=0; pcounter < number_phi; p+=step_phi, pcounter++){				// phi: go through all angles
+	for(q = start_q, q_ct=0; q_ct < number_q; q+=step_q, q_ct++){                        // q: for all rings/q-values
+        if(debug()){cout << "#" << q_ct << ",q=" << q << "  " << std::flush;}
+		for(p = start_phi, p_ct=0; p_ct < number_phi; p+=step_phi, p_ct++){				// phi: go through all angles
 
             //find lookup coordinates
 			xcoord = q * cos(p*M_PI/180.);
@@ -1278,7 +1266,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( array1D* cartesian1D, array
             } catch (int e) {
 				//cout << "Exception: " << e << endl;
 				data_value = 0;									//setting the 0 here will introduce false correlations!!!
-				novalue_count++;
+				novalue_ct++;
 				if ( e == 0){
 					cerr << "Exception " << e << ": table not allocated." << endl;
 				}else{					
@@ -1289,16 +1277,86 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( array1D* cartesian1D, array
 					
 					if ( maskEnable() ){
 						//additionally, include this point in the mask to ignore it later in the analysis
-						mask_polar()->set(pcounter, qcounter, 1);
+						mask_polar()->set(p_ct, q_ct, 1);
 					}
 				}
+			}//catch
+			
+			//assign the new value
+			polar2D->set(p_ct, q_ct, data_value);
+		}//for p
+		
+		
+		//if a mask is used, attempt linear interpolation
+		if (maskEnable()){
+			array1D *datarow = new array1D( polar2D->dim1() );
+			polar2D->getRow(q_ct, datarow);
+			array1D *maskrow = new array1D( mask_polar()->dim1() );
+			mask_polar()->getRow(q_ct, maskrow);
+			//cout << "datarow: " << datarow->getASCIIdata();
+			//cout << "maskrow: " << maskrow->getASCIIdata();
+			
+			double maskSum = maskrow->calcSum();
+			if (maskSum >= maskrow->size()){					// nothing is masked (mask is 1 everywhere) --> go to next q
+				continue;
+			}
+			if (maskSum < 0.5){									// everything is masked --> set data to zero, go to next q
+				datarow->zero();
+				polar2D->setRow(q_ct, datarow);								
+				continue;
 			}
 			
-			//assign the new values 
-			polar2D->set(pcounter, qcounter, data_value);
-			//polar->set(pcounter, qcounter, data_value * q);	//(functional determinant q to account for bins growing as q grows)
-		}
-	}
+			vector<int> start_m;	//mask starts
+			vector<int> stop_m;		//mask stops
+			int prev_maskval = 1;	//initial value 1
+			int p_max = maskrow->size();
+			
+			for(int p_ct = 0; p_ct < p_max; p_ct++ ){
+				int maskval = maskrow->get(p_ct);
+				if (maskval == 0){								//inside masked out region
+					if ( p_ct == 0 ){							//this row begins with mask --> this is a start
+						start_m.push_back(p_ct);
+					}else if (p_ct == p_max-1){					//this row ends with mask --> this is a stop
+						stop_m.push_back(p_ct);
+					}else if (prev_maskval != 0){				//just entered this masked region --> just missed a start
+						start_m.push_back(p_ct-1);
+					}
+				}
+				if (maskval == 1){								//outside masked out region
+					if (prev_maskval != 1){						//just exited this region --> this is a stop
+						stop_m.push_back(p_ct);
+					}
+				}
+				prev_maskval = maskval;
+			}//for p_ct
+			
+			// there should be an equal number of starts and stops now, at least one of each
+			if (start_m.size() != stop_m.size() || start_m.empty() || stop_m.empty()){
+				cerr << "Error in CrossCorrelator::calculatePolarCoordinates_FAST!";
+				cerr << " start_m.size()=" << start_m.size() << " != stop_m.size()=" << stop_m.size() << endl;
+				throw;
+			}
+			
+			//calculate interpolation
+			for (int k = 0; k < start_m.size(); k++){		//for each pair of starts and stops
+				int thisstart = start_m.at(k);
+				int thisstop = stop_m.at(k);
+				double slope = (datarow->get(thisstop) - datarow->get(thisstart)) / (double)(thisstop-thisstart);
+				double offset = datarow->get(thisstart);
+				
+				for (int i = thisstart; i < thisstop; i++){
+					double fill_val = offset + (i-thisstart)*slope;
+					datarow->set(i, fill_val);
+				}
+				
+			}//for each start/stop
+			
+			polar2D->setRow(q_ct, datarow);
+			//cout << "datarow after interpolation: " << datarow->getASCIIdata() << endl;
+			delete datarow;
+			delete maskrow;
+		}//if maskEnable
+	}//for q
 	
     if (debug()) {
 		cout << "polarCoordinates done. dimensions=(" << polar()->dim1() << " x " << polar()->dim2() << ")" << endl;
@@ -1308,7 +1366,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( array1D* cartesian1D, array
 		//if (false){ io->writeToTiff( outputdir()+"polar.tif", polar ); }      //(arraydataIO needed for this)      
 	}
 	
-	return novalue_count;		
+	return novalue_ct;		
 }
 
 
@@ -1445,10 +1503,10 @@ int CrossCorrelator::calculateXCCA_FAST(){
 			autoCorr()->transpose();					
 		}else{														
 			// full-blown cross-correlationp
-			delete p_crossCorrelation;
-			p_crossCorrelation = new array3D( polar()->dim1(), polar()->dim2(), polar()->dim2() );
+			cerr << "CROSS-CORRELATE 3D USING FFT. PROCEED WITH CAUTION! Some features may not be implemented or fully tested." << endl;
+			// crossCorr()->transpose();	// yet to be implemented
 			crosscorrelateFFT( polar(), crossCorr() );
-			throw "THIS IS NOT IMPLEMENTED YET!!!!";
+			// crossCorr()->transpose();	// yet to be implemented
 		}//if
 	} catch(int e) {
 		cerr << "Exception " << e << " thrown: ";
@@ -1493,71 +1551,22 @@ int CrossCorrelator::autocorrelateFFT(array2D *polar2D, array2D *corr2D) const {
 		if (debug()){ cout << q_ct << " " << std::flush; }
 		
 		//perform autocorrelation --> compute via FFT
-		if ( !maskEnable() ){												// no mask
+		// initialize imaginary part to zero --> f is real
+		array1D *f_imag = new array1D(f->size());						
 
-			// initialize imaginary part to zero --> f is real
-		    array1D *f_imag = new array1D(f->size());						
-	
-			FourierTransformer *ft = new FourierTransformer();
-			fail = ft->autocorrelation( f, f_imag );
-			
-			delete ft;
-			delete f_imag;
-			if (fail){ cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform (forward) failed." << endl; throw 3; }
-
-		}else{
-			//get one mask row, corresponding to the data one
-			
-			if (!f || !f->data() ) {
-				cerr << "CrossCorrelator::autocorrelateFFT. Input not allocated." << endl;
-				return 1;
-			}
-			if (f->size()==0 ) {
-				cerr << "CrossCorrelator::autocorrelateFFT. Input has size zero." << endl;
-				return 2;
-			}
-			
-			FourierTransformer *ft = new FourierTransformer();
-			
-			//-----calculate 
-			array1D *f_imag = new array1D(f->size());							// initialized to zeros --> f is real
-			int f_fail = ft->transformForward( f, f_imag );
-			if (f_fail){ cerr << "Error in CrossCorrelator::autocorrelateFFT. autocorr failed." << endl; throw 4; }
-			
-			
-			//-----prepare for back transform
-			array1D *filter = new array1D( f->size() );
-			int maxorder = 100;
-			int winstart = int( f->size()/2. - maxorder - 1 );
-			int winstop = int( f->size()/2. + maxorder + 1 );
-			if (winstart<=0){ winstart = 0; }
-			if (winstop>=f->size()){ winstop = f->size(); }
-			filter->ones( winstart, winstop );
-			//cout << "filter: " << filter->getASCIIdata();
-			f->multiplyByArrayElementwise( filter );	//apply filter in Fourier space
-			f_imag->multiplyByArrayElementwise( filter );
-			
-			//mag squared
-			for (int i=0; i < f->size(); i++) {
-				f->set( i,   ( f->get(i)*f->get(i) + f_imag->get(i)*f_imag->get(i) )  );
-				f_imag->set( i, 0 );		    
-			}
-			
-			//-----transform back
-			// after inverse transform, result is stored in original argument array mf
-			int inv_fail = ft->transformInverse( f, f_imag );
-			if (inv_fail){ cerr << "Error in CrossCorrelator::autocorrelateFFT(masked). transformInverse failed." << endl; throw 4; }
-
-			delete ft;    
-			delete f_imag;
-			delete filter;
-		}
+		FourierTransformer *ft = new FourierTransformer();
+		fail = ft->autocorrelation( f, f_imag );
+		
+		delete ft;
+		delete f_imag;
+		if (fail){ cerr << "Error in CrossCorrelator::autocorrelateFFT. Transform (forward) failed." << endl; throw 3; }
 		
 		//normalize to zero-correlation
 		f->divideByValue( f->get(0) );
 		
 		//feed result into corr
-		corr2D->setRow( q_ct, f );
+		//setRowPart will set only the first half of the data in f, the second half is redundant
+		corr2D->setRowPart( q_ct, f);
 		
 		if (debug()>1){ cout << "   #" << q_ct << ", f after FFT: " << f->getASCIIdata() << endl; }
 		delete f;
