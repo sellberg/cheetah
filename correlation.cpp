@@ -95,10 +95,10 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 
         //cc->createLookupTable( 100, 100 );		// lookup table should in general not be created here (i.e., shot-by-shot)
 		cc->setLookupTable( global->correlationLUT, global->correlationLUTdim1, global->correlationLUTdim2 );
-		array1D *mask = new array1D(RAW_DATA_LENGTH);
-		mask->ones();
+		array1D *mask = new array1D(  global->badpixelmask, RAW_DATA_LENGTH);
+		//mask->ones();
 		cc->setMask(mask);		
-		cc->setMaskEnable(false);   //use no mask for the moment
+		cc->setMaskEnable(true);   
 		delete mask;
 
 		//transform data to polar coordinates as determined by the cheetah ini file	(in detector pixels)
