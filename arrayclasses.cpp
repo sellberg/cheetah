@@ -391,7 +391,7 @@ int arraydata::divideByValue( double value ){
 int arraydata::addArrayElementwise( const arraydata *secondArray ){
     if (this->size() != secondArray->size()){
         cerr << "Error in arraydata::addArrayElementwise! Array sizes don't match. ";
-        cerr << "(" << this->size() << " != " << secondArray->size() << "). Operation not performed."<< endl;
+        cerr << "(this array size " << this->size() << " != second array size " << secondArray->size() << "). Operation not performed."<< endl;
         return 1;
     }
     
@@ -726,6 +726,7 @@ int array2D::getCol( int colnum, array1D *&col) const{
 void array2D::setRow( const int rownum, const array1D *row ){
 	if (!row){
 		cerr << "Error in array2D::setRow. Row not allocated." << endl;
+		throw;
 	}else{
 		for (int i = 0; i < row->size(); i++){			//for a fixed row, i goes through columns (x-values)
 			this->set( i, rownum, row->get(i) );		// copy values of row to this array2D
@@ -733,13 +734,44 @@ void array2D::setRow( const int rownum, const array1D *row ){
 	}
 }
 
+
 // see note for setRow,
 void array2D::setCol( const int colnum, const array1D *col ){
 	if (!col){
 		cerr << "Error in array2D::setRow. Row not allocated." << endl;
+		return;
 	}else{
         for (int j = 0; j < col->size(); j++){			//for a fixed column number, j goes through the rows (y-values)
 			this->set( colnum, j, col->get(j) );
+		}
+	}
+}
+
+
+void array2D::setRowPart( int rownum, const array1D *row, int start ){
+	if (!row){
+		cerr << "Error in array2D::setRowPart. Row not allocated." << endl;
+		throw;
+	}else if( start < 0 || start >= row->size() ){
+		cerr << "Start value " << start << " not allowed." << endl;
+		throw;
+	}else{
+		for (int i = 0; i < row->size() && start+i < this->dim1(); i++){
+			this->set( start+i, rownum, row->get(i) );
+		}
+	}
+}
+
+void array2D::setColPart( int colnum, const array1D *col, int start ){
+	if (!col){
+		cerr << "Error in array2D::setRowPart. Row not allocated." << endl;
+		throw;
+	}else if( start < 0 || start >= col->size() ){
+		cerr << "Start value " << start << " not allowed." << endl;
+		throw;
+	}else{
+		for (int i = 0; i < col->size() && start+i < this->dim2(); i++){
+			this->set( start+i, colnum, col->get(i) );
 		}
 	}
 }
@@ -748,11 +780,11 @@ void array2D::setCol( const int colnum, const array1D *col ){
 void array2D::transpose(){
 	array2D *old = new array2D(*this);
 	//swap dimensions, total arraydata length stays the same
-	setDim1(old->dim2());
-	setDim2(old->dim1());
+	this->setDim1(old->dim2());
+	this->setDim2(old->dim1());
 	for ( int i = 0; i < dim1(); i++ ){
 		for ( int j = 0; j < dim2(); j++ ){
-			set( i, j, old->get(j,i) );
+			this->set( i, j, old->get(j,i) );
 		}
 	}
 	delete old;
