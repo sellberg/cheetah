@@ -147,6 +147,7 @@ void *worker(void *threadarg) {
 	hit.standard = 0;
 	if(global->hitfinder.use){
 		hit.standard = hitfinder(threadInfo, global, &(global->hitfinder));
+		hit.standardPeaks = threadInfo->nPeaks;
 	}
 	
 	/*
@@ -155,6 +156,7 @@ void *worker(void *threadarg) {
 	hit.water = 0;
 	if(global->waterfinder.use){
 		hit.water = hitfinder(threadInfo, global, &(global->waterfinder));
+		hit.waterPeaks = threadInfo->nPeaks;
 	}
 
 	/*
@@ -163,6 +165,7 @@ void *worker(void *threadarg) {
 	hit.ice = 0;
 	if(global->icefinder.use){
 		hit.ice = hitfinder(threadInfo, global, &(global->icefinder));
+		hit.icePeaks = threadInfo->nPeaks;
 	}
 	 
 	/*
@@ -171,6 +174,7 @@ void *worker(void *threadarg) {
 	hit.background = 0;
 	if(global->backgroundfinder.use){
 		hit.background = hitfinder(threadInfo, global, &(global->backgroundfinder));
+		hit.backgroundPeaks = threadInfo->nPeaks;
 	}
 	
 	/*
@@ -294,23 +298,37 @@ void *worker(void *threadarg) {
 	 *	Write out diagnostics to screen
 	 */	
 	if (global->useAutoHotpixel) {
-		if (global->icefinder.use) {
-			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i, hot=%i)\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, hit.ice, threadInfo->nPeaks, threadInfo->nHot);
-		} else if (global->waterfinder.use) {
-			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i, hot=%i)\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, hit.water, threadInfo->nPeaks, threadInfo->nHot);
-		} else if (global->hitfinder.use) {
-			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i, hot=%i)\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, hit.standard, threadInfo->nPeaks, threadInfo->nHot);
+		printf("r%04u:%i (%3.1f Hz): Processed (hot=%i", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, threadInfo->nHot);
+		if (global->hitfinder.use) {
+			printf("; hit=%i, nat/npeaks=%i", hit.standard, hit.standardPeaks);
 		}
-	} else {
 		if (global->icefinder.use) {
-			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, hit.ice, threadInfo->nPeaks);
-		} else if (global->waterfinder.use) {
-			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, hit.water, threadInfo->nPeaks);
-		} else if (global->hitfinder.use) {
-			printf("r%04u:%i (%3.1f Hz): Processed (hit=%i, nat/npeaks=%i)\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, hit.standard, threadInfo->nPeaks);
-		} else if ((global->nprocessedframes % 100) == 0) {
-			printf("r%04u:%i (%3.1f Hz): Processed %ld events\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, global->nprocessedframes);
+			printf("; ice=%i, nat/npeaks=%i", hit.ice, hit.icePeaks);
 		}
+		if (global->waterfinder.use) {
+			printf("; water=%i, nat/npeaks=%i", hit.water, hit.waterPeaks);
+		}
+		if (global->backgroundfinder.use) {
+			printf("; background=%i, nat/npeaks=%i", (hit.background) ? 0 : 1, hit.backgroundPeaks);
+		}
+		printf(")\n");
+	} else if (global->hitfinder.use || global->icefinder.use || global->waterfinder.use || global->backgroundfinder.use) {
+		printf("r%04u:%i (%3.1f Hz): Processed (", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate);
+		if (global->hitfinder.use) {
+			printf("hit=%i, nat/npeaks=%i", hit.standard, hit.standardPeaks);
+		}
+		if (global->icefinder.use) {
+			printf("; ice=%i, nat/npeaks=%i", hit.ice, hit.icePeaks);
+		}
+		if (global->waterfinder.use) {
+			printf("; water=%i, nat/npeaks=%i", hit.water, hit.waterPeaks);
+		}
+		if (global->backgroundfinder.use) {
+			printf("; background=%i, nat/npeaks=%i", (hit.background) ? 0 : 1, hit.backgroundPeaks);
+		}
+		printf(")\n");
+	} else if ((global->nprocessedframes % 100) == 0) {
+		printf("r%04u:%i (%3.1f Hz): Processed %ld events\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, global->nprocessedframes);
 	}
 	
 	/*

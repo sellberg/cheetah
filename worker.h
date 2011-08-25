@@ -37,9 +37,13 @@
 class cHit {
 public:
 	int standard;
+	int standardPeaks;
 	int water;
+	int waterPeaks;
 	int ice;
+	int icePeaks;
 	int background;
+	int backgroundPeaks;
 };
 
 

@@ -35,8 +35,8 @@ public:
 	int			Algorithm;		 // 1,2,3 see the commented ini file or the code hitfinder.cpp
 	int			ADC;			 // ADC threshold used in the hitfinders
 	int			NAT;			 // Threshold on number of pixels above hitfinderADC (Algorithm 1)
-	int			Npeaks;		 	 // Number of peaks above hitfinderADC (algorithm 3)
-	int			NpeaksMax;
+	int			Npeaks;		 	 // Min number of peaks above hitfinderADC (algorithm 3)
+	int			NpeaksMax;			 // Max number of peaks above hitfinderADC (algorithm 3)
 	int			MinPixCount;	 	 // Min number of pixels in peaks required for hit (Algorithm 2 and 3)
 	int			MaxPixCount;		 // Max number of pixels in peaks required for hit (Algorithm 3 only)
 	int			Cluster;		 // minimum number of pixels to define a cluster (Algorithm 2)
