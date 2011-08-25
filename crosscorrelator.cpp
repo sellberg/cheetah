@@ -487,7 +487,7 @@ void CrossCorrelator::calculateXCCA(){
 		if (p_debug >= 1) printf("starting main loop to calculate cross-correlation...\n");
 		
 		for (int i=0; i<nQ(); i++) { // q1 index
-			for (int j=0; j<nQ(); j++) { // q2 index 
+			for (int j=0; j<nQ(); j++) { // q2 index
 				for (int k=0; k<nLag(); k++) { // phi lag => phi2 index = (l+k)%nPhi
 					double norm = 0;
 					for (int l=0; l<nPhi(); l++) { // phi1 index
@@ -495,23 +495,40 @@ void CrossCorrelator::calculateXCCA(){
 						crossCorr()->set(i,j,k, crossCorr()->get(i,j,k) + speckleNorm->get(i,l)*speckleNorm->get(j, phi2_index) );
 						norm += pixelBool->get(i,l)*pixelBool->get(j, phi2_index);
 					}
-			
 					if (norm) {
-						// normalize the cross-correlation array with the average SAXS intensity and the calculated normalization constant					
-						// crossCorr()->set(i, j, k, crossCorr()->get(i,j,k) / ( norm*p_iave->get(i)*p_iave->get(j)) );
-					
-						//normalize by standard deviation (or the zeroth element of the correlation)
-						crossCorr()->set(i, j, k, crossCorr()->get(i,j,k) / ( norm*crossCorr()->get(i, j, 0)) );
+						crossCorr()->set(i, j, k, crossCorr()->get(i,j,k)/norm );
+					} else { // fail code if no information exists about the specific element in the cross-correlation array
+						crossCorr()->set(i, j, k, -2);
 					}
 				}
 			}
 		}
-		
+		// normalization loop for variances (since the diagonal elements w.r.t. Q of the cross-correlation array aren't calculated first)
+		for (int i=0; i<nQ(); i++) { // q1 index
+			for (int j=0; j<nQ(); j++) { // q2 index
+				double variance1 = crossCorr()->get(i, i, 0);
+				double variance2 = crossCorr()->get(j, j, 0);
+				for (int k=0; k<nLag(); k++) { // phi lag => phi2 index = (l+k)%nPhi
+//					if (p_iave->get(i) && p_iave->get(j)) {
+//						// normalize the cross-correlation array with the average SAXS intensity
+//						crossCorr()->set(i, j, k, crossCorr()->get(i,j,k) / (p_iave->get(i)*p_iave->get(j)) );
+//					} else { // fail code if average intensity is 0
+//						crossCorr()->set(i, j, k, -1.5);
+//					}
+					if (variance1 && variance2) {
+						// normalize by standard deviations (or the square root of the diagonal elements of the cross-correlation)
+						crossCorr()->set(i, j, k, crossCorr()->get(i,j,k) / (sqrt(variance1)*sqrt(variance2)) );
+					} else { // fail code if variances are 0
+						crossCorr()->set(i, j, k, -1.5);
+					}
+				}
+			}
+		}
 	} else {
 		if (p_debug >= 1) printf("starting main loop to calculate cross-correlation...\n");
 		
 		for (int i=0; i<nQ(); i++) { // q index
-			double stdev = 0;
+			double variance = 0;
 			for (int k=0; k<nLag(); k++) { // phi lag => phi2 index = (l+k)%nPhi
 				double norm = 0;
 				for (int l=0; l<nPhi(); l++) { // phi1 index
@@ -520,14 +537,22 @@ void CrossCorrelator::calculateXCCA(){
 					norm += pixelBool->get(i,l)*pixelBool->get(i, phi2_index);
 				}
 				if (norm != 0) {
+//					if (p_iave->get(i) != 0) {
+//						// normalize the cross-correlation array with the average SAXS intensity and the calculated normalization constant					
+//						autoCorr()->set(i, k, autoCorr()->get(i,k) / (norm*p_iave->get(i)*p_iave->get(i)) );
+//					} else { // fail code if average intensity is 0
+//						autoCorr()->set(i, k, -1.5);						
+//					}
 					if (k == 0) {
-						stdev = autoCorr()->get(i, 0)/norm;
+						variance = autoCorr()->get(i, 0)/norm;
 					}
-					if (stdev != 0) {
-						//autoCorr()->set(i, k, autoCorr()->get(i,k) / (norm*p_iave->get(i)*p_iave->get(i)) );
-						autoCorr()->set(i, k, autoCorr()->get(i,k) / (norm*stdev) );
+					if (variance != 0) {
+						// normalize by variance (or the zeroth element of the correlation)
+						autoCorr()->set(i, k, autoCorr()->get(i,k) / (norm*variance) );
+					} else { // fail code if variance is 0
+						autoCorr()->set(i, k, -1.5);
 					}
-				} else {
+				} else { // fail code if no information exists about the specific element in the cross-correlation array
 					autoCorr()->set(i, k, -2);
 				}
 			}		
@@ -545,92 +570,6 @@ void CrossCorrelator::calculateXCCA(){
 
 
 
-//----------------------------------------------------------------------------calculateXACA
-void CrossCorrelator::calculateXACA() {
-	
-	if (p_debug >= 1) cout << "deltaPhi: " << deltaphi() << endl;
-	if (p_debug >= 1) cout << "# of angles: " << nPhi() << endl;
-	for (int i=0; i<nPhi(); i++) {
-		p_phiave->set( i, phimin()+i*deltaphi() );
-	}
-
-	
-	// create array of the speckle pattern with the correct binning
-	array2D *speckle = new array2D( nQ(), nPhi() );
-	
-	// create array over pixel counts for each sampled q and phi
-	array2D *pixelCount = new array2D( nQ(), nPhi() );
-	array2D *pixelBool = new array2D( nQ(), nPhi() );
-	
-	if (p_debug >= 1) printf("calculating speckle arrays...\n");
-	
-	for (int i=0; i<arraySize(); i++) {
-		if (!maskEnable() || mask()->get(i)) {
-			int qIndex = (int) round((p_q->get(i)-qmin())/deltaq()); // the index in qave[] that corresponds to q[i]
-			int phiIndex = (int) round((p_phi->get(i)-phimin())/deltaphi()); // the index in phiave[] that corresponds to phi[i]
-			if (p_debug >= 3) printf("qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
-			if (qIndex >= 0 && qIndex < nQ() && phiIndex >= 0 && phiIndex < nPhi()) { // make sure qIndex and phiIndex is not out of array bounds
-				speckle->set(qIndex, phiIndex, speckle->get(qIndex, phiIndex) + data()->get(i) );
-				pixelCount->set(qIndex, phiIndex, pixelCount->get(qIndex,phiIndex)+1);
-				if (pixelBool->get(qIndex, phiIndex) != 1) {
-					pixelBool->set(qIndex, phiIndex, 1);
-				}
-			} else if (p_debug >= 2) printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
-		}
-	}
-	
-	// subtract the average SAXS intensity from the speckle array
-	array2D *speckleNorm = new array2D( nQ(), nPhi() );
-	
-	for (int i=0; i<nQ(); i++) { // make sure each element is initially zero
-		for (int j=0; j<nPhi(); j++) {
-			if (pixelBool->get(i,j) != 0) {
-				speckle->set(i, j, speckle->get(i,j) / pixelCount->get(i,j) );
-				speckleNorm->set(i, j, speckle->get(i,j) - p_iave->get(i) );
-			}
-			if (p_debug >= 2) printf("q: %f, phi: %f --> bool: %f, count: %f\n", p_qave->get(i), p_phiave->get(j), pixelBool->get(i, j), pixelCount->get(i, j));
-		}
-	}
-	
-	// calculate cross-correlation array and normalization array for cross-correlation
-	if (p_debug >= 1) cout << "# of angular lags: " << nLag() << endl;
-	
-	array2D *normalization = new array2D( nQ(), nLag() );
-	
-	if (p_debug >= 1) printf("starting main loop to calculate cross-correlation...\n");
-	
-	for (int i=0; i<nQ(); i++) { // q index
-		for (int k=0; k<nLag(); k++) { // phi lag => phi2 index = (l+k)%nPhi
-			for (int l=0; l<nPhi(); l++) { // phi1 index
-				crossCorr()->set(i,i,k, crossCorr()->get(i,i,k) + speckleNorm->get(i,l)*speckleNorm->get(i, (l+k)%nPhi()) );
-				normalization->set(i, k, normalization->get(i, k) + pixelBool->get(i,l)*pixelBool->get(i, (l+k)%nPhi()) );
-			}
-		}		
-	}
-	
-	// normalize the cross-correlation array with the average SAXS intensity and the calculated normalization constant
-	for (int i=0; i<nQ(); i++) {
-		for (int k=0; k<nLag(); k++) {
-			if (normalization->get(i,k) != 0) {
-				crossCorr()->set(i, i, k, crossCorr()->get(i,i,k) / (normalization->get(i,k)*p_iave->get(i)*p_iave->get(i)) );
-			}
-		}
-	}
-	
-	delete pixelBool;
-	delete pixelCount;
-	
-	delete normalization;
-	
-	delete speckle;
-	delete speckleNorm;
-	
-	if (p_debug >= 1) printf("done calculating cross-correlation...\n");
-}
-
-
-
-
 //----------------------------------------------------------------------------printRawData
 // print raw data after having read from file
 void CrossCorrelator::printRawData(uint16_t *buffer,long lSize) {
@@ -639,6 +578,7 @@ void CrossCorrelator::printRawData(uint16_t *buffer,long lSize) {
 	}
 	printf("\n");
 }
+
 
 
 //=================================================================================
