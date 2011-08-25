@@ -178,6 +178,15 @@ void *worker(void *threadarg) {
 	}
 	
 	/*
+	 *	Hitfinding - Update central hit counter
+	 */
+	if(hit.standard || hit.water || hit.ice) {
+		pthread_mutex_lock(&global->nhits_mutex);
+		global->nhits++;
+		pthread_mutex_unlock(&global->nhits_mutex);
+	}
+	
+	/*
 	 *	Update the running background
 	 */
 	if (global->backgroundfinder.use){	
@@ -275,22 +284,40 @@ void *worker(void *threadarg) {
 	if(global->hdf5dump) 
 		writeHDF5(threadInfo, global, threadInfo->eventname, global->hitfinder.cleanedfp);
 	else {
-		if(hit.standard && global->hitfinder.savehits)
+		if(hit.standard && global->hitfinder.savehits) {
+			threadInfo->nPeaks = hit.standardPeaks;
 			writeHDF5(threadInfo, global, threadInfo->eventname, global->hitfinder.cleanedfp);
-
-		char eventname[1024];
+		}
+		
 		if(hit.water && global->waterfinder.savehits) {
-			sprintf(eventname,"%s_waterhit",threadInfo->eventname);
-			writeHDF5(threadInfo, global, eventname, global->waterfinder.cleanedfp);
+			threadInfo->nPeaks = hit.waterPeaks;
+			writeHDF5(threadInfo, global, threadInfo->eventname, global->waterfinder.cleanedfp);
 		}
+		
 		if(hit.ice && global->icefinder.savehits) {
-			sprintf(eventname,"%s_icehit",threadInfo->eventname);
-			writeHDF5(threadInfo, global, eventname, global->icefinder.cleanedfp);
+			threadInfo->nPeaks = hit.icePeaks;
+			writeHDF5(threadInfo, global, threadInfo->eventname, global->icefinder.cleanedfp);			
 		}
+		
 		if(!hit.background && global->backgroundfinder.savehits) {
-			sprintf(eventname,"%s_background",threadInfo->eventname);
-			writeHDF5(threadInfo, global, eventname, global->backgroundfinder.cleanedfp);
+			threadInfo->nPeaks = hit.backgroundPeaks;
+			writeHDF5(threadInfo, global, threadInfo->eventname, global->backgroundfinder.cleanedfp);			
 		}
+		
+//		char eventname[1024];
+//		if(hit.water && global->waterfinder.savehits) {
+//			sprintf(eventname,"%s_waterhit",threadInfo->eventname);
+//			writeHDF5(threadInfo, global, eventname, global->waterfinder.cleanedfp);
+//		}
+//		if(hit.ice && global->icefinder.savehits) {
+//			sprintf(eventname,"%s_icehit",threadInfo->eventname);
+//			writeHDF5(threadInfo, global, eventname, global->icefinder.cleanedfp);
+//		}
+//		if(!hit.background && global->backgroundfinder.savehits) {
+//			sprintf(eventname,"%s_background",threadInfo->eventname);
+//			writeHDF5(threadInfo, global, eventname, global->backgroundfinder.cleanedfp);
+//		}
+		
 	}
 	
 	
@@ -335,7 +362,20 @@ void *worker(void *threadarg) {
 	 *	Write out information on each frame to a log file
 	 */
 	pthread_mutex_lock(&global->framefp_mutex);
-	fprintf(global->framefp, "%i, %i, %s, %i\n", (int)threadInfo->threadNum, threadInfo->seconds, threadInfo->eventname, threadInfo->nPeaks);
+	fprintf(global->framefp, "%i, %i, %s", (int)threadInfo->threadNum, threadInfo->seconds, threadInfo->eventname);
+	if (global->hitfinder.use) {
+		fprintf(global->framefp, ", %i", hit.standardPeaks);
+	}
+	if (global->icefinder.use) {
+		fprintf(global->framefp, ", %i", hit.icePeaks);
+	}
+	if (global->waterfinder.use) {
+		fprintf(global->framefp, ", %i", hit.waterPeaks);
+	}
+	if (global->backgroundfinder.use) {
+		fprintf(global->framefp, ", %i", hit.backgroundPeaks);
+	}
+	fprintf(global->framefp, "\n");
 	pthread_mutex_unlock(&global->framefp_mutex);
 	
 	
@@ -692,7 +732,7 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	fprintf(hitfp, "r%04u/%s, %i\n", (int)info->runNumber, info->eventname, info->nPeaks);
 	pthread_mutex_unlock(&global->framefp_mutex);
 	
-		
+	
 	/* 
  	 *  HDF5 variables
 	 */

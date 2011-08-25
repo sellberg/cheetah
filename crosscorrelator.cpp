@@ -1312,7 +1312,7 @@ int CrossCorrelator::calculatePolarCoordinates_FAST( array1D* cartesian1D, array
 			int p_max = maskrow->size();
 			
 			for(int p_ct = 0; p_ct < p_max; p_ct++ ){
-				int maskval = maskrow->get(p_ct);
+				int maskval = (int) maskrow->get(p_ct);
 				if (maskval == 0){								//inside masked out region
 					if ( p_ct == 0 ){							//this row begins with mask --> this is a start
 						start_m.push_back(p_ct);

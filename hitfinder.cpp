@@ -202,15 +202,6 @@ int hitfinder(tThreadInfo *threadInfo, cGlobal *global, cHitfinder *hitf) {
 			free(iny);
 			break;
 	}
-		
-	
-	
-	// Update central hit counter
-	if(hit) {
-		pthread_mutex_lock(&global->nhits_mutex);
-		global->nhits++;
-		pthread_mutex_unlock(&global->nhits_mutex);
-	}
 	
 	free(temp);
 	return(hit);
