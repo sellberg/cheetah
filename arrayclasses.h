@@ -152,9 +152,13 @@ public:
 	void set( unsigned int i, unsigned int j, double value );
     
     int getRow( int rownum, array1D *&row ) const; 	                    //returns one-dimensional 'row' or 'col'
-    int getCol( int colnum, array1D *&col ) const;						//return value is 0 if successful
-    void setRow( int rownum, const array1D *row );                              //sets a one-dimensional row
+    void setRow( int rownum, const array1D *row );						//sets a one-dimensional row
+	void setRowPart( int rownum, const array1D *row, int start=0 );		//like setRow, but only replaces part of the row starting at a certain index
+
+    int getCol( int colnum, array1D *&col ) const;
     void setCol( int colnum, const array1D *col );
+	void setColPart( int colnum, const array1D *col, int start=0 );							
+
 	void transpose();
 	
 	void xrange( double xneg, double xpos );
