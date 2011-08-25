@@ -238,6 +238,11 @@ void *worker(void *threadarg) {
 	
 	
 	/*
+     *  Calculate intensity average
+     */
+	calculateIntensityAvg(threadInfo, global);
+	
+	/*
      *  Calculate angular averages
      */
 	if (global->hitAngularAvg && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
@@ -325,7 +330,7 @@ void *worker(void *threadarg) {
 	 *	Write out diagnostics to screen
 	 */	
 	if (global->useAutoHotpixel) {
-		printf("r%04u:%i (%3.1f Hz): Processed (hot=%i", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, threadInfo->nHot);
+		printf("r%04u:%i (%3.1f Hz): Processed (iavg=%4.2f, hot=%i", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, threadInfo->intensityAvg, threadInfo->nHot);
 		if (global->hitfinder.use) {
 			printf("; hit=%i, nat/npeaks=%i", hit.standard, hit.standardPeaks);
 		}
@@ -340,9 +345,9 @@ void *worker(void *threadarg) {
 		}
 		printf(")\n");
 	} else if (global->hitfinder.use || global->icefinder.use || global->waterfinder.use || global->backgroundfinder.use) {
-		printf("r%04u:%i (%3.1f Hz): Processed (", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate);
+		printf("r%04u:%i (%3.1f Hz): Processed (iavg=%4.2f", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, threadInfo->intensityAvg);
 		if (global->hitfinder.use) {
-			printf("hit=%i, nat/npeaks=%i", hit.standard, hit.standardPeaks);
+			printf("; hit=%i, nat/npeaks=%i", hit.standard, hit.standardPeaks);
 		}
 		if (global->icefinder.use) {
 			printf("; ice=%i, nat/npeaks=%i", hit.ice, hit.icePeaks);
@@ -362,7 +367,7 @@ void *worker(void *threadarg) {
 	 *	Write out information on each frame to a log file
 	 */
 	pthread_mutex_lock(&global->framefp_mutex);
-	fprintf(global->framefp, "%i, %i, %s", (int)threadInfo->threadNum, threadInfo->seconds, threadInfo->eventname);
+	fprintf(global->framefp, "%i, %i, %s, %f", (int)threadInfo->threadNum, threadInfo->seconds, threadInfo->eventname, threadInfo->intensityAvg);
 	if (global->hitfinder.use) {
 		fprintf(global->framefp, ", %i", hit.standardPeaks);
 	}
@@ -729,7 +734,7 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	DEBUGL1_ONLY printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)info->runNumber, (int)info->threadNum, global->datarate, outfile);
 
 	pthread_mutex_lock(&global->framefp_mutex);
-	fprintf(hitfp, "r%04u/%s, %i\n", (int)info->runNumber, info->eventname, info->nPeaks);
+	fprintf(hitfp, "r%04u/%s, %f, %i\n", (int)info->runNumber, info->eventname, info->intensityAvg, info->nPeaks);
 	pthread_mutex_unlock(&global->framefp_mutex);
 	
 	
@@ -1408,6 +1413,18 @@ void savePowderAngularAvg(cGlobal *global) {
 		
 	}			
 
+}
+
+
+void calculateIntensityAvg(tThreadInfo *threadInfo, cGlobal *global) {
+	
+	threadInfo->intensityAvg = 0;
+	
+	for (long i=0; i<global->pix_nn; i++)
+		threadInfo->intensityAvg += threadInfo->corrected_data[i];
+	
+	threadInfo->intensityAvg /= global->pix_nn;
+	
 }
 
 

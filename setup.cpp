@@ -1594,7 +1594,7 @@ void cGlobal::writeInitialLog(void){
 	
 	sprintf(framefile,"r%04u-frames.txt",getRunNumber());
 	framefp = fopen (framefile,"w");
-	fprintf(framefp, "# FrameNumber, UnixTime, EventName");
+	fprintf(framefp, "# FrameNumber, UnixTime, EventName, Iavg");
 	if (hitfinder.use) {
 		fprintf(framefp, ", nPeaks (standard)");
 	}
@@ -1611,19 +1611,19 @@ void cGlobal::writeInitialLog(void){
 	
 	sprintf(cleanedfile,"r%04u-cleanedhits.txt",getRunNumber());
 	hitfinder.cleanedfp = fopen (cleanedfile,"w");
-	fprintf(hitfinder.cleanedfp, "# Filename, nPeaks\n");
+	fprintf(hitfinder.cleanedfp, "# Filename, Iavg, nPeaks\n");
 	
 	sprintf(icefile,"r%04u-icehits.txt",getRunNumber());
 	icefinder.cleanedfp = fopen (icefile,"w");
-	fprintf(icefinder.cleanedfp, "# Filename, nPeaks\n");
+	fprintf(icefinder.cleanedfp, "# Filename, Iavg, nPeaks\n");
 
 	sprintf(waterfile,"r%04u-waterhits.txt",getRunNumber());
 	waterfinder.cleanedfp = fopen (waterfile,"w");
-	fprintf(waterfinder.cleanedfp, "# Filename, nPeaks\n");
+	fprintf(waterfinder.cleanedfp, "# Filename, Iavg, nPeaks\n");
 
 	sprintf(backgroundfile,"r%04u-backgroundhits.txt",getRunNumber());
 	backgroundfinder.cleanedfp = fopen (backgroundfile,"w");
-	fprintf(backgroundfinder.cleanedfp, "# Filename, nPeaks\n");
+	fprintf(backgroundfinder.cleanedfp, "# Filename, Iavg, nPeaks\n");
 
 	pthread_mutex_unlock(&framefp_mutex);
 	

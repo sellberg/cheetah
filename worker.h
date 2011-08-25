@@ -66,6 +66,7 @@ typedef struct {
 	float		*image;
 	double		*angularAvg;
 	double		*correlation;
+	double		intensityAvg;
 	int			nPeaks;
 	int			nHot;
 	
@@ -162,6 +163,7 @@ void calculatePowderAngularAvg(cGlobal *global);
 void savePowderAngularAvg(cGlobal *global);
 void calculateAngularAvg(tThreadInfo *threadInfo, cGlobal *global);
 void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global);
+void calculateIntensityAvg(tThreadInfo *threadInfo, cGlobal *global);
 void saveEnergies(cGlobal *global);
 void makeEnergyHistograms(cGlobal *global);
 void makeQcalibration(cGlobal *global);
