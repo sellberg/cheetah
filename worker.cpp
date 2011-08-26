@@ -1283,7 +1283,7 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer10 = (float*) calloc(global->correlation_nn, sizeof(float));
 				pthread_mutex_lock(&global->watersumcorrelation_mutex);
 				for(long i=0; i<global->correlation_nn; i++)
-					buffer10[i] = (float) global->waterCorrelation[i]/global->nice;
+					buffer10[i] = (float) global->waterCorrelation[i]/global->nwater;
 				pthread_mutex_unlock(&global->watersumcorrelation_mutex);
 				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				else writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);
