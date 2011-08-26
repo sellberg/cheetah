@@ -44,8 +44,7 @@ public:
 //	void dumpResults( std::string filename );				// (arraydataIO needed for this)
 	
 	//---------------------------------------------calculations (Jonas's way)
-	void calculatePolarCoordinates();
-	void calculatePolarCoordinates( double start_q, double stop_q ); // for cheetah.ini control
+	void calculatePolarCoordinates( double start_q = 0, double stop_q = 0);
 	void calculateSAXS();
 	void calculateXCCA();
 	
