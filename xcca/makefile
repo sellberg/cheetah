@@ -37,7 +37,7 @@ CPP             = g++ -c -g
 CPP_LD_FLAGS    = -O4 -Wall
 CFLAGS          = $(INCLUDEDIRS)
 LD              = g++
-LD_FLAGS        = -Wl
+LD_FLAGS        = -Wl,-rpath=$(HDF5DIR)/lib
 
 all: $(TARGET)
 
