@@ -21,8 +21,8 @@ public:
 	Analyzer();
 	~Analyzer();
 
-	int processFiles( vector<string> files, int cenX, int cenY, int num_phi, int num_q);
-	int processFiles( vector<string> files, int cenX, int cenY, int num_phi, int num_q, 
+	int processFiles( vector<string> files, double cenX, double cenY, int num_phi, int num_q);
+	int processFiles( vector<string> files, double cenX, double cenY, int num_phi, int num_q, 
 						double start_q, double stop_q, int LUTx, int LUTy );
 						
 	void setBackground( array2D *back );

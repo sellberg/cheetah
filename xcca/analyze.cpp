@@ -42,15 +42,15 @@ Analyzer::~Analyzer(){
 //	int cenX = 260;			//in detector pixels
 //	int cenY = 308;	
 // =============================================================
-int Analyzer::processFiles( vector<string> files, int shiftX, int shiftY, int num_phi, int num_q){
+int Analyzer::processFiles( vector<string> files, double shiftX, double shiftY, int num_phi, int num_q){
 	double start_q = 0;
 	double stop_q = num_q;
-	double LUTx = 200;
-	double LUTy = 200;
+	int LUTx = 200;
+	int LUTy = 200;
 	return processFiles(files, shiftX, shiftY, num_phi, num_q, start_q, stop_q, LUTx, LUTy);
 }
 
-int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, int num_phi, int num_q, 
+int Analyzer::processFiles( std::vector<string> files, double shiftX, double shiftY, int num_phi, int num_q, 
 					double start_q, double stop_q, int LUTx, int LUTy ){
 					
 	//prepare array2D's to hold overall averages
