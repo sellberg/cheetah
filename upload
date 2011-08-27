@@ -22,7 +22,7 @@ switch ($1)
 	breaksw
 	
 	case feldkamp:
-	rsync -av --exclude 'release' --exclude 'cheetah.xcodeproj' --exclude 'xcca/xcca_commandline.xcodeproj' --exclude '.git' --exclude '*.o' . feldkamp@psexport.slac.stanford.edu:cheetah/
+	rsync -av --exclude 'release' --exclude 'cheetah.xcodeproj' --exclude 'xcca/xcca_commandline.xcodeproj' --exclude '.git' --exclude '*.o' --exclude 'xcca/*.o' --exclude 'xcca/matlib_support_files/*.o' . feldkamp@psexport.slac.stanford.edu:cheetah/
 	breaksw
 	
 	case sellberg:
