@@ -31,7 +31,7 @@ public:
 	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, 
 						int nphi, int nq1, int nq2 = 0, int16_t *maskCArray = NULL );
 	CrossCorrelator( array2D *dataArray, array2D *qxArray, array2D *qyArray, 
-						int nphi, int nq1, int nq2 = 0, int16_t *maskCArray = NULL  );
+						int nphi, int nq1, int nq2 = 0, array2D *maskArray = NULL  );
 	~CrossCorrelator();
 	
 

@@ -87,7 +87,7 @@ CrossCorrelator::CrossCorrelator( float *dataCArray, float *qxCArray, float *qyC
 //----------------------------------------------------------------------------constructor with arraydata objects
 CrossCorrelator::CrossCorrelator( array2D *dataArray, array2D *qxArray, array2D *qyArray, 
 									int nphi, int nq1,
-									int nq2, int16_t *maskCArray ){
+									int nq2, array2D *maskArray ){
 	initPrivateVariables();
 	
 	if ( (dataArray->size() != qyArray->size()) || (dataArray->size() != qyArray->size()) ){
@@ -114,11 +114,11 @@ CrossCorrelator::CrossCorrelator( array2D *dataArray, array2D *qxArray, array2D 
 	}
 
 	//check, if a mask was given
-	if (maskCArray == NULL){
+	if (maskArray == NULL){
 		setMaskEnable( false );
 	}else{
 		setMaskEnable( true );
-		setMask(maskCArray, dataArray->size());	
+		setMask(maskArray);	
 	}
 	
     //copy data from array over to internal data structure
@@ -836,7 +836,6 @@ void CrossCorrelator::calculateXCCA(){
 	if (p_debug >= 1) cout << "# of angular lags: " << nLag() << endl;
 	
 	if (xccaEnable()) {
-		
 		if (p_debug >= 1) printf("starting main loop to calculate cross-correlation...\n");
 		
 		for (int i=0; i<nQ(); i++) { // q1 index
@@ -855,7 +854,7 @@ void CrossCorrelator::calculateXCCA(){
 					}
 				}
 			}
-		}
+		}//for q1
 		// normalization loop for variances (since the diagonal elements w.r.t. Q of the cross-correlation array aren't calculated first)
 		for (int i=0; i<nQ(); i++) { // q1 index
 			for (int j=0; j<nQ(); j++) { // q2 index
@@ -876,9 +875,9 @@ void CrossCorrelator::calculateXCCA(){
 					}
 				}
 			}
-		}
+		}//for i
 	} else {
-		if (p_debug >= 1) printf("starting main loop to calculate cross-correlation...\n");
+		if (p_debug >= 1) printf("starting main loop to calculate auto-correlation...\n");
 		
 		for (int i=0; i<nQ(); i++) { // q index
 			double variance = 0;
@@ -909,7 +908,7 @@ void CrossCorrelator::calculateXCCA(){
 					autoCorr()->set(i, k, -2);
 				}
 			}		
-		}
+		}//for i
 	}
 	
 	delete pixelBool;
