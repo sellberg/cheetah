@@ -46,7 +46,7 @@ public:
 	//---------------------------------------------calculations (Jonas's way)
 	void calculatePolarCoordinates(double start_q = 0, double stop_q = 0);
 	void calculateSAXS(double start_q = 0, double stop_q = 0);
-	void calculateXCCA();
+	void calculateXCCA(double start_q = 0, double stop_q = 0);
 	
     //---------------------------------------------alternative approach (Jan's way)
     // some of these functions have the byname _FAST to distinguish them from the ones above 
@@ -71,10 +71,6 @@ public:
     // 'calculatePolarCoordinates' creates a 2D pattern in polar coordinates (r vs. phi)
     int calculatePolarCoordinates_FAST();
     int calculatePolarCoordinates_FAST(double start_q, double stop_q );
-	
-	//getter for the polar pattern(s) produced by calculatePolarCoordinates
-	array2D *polar() const;
-	array2D *mask_polar() const;
 	
 	// "worker" function for the one above
 	int calculatePolarCoordinates_FAST( array1D* image, array2D* polar2D, 
@@ -103,6 +99,9 @@ public:
 	double getQave(unsigned index) const;
 	double getPhiave(unsigned index) const;
 	double getIave(unsigned index) const;
+	array2D *fluctuations() const;	// intensity fluctuations in polar coordinates produced by calculateXCCA()
+	array2D *polar() const;			// intensities in polar coordinates produced by calculateXCCA()/calculatePolarCoordinates_FAST()
+	array2D *mask_polar() const;	// mask in polar coordinates produced by calculatePolarCoordinates_FAST()
 	array2D *autoCorr() const;
 	double getAutoCorrelation(unsigned index1, unsigned index2) const;
 	array3D *crossCorr() const;	
@@ -176,10 +175,11 @@ private:
 	bool p_xcca_enable;			// enables/disables cross-correlations (if disabled only autocorrelations are calculated)
     std::string p_outputdir;  	// the output directory if anything is dumped from withing this class (default is working dir)
 
-	array1D *p_data;			//data storage
-	array1D *p_qx;				//pixel x coordinate
-	array1D *p_qy;				//pixel y coordinate
-	array1D *p_mask;			//mask used to remove bad pixels
+	array1D *p_data;			// data storage
+	array1D *p_qx;				// pixel x coordinate
+	array1D *p_qy;				// pixel y coordinate
+	array1D *p_mask;			// mask used to remove bad pixels
+	array2D *p_polar;			// intensities in polar coordinates
 	
 	array2D *p_autoCorrelation;
 	array3D *p_crossCorrelation;
@@ -205,6 +205,8 @@ private:
 	array1D *p_iave;			// vector of output average intensities for magnitudes of q-vector
 	array1D *p_phiave;			// vector of output angles
 	
+	array2D *p_fluctuations;	// intensity fluctuations in polar coordinates
+	
 	void updateDependentVariables();
     
 	// function trackers
@@ -214,7 +216,6 @@ private:
 	int p_updateDependentVariables;		// tracker for updateDependentVariables()
 	
 	//-------------------------------------------------required for alg2
-	array2D *p_polar;
 	array2D *p_mask_polar;
 	array2D *p_table;					//lookup table
 
