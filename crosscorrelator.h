@@ -188,25 +188,30 @@ private:
 	clock_t p_creation_time;
 	
 	//-------------------------------------------------required for alg1
-	double p_qmin;
-	double p_qmax;
+	double p_qmin;				// start q for correlation calculations
+	double p_qmax;				// stop q for correlation calculations
 	double p_deltaq;			// step size (bin length) in q-direction
-	double p_phimin;
-	double p_phimax;
+	double p_phimin;			// start phi for correlation calculations (currently disabled, 0 is always used)
+	double p_phimax;			// stop phi for correlation calculations (currently disabled, 360 is always used)
 	double p_deltaphi;			// step size (bin length) in phi direction
 	int p_nQ;					// formerly samplingLength
 	int p_nPhi;					// formerly samplingAngle
 	int p_nLag;					// formerly samplingLag
 
-	array1D *p_q;				//magnitude of q vector (1st dimension in correlation)
-	array1D *p_phi;				//angle (2nd dimension in correlation)
+	array1D *p_q;				// magnitude of q-vector (1st dimension in correlation) for each pixel
+	array1D *p_phi;				// angle (2nd dimension in correlation) for each pixel
 	
-	array1D *p_qave;
-	array1D *p_iave;
-	array1D *p_phiave;
+	array1D *p_qave;			// vector of output magnitudes of q-vector
+	array1D *p_iave;			// vector of output average intensities for magnitudes of q-vector
+	array1D *p_phiave;			// vector of output angles
+	
 	void updateDependentVariables();
     
-    
+	// function trackers
+    int p_calculatePolarCoordinates;	// tracker for calculatePolarCoordinates()
+	int p_calculateSAXS;				// tracker for calculateSAXS()
+	int p_calculateXCCA;				// tracker for calculateXCCA()
+	int p_updateDependentVariables;		// tracker for updateDependentVariables()
 	
 	//-------------------------------------------------required for alg2
 	array2D *p_polar;

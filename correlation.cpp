@@ -183,7 +183,6 @@ void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 //-------------------------------------------------------------------------------------
 void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname) {
 	
-	DEBUGL1_ONLY cout << "writing XCCA to file..." << std::flush;
 	FILE *filePointerWrite;
 	char outfile[1024];
 	
@@ -268,7 +267,5 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	
 	fclose(filePointerWrite);
 	free(buffer);
-	
-	DEBUGL1_ONLY cout << "writeXCCA done" << endl;
 }
 

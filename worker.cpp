@@ -1545,7 +1545,10 @@ void makeEnergyHistograms(cGlobal *global) {
 		free(buffer);
 		free(global->Ehist);
 		free(global->Lhist);
-	}		
+	} else {
+		// disable energy calibration if not enough bins
+		global->useEnergyCalibration = 0;
+	}
 	
 }
 
@@ -1555,7 +1558,7 @@ void makeQcalibration(cGlobal *global) {
 	// allocate arrays
 	global->angularAvgQcal = new double[global->angularAvg_nn];
 	float *buffer = (float*) calloc(global->angularAvg_nn, sizeof(float));
-	// calculate Q-calibration
+	// calculate Q-calibration (using the detector position from the last event)
 	for (int i=0; i<global->angularAvg_nn; i++) {
 		global->angularAvgQcal[i] = 4*M_PI*sin(atan(global->pixelSize*global->angularAvgQ[i]*1000/global->detectorZ)/2)/global->Lmean;
 	}

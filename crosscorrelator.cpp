@@ -47,8 +47,13 @@ CrossCorrelator::CrossCorrelator( float *dataCArray, float *qxCArray, float *qyC
     
     //set basic properties for the size of the arrays
     setArraySize(arraylength);
-	p_nPhi = nphi;
-	p_nLag = (int) ceil(p_nPhi/2.0+1);
+	
+	//check consistency of input arguments
+	if (nphi > 0) {
+		p_nPhi = nphi;
+		p_nLag = (int) ceil(p_nPhi/2.0+1);		
+	} else cerr << "ERROR in CrossCorrelator::constructor: nphi must be a positive integer." << endl;
+	if (nq1 < 2) cerr << "ERROR in CrossCorrelator::constructor: nq1 must be a positive integer larger than 1." << endl;
 	
 	//check, user wants to run in 2D xaca or full 3D xcca mode
 	if (nq2 == 0){
@@ -60,7 +65,7 @@ CrossCorrelator::CrossCorrelator( float *dataCArray, float *qxCArray, float *qyC
 		p_nQ = (nq1 > nq2) ? nq1 : nq2;
 		p_crossCorrelation = new array3D( nQ(), nQ(), nLag() );
 	}
-
+	
 	//check, if a mask was given
 	if (maskCArray == NULL){
 		setMaskEnable( false );
@@ -175,18 +180,23 @@ void CrossCorrelator::initPrivateVariables(){
 	p_qy = NULL;
 	p_mask = NULL;
 
-	p_polar = NULL;
-	p_mask_polar = NULL;
-    p_table = NULL;
-
+	p_crossCorrelation = NULL;
+	p_autoCorrelation = NULL;
+	
 	p_q = NULL;
 	p_phi = NULL;	
 	p_qave = NULL;
 	p_iave = NULL;
 	p_phiave = NULL;
 	
-	p_crossCorrelation = NULL;
-	p_autoCorrelation = NULL;
+	p_calculatePolarCoordinates = 0;
+	p_calculateSAXS = 0;
+	p_calculateXCCA = 0;
+	p_updateDependentVariables = 0;
+	
+	p_polar = NULL;
+	p_mask_polar = NULL;
+    p_table = NULL;
 	
 	p_qxmin = 0;
 	p_qymin = 0;
@@ -509,7 +519,9 @@ int CrossCorrelator::arraySize() const{
 }
 
 void CrossCorrelator::setArraySize( int arraySize_val ){
-	p_arraySize = arraySize_val;
+	if (arraySize_val > 0)
+		p_arraySize = arraySize_val;
+	else cerr << "ERROR in CrossCorrelator::setArraySize(): arraylength must be a positive integer." << endl;
 }
 
 //----------------------------------------------------------------------------matrixSize
@@ -659,13 +671,16 @@ void CrossCorrelator::updateDependentVariables(){		//update the values that depe
 		cout << "WARNING: Qmax <= Qmin, dependent variables not updated." << endl;
 		return;
 	}
-
+	
 	p_deltaq = (qmax()-qmin())/(nQ()-1);	// make sure deltaq samples start and stop
 	p_deltaphi = (double) 2.0*M_PI/(p_nPhi);	// make sure deltaphi samples exactly an interval of 2PI
 	
 	if (debug() >= 1) {
-		cout << "CrossCorrelator::updateDependentVariables done. qmax: " << qmax() << ", p_deltaq: " << p_deltaq << ", p_nQ: " << p_nQ << ", p_deltaphi: " << p_deltaphi << ", p_nPhi: " << p_nPhi << ", p_nLag: " << p_nLag << endl;
+		cout << "updated dependent variables:" << endl;
+		cout << "qmin: " << qmin() << ", qmax: " << qmax() << ", p_deltaq: " << p_deltaq << ", p_nQ: " << p_nQ << ", p_deltaphi: " << p_deltaphi << ", p_nPhi: " << p_nPhi << ", p_nLag: " << p_nLag << endl;
 	}
+	
+	p_updateDependentVariables++;
 }
 
 double CrossCorrelator::getQave(unsigned index) const {
@@ -697,12 +712,12 @@ double CrossCorrelator::getCrossCorrelation(unsigned index1, unsigned index2, un
 //
 //=================================================================================
 
-//----------------------------------------------------------------------------calculatePolarCoordinates
-// calculate polar coordinates from cartesian coordinate system
+//--------------------------------------------------------calculatePolarCoordinates
+// calculates polar coordinates for each pixel from cartesian coordinate system
 void CrossCorrelator::calculatePolarCoordinates(double start_q, double stop_q) {
 	
 	if (!p_qmax && !stop_q) {
-		cout << "WARNING: Need to setQmax($MAXVALUE) or specify Q-limits as arguments before running calculatePolarCoordinates()" << endl;
+		cout << "WARNING: Need to setQmax($VALUE) or specify Q-limits as arguments before running calculatePolarCoordinates()" << endl;
 		return;
 	} else if (start_q || stop_q) {
 		p_qmin = start_q;
@@ -710,10 +725,14 @@ void CrossCorrelator::calculatePolarCoordinates(double start_q, double stop_q) {
 		updateDependentVariables();
 	}
 	
-	if (debug() >= 1) cout << "qmin: " << qmin() << ", qmax: " << qmax() << ", p_deltaq: " << p_deltaq << ", p_nQ: " << p_nQ << ", p_deltaphi: " << p_deltaphi << ", p_nPhi: " << p_nPhi << ", p_nLag: " << p_nLag << endl;
-	
-	if (p_deltaq && p_deltaphi) {
-		// calculate phi for each pixel and bin angles with correct deltaphi
+	if (p_updateDependentVariables) {
+		
+		// calculate |q| for each pixel and bin lengths with correct resolution
+		for (int i=0; i<arraySize(); i++) {
+			p_q->set(i, round(sqrt( (qx()->get(i)*qx()->get(i))+(qy()->get(i)*qy()->get(i)) ) / deltaq()) * deltaq() );
+		}		
+		
+		// calculate phi for each pixel and bin angles with correct resolution
 		for (int i=0; i<arraySize(); i++) {
 			double phii = 0;
 			double qxi = qx()->get(i);
@@ -736,50 +755,92 @@ void CrossCorrelator::calculatePolarCoordinates(double start_q, double stop_q) {
 			}
 			
 			if (phii < 0) {
-				if (debug() >= 2) cout << "phii: " << phii << ", sampleAngle(phii): " << round(phii/deltaphi()) << endl;
+				if (debug() >= 2) cout << "phii: " << phii << ", nAngle(phii): " << round(phii/deltaphi()) << endl;
 			} else if (phii > (nPhi()-1)*deltaphi()) {
-				if (debug() >= 2) cout << "phii: " << phii << ", sampleAngle(phii): " << round(phii/deltaphi()) << endl;
+				if (debug() >= 2) cout << "phii: " << phii << ", nAngle(phii): " << round(phii/deltaphi()) << endl;
 			}
 			
 			p_phi->set( i, round(phii/deltaphi()) * deltaphi() );
 			
 		}
+		
+		for (int i=0; i<nQ(); i++) {
+			p_qave->set( i, qmin()+i*deltaq() );
+		}
+		
+		for (int i=0; i<nPhi(); i++) {
+			p_phiave->set( i, phimin()+i*deltaphi() );
+		}
+		
+		p_calculatePolarCoordinates++;
 	} else {
-		cout << "WARNING: deltaQ and/or deltaPhi are zero, polar coordinates not calculated." << endl;
+		cout << "WARNING: dependent variables must be updated before polar coordinates are calculated." << endl;
+		updateDependentVariables();
+		if (p_updateDependentVariables) calculatePolarCoordinates();
+		else cerr << "ERROR in CrossCorrelator::calculatePolarCoordinates: dependent variables were not updated properly prior to use." << endl;
 	}
-}	
+}
 
 
 
 //----------------------------------------------------------------------------calculateSAXS
+// calculates the angular average of the intensity as a function of |q|
 void CrossCorrelator::calculateSAXS() {
+	//option with start_q stop_q as arguments?
 	
-	// using SAXS average for all shots to calculate cross-correlation 
-    // or just the SAXS from the specific shots will give different results. 
+	// Using SAXS average for all shots to calculate cross-correlation 
+    // or just the SAXS from the specific shot will give different results. 
     // The second choice is probably preferable and is performed here.
-	if (debug() >= 1) printf("calculating average SAXS intensity...\n");
-	
-	// calculate |q| for each pixel and bin lengths with correct resolution
-	for (int i=0; i<arraySize(); i++) {
-		p_q->set(i, round(sqrt( (qx()->get(i)*qx()->get(i))+(qy()->get(i)*qy()->get(i)) ) / deltaq()) * deltaq() );
-	}
-	
-	// angular average for each |q|
-	if (debug() >= 1) printf("# of steps: %d\n",nQ());
-	if (debug() >= 2) printf("average SAXS intensity:\n");
-	
-	for (int i=0; i<nQ(); i++) {
-		p_qave->set( i, qmin()+i*deltaq() );
-		double itot = 0; // reset summed intensity
-		int counter = 0; // reset counter
-		for (int j=0; j<arraySize(); j++) {
-			if ( p_q->get(j) == p_qave->get(i) && (!maskEnable() || mask()->get(j))) {
-				itot += data()->get(j);
-				counter++;
+		
+	if (p_updateDependentVariables) {
+		
+		// create counter array
+		array1D *counter = new array1D( nQ() );
+		
+		if (debug() >= 1) printf("calculating average SAXS intensity...\n");
+		
+		if (!p_calculatePolarCoordinates) {
+			// calculate |q| for each pixel and bin lengths with correct resolution
+			for (int i=0; i<arraySize(); i++) {
+				p_q->set(i, round(sqrt( (qx()->get(i)*qx()->get(i))+(qy()->get(i)*qy()->get(i)) ) / deltaq()) * deltaq() );
+			}
+			
+			for (int i=0; i<nQ(); i++) {
+				p_qave->set( i, qmin()+i*deltaq() );
+			}			
+		}
+		
+		// angular sum for each |q|
+		for (int i=0; i<arraySize(); i++) {
+			if (!maskEnable() || mask()->get(i)) {
+				int qIndex = (int) round((p_q->get(i)-qmin())/deltaq()); // the index in qave[] that corresponds to q[i]
+				if (p_q->get(i) <= qmax() && p_q->get(i) >= qmin()) {
+					p_iave->set( qIndex, p_iave->get(qIndex)+data()->get(i) );
+					counter->set( qIndex, counter->get(qIndex)+1 );
+				} else if (debug() >= 2) printf("POINT EXCLUDED! q: %4.2f, qmin: %4.2f, qmax: %4.2f, nQ: %4.2f, qIndex: %d\n", p_q->get(i), qmin(), qmax(), nQ(), qIndex );
 			}
 		}
-		p_iave->set( i, itot/counter );
-		if (debug() >= 2) cout << "Q: " << p_qave->get(i) << ",   \t# pixels: " << counter << ",\tI: " << p_iave->get(i) << endl;
+		
+		// normalize by number of pixels
+		for (int i=0; i<nQ(); i++) {
+			if (counter->get(i)) p_iave->set( i, p_iave->get(i)/counter->get(i) );
+		}
+		
+		if (debug() >= 2) {
+			printf("average SAXS intensity:\n");
+			for (int i=0; i<nQ(); i++)
+				cout << "Q: " << p_qave->get(i) << ",   \t# pixels: " << counter->get(i) << ",\tI: " << p_iave->get(i) << endl;
+		}
+		
+		// free counter array
+		delete counter;
+		
+		p_calculateSAXS++;
+	} else {
+		cout << "WARNING: dependent variables must be updated before SAXS intensity is calculated." << endl;
+		updateDependentVariables();
+		if (p_updateDependentVariables) calculatePolarCoordinates();
+		else cerr << "ERROR in CrossCorrelator::calculateSAXS: dependent variables were not updated properly prior to use." << endl;
 	}
 }
 
@@ -788,11 +849,9 @@ void CrossCorrelator::calculateSAXS() {
 //----------------------------------------------------------------------------calculateXCCA
 void CrossCorrelator::calculateXCCA(){
 	
-	if (debug() >= 1) cout << "deltaPhi: " << deltaphi() << endl;
-	if (debug() >= 1) cout << "# of angles: " << nPhi() << endl;
-	for (int i=0; i<nPhi(); i++) {
-		p_phiave->set( i, phimin()+i*deltaphi() );
-	}
+	// check that calculatePolarCoordinates() has been called
+	if (p_calculatePolarCoordinates) cout << "TO BE ADDED..." << endl;
+	
 	
 	// create array of the speckle pattern with the correct binning
 	array2D *speckle = new array2D( nQ(), nPhi() );
@@ -807,7 +866,7 @@ void CrossCorrelator::calculateXCCA(){
 		if (!maskEnable() || mask()->get(i)) {
 			int qIndex = (int) round((p_q->get(i)-qmin())/deltaq()); // the index in qave[] that corresponds to q[i]
 			int phiIndex = (int) round((p_phi->get(i)-phimin())/deltaphi()); // the index in phiave[] that corresponds to phi[i]
-			if (qIndex >= 0 && qIndex < nQ() && phiIndex >= 0 && phiIndex < nPhi()) { // make sure qIndex and phiIndex is not out of array bounds
+			if (qIndex >= 0 && qIndex < nQ() && phiIndex >= 0 && phiIndex < nPhi()) { // make sure qIndex and phiIndex are not out of array bounds
 				speckle->set(qIndex, phiIndex, speckle->get(qIndex, phiIndex) + data()->get(i) );
 				pixelCount->set(qIndex, phiIndex, pixelCount->get(qIndex,phiIndex)+1);
 				if (pixelBool->get(qIndex, phiIndex) != 1) {
@@ -830,9 +889,7 @@ void CrossCorrelator::calculateXCCA(){
 		}
 	}
 	
-	// calculate cross-correlation array and normalization array for cross-correlation
-	if (debug() >= 1) cout << "# of angular lags: " << nLag() << endl;
-	
+	// calculate cross-correlation array and normalization array for cross-correlation	
 	if (xccaEnable()) {
 		
 		if (debug() >= 1) printf("starting main loop to calculate cross-correlation...\n");
@@ -854,6 +911,7 @@ void CrossCorrelator::calculateXCCA(){
 				}
 			}
 		}
+		
 		// normalization loop for variances (since the diagonal elements w.r.t. Q of the cross-correlation array aren't calculated first)
 		for (int i=0; i<nQ(); i++) { // q1 index
 			for (int j=0; j<nQ(); j++) { // q2 index
@@ -876,7 +934,7 @@ void CrossCorrelator::calculateXCCA(){
 			}
 		}
 	} else {
-		if (debug() >= 1) printf("starting main loop to calculate cross-correlation...\n");
+		if (debug() >= 1) printf("starting main loop to calculate auto-correlation...\n");
 		
 		for (int i=0; i<nQ(); i++) { // q index
 			double variance = 0;
