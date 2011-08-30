@@ -31,6 +31,8 @@ using std::cerr;
 using std::endl;
 
 #include <sstream>
+#include <string>
+using std::string;
 
 #include <cmath>
 
@@ -48,6 +50,16 @@ using std::endl;
 void correlate(tThreadInfo *threadInfo, cGlobal *global) {
     
     DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
+
+	//prepare some things for output
+	bool tif_out = true;
+	bool bin_out = true;
+	bool h5_out = true;
+	
+	arraydataIO *io = new arraydataIO;
+	std::ostringstream osst;
+	osst << threadInfo->eventname;
+	string eventname_str = osst.str();
 	
     //create cross correlator object that takes care of the computations
 	//the arguments that are passed to the constructor determine 2D/3D calculations with/without mask
@@ -77,65 +89,64 @@ void correlate(tThreadInfo *threadInfo, cGlobal *global) {
 	DEBUGL2_ONLY cc->setDebug(2);
 	
 	//--------------------------------------------------------------------------------------------alg1
-	if (global->useCorrelation == 1) {					
-		
-		DEBUGL1_ONLY cout << "XCCA regular" << endl;
+	if (global->useCorrelation == 1) {							
+		DEBUGL1_ONLY cout << "XCCA regular (algorithm 1)" << endl;
 		
 		cc->calculatePolarCoordinates(global->correlationStartQ, global->correlationStopQ);
 		cc->calculateSAXS();
 		cc->calculateXCCA();
 		
-		//writeSAXS(threadInfo, global, cc, threadInfo->eventname); // writes SAXS only to binary
-		writeXCCA(threadInfo, global, cc, threadInfo->eventname); // writes XCCA/XACA+SAXS to binary
-		
-		
 	//--------------------------------------------------------------------------------------------alg2
 	} else if (global->useCorrelation == 2) {					
-		DEBUGL2_ONLY cout << "XCCA fast" << endl;
-
-        //cc->createLookupTable( 100, 100 );		// lookup table should in general not be created here (i.e., shot-by-shot)
+		DEBUGL1_ONLY cout << "XCCA fast (algorithm 2)" << endl;
 		cc->setLookupTable( global->correlationLUT, global->correlationLUTdim1, global->correlationLUTdim2 );
-		array1D *mask = new array1D(  global->badpixelmask, RAW_DATA_LENGTH);
-		//mask->ones();
-		cc->setMask(mask);		
-		cc->setMaskEnable(true);   
-		delete mask;
-
-		//transform data to polar coordinates as determined by the cheetah ini file	(in detector pixels)
-		//to the q-calibrated values the cross-correlator expects
-		int polar_fail = cc->calculatePolarCoordinates_FAST(global->correlationStartQ, global->correlationStopQ);
-		if (polar_fail){ cout << "ERROR in correlate! Could not calculate polar coordinates!" << endl; }
-
-		//perform the correlation
-		pthread_mutex_lock(&global->correlationFFT_mutex);			// need to protect the FFTW at the core, not thread-safe!!
-		int XCCA_fail = cc->calculateXCCA_FAST();
-		if (XCCA_fail){ cout << "ERROR in correlate! Could not calculate XCCA!" << endl; }
+		cc->calculatePolarCoordinates_FAST(global->correlationStartQ, global->correlationStopQ);
+		
+		// need to protect the FFTW at the core with a mutex, not thread-safe!!
+		pthread_mutex_lock(&global->correlationFFT_mutex);
+		cc->calculateXCCA_FAST();
 		pthread_mutex_unlock(&global->correlationFFT_mutex);
 		
-		//write output
-		pthread_mutex_lock(&global->correlation_mutex);
-		writeXCCA(threadInfo, global, cc, threadInfo->eventname); // writes XCCA+SAXS to binary
-		pthread_mutex_unlock(&global->correlation_mutex);
-		
-		//writing files is not explicitly thread-safe... is this a problem for the cheetah? ...right now, it doesn't seem like it
-		std::ostringstream polar_osst, corr_osst;
-		int verbose = 1;
-		arraydataIO *io = new arraydataIO;
-		polar_osst << threadInfo->eventname << "-polar.tif";
-		io->writeToTiff( polar_osst.str(), cc->polar(), 1, verbose );		//0: not scaled
-		corr_osst << threadInfo->eventname << "-xaca.tif";
-		io->writeToTiff( corr_osst.str(), cc->autoCorr(), 1, verbose );		//1: scaled
-		delete io;
-		
-		DEBUGL2_ONLY cout << "XCCA done." << endl;
+		io->writeToTiff( eventname_str+"-polar.tif", cc->polar(), 1, 1 );		// 0: unscaled, 1: scaled
 
-	//--------------------------------------------------------------------------------------------default case
 	} else {
 		cerr << "Error in correlate()! Correlation algorithm " << global->useCorrelation << " not known." << endl;
 	}
 	
+	
+	//--------------------------------------------------------------------------------------------output for this shot
+	// by JF: not sure if the mutex is really necessary... maybe not
+	pthread_mutex_lock(&global->correlation_mutex);
+	
+	//bin output
+	if (bin_out){
+		writeXCCA(threadInfo, global, cc, threadInfo->eventname); 			// writes XCCA+SAXS to binary
+	}
+	//TIFF image output
+	if (tif_out){
+		if (global->autoCorrelateOnly){
+			io->writeToTiff( eventname_str+"-xaca.tif", cc->autoCorr(), 1 );			// 0: unscaled, 1: scaled
+		}else{
+			cerr << "WARNING. No tiff output for 3D cross-correlation case implemented, yet!" << endl;
+			//one possibility would be to write a stack of tiffs, one for each of the outer q values
+		}
+	}
+	//HDF5 output
+	if (h5_out){
+		if (global->autoCorrelateOnly){
+			io->writeToHDF5( osst.str()+"-xaca.h5", cc->autoCorr() );
+		}else{
+			cerr << "WARNING. No HDF5 output for 3D cross-correlation case implemented, yet!" << endl;
+		}
+	}
+	
+	pthread_mutex_unlock(&global->correlation_mutex);
+	
+	delete io;
 	delete cc;
 }
+
+
 
 
 

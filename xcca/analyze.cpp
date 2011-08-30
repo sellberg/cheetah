@@ -22,6 +22,7 @@ Analyzer::Analyzer(){
 	p_mask = new array2D();
 	
 	p_back_weight = 1;
+	p_alg = 2;
 	
 	flag_subtract_background = false;
 	flag_single_correlation_output = false;
@@ -41,15 +42,15 @@ Analyzer::~Analyzer(){
 //	int cenX = 260;			//in detector pixels
 //	int cenY = 308;	
 // =============================================================
-int Analyzer::processFiles( vector<string> files, int shiftX, int shiftY, int num_phi, int num_q){
+int Analyzer::processFiles( vector<string> files, double shiftX, double shiftY, int num_phi, int num_q){
 	double start_q = 0;
 	double stop_q = num_q;
-	double LUTx = 200;
-	double LUTy = 200;
+	int LUTx = 200;
+	int LUTy = 200;
 	return processFiles(files, shiftX, shiftY, num_phi, num_q, start_q, stop_q, LUTx, LUTy);
 }
 
-int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, int num_phi, int num_q, 
+int Analyzer::processFiles( std::vector<string> files, double shiftX, double shiftY, int num_phi, int num_q, 
 					double start_q, double stop_q, int LUTx, int LUTy ){
 					
 	//prepare array2D's to hold overall averages
@@ -104,6 +105,9 @@ int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, i
 		
 		
 		CrossCorrelator *cc = new CrossCorrelator(image, qx, qy, num_phi, num_q);
+		if ( flag_use_mask ){
+			cc->setMask( this->mask() );
+		}
 		cc->setOutputdir( outputDirectory() );
 		cc->setDebug(0);
 		
@@ -111,37 +115,35 @@ int Analyzer::processFiles( std::vector<string> files, int shiftX, int shiftY, i
 			image->subtractArrayElementwise( background() );
 			backavg->addArrayElementwise( background() );
 		}
-
-		if ( flag_use_mask ){
-			cc->setMask( this->mask() );
-		}
 		
-		int alg = 1;
-		switch (alg) {
-			case 0:
-				cout << "XCCA regular" << endl;
-				cc->calculatePolarCoordinates();
+		switch (alg()) {
+			case 1:
+				cout << "XCCA regular (algorithm 1)" << endl;
+				cc->calculatePolarCoordinates( start_q, stop_q );
 				cc->calculateSAXS();
 				cc->calculateXCCA();	
 				
 			break;
-			case 1:
-				cout << "XCCA FAST" << endl;
-
+			case 2:
+				cout << "XCCA FAST (algorithm 2)" << endl;
 				cc->setLookupTable( LUT );
 				cc->calculatePolarCoordinates_FAST( start_q, stop_q );
 				cc->calculateXCCA_FAST();
 
+				polaravg->addArrayElementwise( cc->polar() );
 				if ( flag_single_correlation_output ){
 					io->writeToEDF( cc->outputdir()+"polar"+single_desc+".edf", cc->polar() );           		
-					io->writeToEDF( cc->outputdir()+"corr"+single_desc+".edf", cc->autoCorr() );
 				}
-				
-				polaravg->addArrayElementwise( cc->polar() );
-				corravg->addArrayElementwise( cc->autoCorr() );
 			break;
 		}
 		
+		corravg->addArrayElementwise( cc->autoCorr() );
+		if ( flag_single_correlation_output ){
+			io->writeToEDF( cc->outputdir()+"corr"+single_desc+".edf", cc->autoCorr() );
+			io->writeToHDF5( cc->outputdir()+"corr"+single_desc+".h5", cc->autoCorr() );
+		}
+
+						
 		detavg->addArrayElementwise( image );			//sum up
 		detavg_copy->addArrayElementwise( image_copy );
 		
@@ -223,5 +225,11 @@ string Analyzer::outputDirectory(){
 	return p_out_dir;
 }
 
+void Analyzer::setAlg( int alg ){
+	p_alg = alg;
+}
 
+int Analyzer::alg(){
+	return p_alg;
+}
 

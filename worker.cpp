@@ -1351,9 +1351,9 @@ void calculatePowderAngularAvg(cGlobal *global) {
 		}
 		
 		DEBUGL2_ONLY {
-			if (global->hitfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterp << ",\tI(powder): " << global->powderAverage[i] << endl;
-			if (global->icefinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counteri << ",\tI(water): " << global->iceAverage[i] << endl;
-			if (global->waterfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterw << ",\tI(ice): " << global->waterAverage[i] << endl;
+			if (global->hitfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterp[i] << ",\tI(powder): " << global->powderAverage[i] << endl;
+			if (global->icefinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counteri[i] << ",\tI(water): " << global->iceAverage[i] << endl;
+			if (global->waterfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterw[i] << ",\tI(ice): " << global->waterAverage[i] << endl;
 		}
 	}
 	

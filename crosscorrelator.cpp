@@ -92,7 +92,7 @@ CrossCorrelator::CrossCorrelator( float *dataCArray, float *qxCArray, float *qyC
 //----------------------------------------------------------------------------constructor with arraydata objects
 CrossCorrelator::CrossCorrelator( array2D *dataArray, array2D *qxArray, array2D *qyArray, 
 									int nphi, int nq1,
-									int nq2, int16_t *maskCArray ){
+									int nq2, array2D *maskArray ){
 	initPrivateVariables();
 	
 	if ( (dataArray->size() != qyArray->size()) || (dataArray->size() != qyArray->size()) ){
@@ -119,11 +119,11 @@ CrossCorrelator::CrossCorrelator( array2D *dataArray, array2D *qxArray, array2D 
 	}
 
 	//check, if a mask was given
-	if (maskCArray == NULL){
+	if (maskArray == NULL){
 		setMaskEnable( false );
 	}else{
 		setMaskEnable( true );
-		setMask(maskCArray, dataArray->size());	
+		setMask(maskArray);	
 	}
 	
     //copy data from array over to internal data structure
@@ -534,9 +534,9 @@ void CrossCorrelator::setMatrixSize( int matrixSize_val ){
 }
 
 //----------------------------------------------------------------------------qmin/qmax
-void CrossCorrelator::setQmaxmin( double qmax_val, double qmin_val ){
-	p_qmax = qmax_val;
+void CrossCorrelator::setQminmax( double qmin_val, double qmax_val ){
 	p_qmin = qmin_val;
+	p_qmax = qmax_val;
 	updateDependentVariables();
 }
 
@@ -754,20 +754,20 @@ void CrossCorrelator::calculatePolarCoordinates(double start_q, double stop_q) {
 				phii += 2*M_PI;
 			}
 			
-			if (phii < 0) {
-				if (debug() >= 2) cout << "phii: " << phii << ", nAngle(phii): " << round(phii/deltaphi()) << endl;
-			} else if (phii > (nPhi()-1)*deltaphi()) {
-				if (debug() >= 2) cout << "phii: " << phii << ", nAngle(phii): " << round(phii/deltaphi()) << endl;
+			if (debug() >= 3) {
+				if (phii < 0) cout << "phii: " << phii << ", nAngle(phii): " << round(phii/deltaphi()) << endl;
+				else if (phii > (nPhi()-1)*deltaphi()) cout << "phii: " << phii << ", nAngle(phii): " << round(phii/deltaphi()) << endl;
 			}
 			
 			p_phi->set( i, round(phii/deltaphi()) * deltaphi() );
-			
 		}
 		
+		// calculate vector of output |q|
 		for (int i=0; i<nQ(); i++) {
 			p_qave->set( i, qmin()+i*deltaq() );
 		}
-		
+
+		// calculate vector of output angles
 		for (int i=0; i<nPhi(); i++) {
 			p_phiave->set( i, phimin()+i*deltaphi() );
 		}
@@ -785,26 +785,41 @@ void CrossCorrelator::calculatePolarCoordinates(double start_q, double stop_q) {
 
 //----------------------------------------------------------------------------calculateSAXS
 // calculates the angular average of the intensity as a function of |q|
-void CrossCorrelator::calculateSAXS() {
-	//option with start_q stop_q as arguments?
+void CrossCorrelator::calculateSAXS(double start_q, double stop_q) {
 	
-	// Using SAXS average for all shots to calculate cross-correlation 
-    // or just the SAXS from the specific shot will give different results. 
-    // The second choice is probably preferable and is performed here.
-		
+	if (!p_qmax && !stop_q) {
+		cout << "WARNING: Need to setQmax($VALUE) or specify Q-limits as arguments before running calculateSAXS()" << endl;
+		return;
+	} else if (start_q || stop_q) {
+		p_qmin = start_q;
+		p_qmax = stop_q;
+		updateDependentVariables();
+	}
+	
 	if (p_updateDependentVariables) {
 		
 		// create counter array
 		array1D *counter = new array1D( nQ() );
 		
+		// if calculateSAXS() has already been used, free and recreate p_qave, p_iave
+		if (p_calculateSAXS) {
+			delete p_qave;
+			delete p_iave;
+			p_qave = new array1D(nQ());
+			p_iave = new array1D(nQ());
+		}
+		
 		if (debug() >= 1) printf("calculating average SAXS intensity...\n");
 		
-		if (!p_calculatePolarCoordinates) {
+		if (!p_calculatePolarCoordinates && !p_calculateSAXS) {
 			// calculate |q| for each pixel and bin lengths with correct resolution
 			for (int i=0; i<arraySize(); i++) {
 				p_q->set(i, round(sqrt( (qx()->get(i)*qx()->get(i))+(qy()->get(i)*qy()->get(i)) ) / deltaq()) * deltaq() );
 			}
-			
+		}
+		
+		if (!p_calculatePolarCoordinates || p_calculateSAXS) {
+			// calculate vector of output |q|
 			for (int i=0; i<nQ(); i++) {
 				p_qave->set( i, qmin()+i*deltaq() );
 			}			
@@ -817,7 +832,7 @@ void CrossCorrelator::calculateSAXS() {
 				if (p_q->get(i) <= qmax() && p_q->get(i) >= qmin()) {
 					p_iave->set( qIndex, p_iave->get(qIndex)+data()->get(i) );
 					counter->set( qIndex, counter->get(qIndex)+1 );
-				} else if (debug() >= 2) printf("POINT EXCLUDED! q: %4.2f, qmin: %4.2f, qmax: %4.2f, nQ: %4.2f, qIndex: %d\n", p_q->get(i), qmin(), qmax(), nQ(), qIndex );
+				} else if (debug() >= 3) printf("POINT EXCLUDED! q: %4.2f, qmin: %4.2f, qmax: %4.2f, nQ: %4.2f, qIndex: %d\n", p_q->get(i), qmin(), qmax(), nQ(), qIndex );
 			}
 		}
 		
@@ -872,12 +887,16 @@ void CrossCorrelator::calculateXCCA(){
 				if (pixelBool->get(qIndex, phiIndex) != 1) {
 					pixelBool->set(qIndex, phiIndex, 1);
 				}
-			} else if (debug() >= 2) printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
+			} else if (debug() >= 3) printf("POINT EXCLUDED! qIndex: %d, phiIndex: %d\n", qIndex, phiIndex);
 		}
 	}
 	
 	// subtract the average SAXS intensity from the speckle array
 	array2D *speckleNorm = new array2D( nQ(), nPhi() );
+	
+	// Using SAXS average for all shots to calculate cross-correlation 
+    // or just the SAXS from the specific shot will give different results. 
+    // The second choice is probably preferable and is performed here.
 	
 	for (int i=0; i<nQ(); i++) { // make sure each element is initially zero
 		for (int j=0; j<nPhi(); j++) {
@@ -909,8 +928,8 @@ void CrossCorrelator::calculateXCCA(){
 						crossCorr()->set(i, j, k, -2);
 					}
 				}
-			}
-		}
+			} // for q2
+		} // for q1
 		
 		// normalization loop for variances (since the diagonal elements w.r.t. Q of the cross-correlation array aren't calculated first)
 		for (int i=0; i<nQ(); i++) { // q1 index
@@ -931,9 +950,10 @@ void CrossCorrelator::calculateXCCA(){
 						crossCorr()->set(i, j, k, -1.5);
 					}
 				}
-			}
-		}
+			} // for q2
+		} // for q1
 	} else {
+		
 		if (debug() >= 1) printf("starting main loop to calculate auto-correlation...\n");
 		
 		for (int i=0; i<nQ(); i++) { // q index
@@ -965,7 +985,7 @@ void CrossCorrelator::calculateXCCA(){
 					autoCorr()->set(i, k, -2);
 				}
 			}		
-		}
+		}//for i
 	}
 	
 	delete pixelBool;

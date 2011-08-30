@@ -31,7 +31,7 @@ public:
 	CrossCorrelator( float *dataCArray, float *qxCArray, float *qyCArray, int arraylength, 
 						int nphi, int nq1, int nq2 = 0, int16_t *maskCArray = NULL );
 	CrossCorrelator( array2D *dataArray, array2D *qxArray, array2D *qyArray, 
-						int nphi, int nq1, int nq2 = 0, int16_t *maskCArray = NULL  );
+						int nphi, int nq1, int nq2 = 0, array2D *maskArray = NULL  );
 	~CrossCorrelator();
 	
 
@@ -44,8 +44,8 @@ public:
 //	void dumpResults( std::string filename );				// (arraydataIO needed for this)
 	
 	//---------------------------------------------calculations (Jonas's way)
-	void calculatePolarCoordinates( double start_q = 0, double stop_q = 0);
-	void calculateSAXS();
+	void calculatePolarCoordinates(double start_q = 0, double stop_q = 0);
+	void calculateSAXS(double start_q = 0, double stop_q = 0);
 	void calculateXCCA();
 	
     //---------------------------------------------alternative approach (Jan's way)
@@ -142,7 +142,7 @@ public:
 	void setQmax( double qmax_val );
 	double qmin() const;
 	void setQmin( double qmin_val );
-	void setQmaxmin( double qmax_val, double qmin_val );	
+	void setQminmax( double qmin_val, double qmax_val );	
 	
 	double phimin() const;
 	void setPhimin( double phimin_val );

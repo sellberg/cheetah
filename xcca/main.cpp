@@ -25,6 +25,7 @@ void usage(){
 	cout << " -b<filename>   : subtract background file " << endl;
 	cout << " -m<filename>   : use mask file " << endl;
 	cout << " -B<factor>     : weighting of background" << endl;
+	cout << " -a<algorithm>  : (1) direct calculation, (2) FFT approach" << endl;
 	cout << "=====================================================" << endl;
 }
 
@@ -90,6 +91,18 @@ int main (int argc, char * const argv[]) {
 
 				cout << "--> using file list in " << list_fn << endl;
 
+			}else if (argv[i][1] == 'a'){
+				string a = argToString(argv[i]);
+				if (a == "1"){
+					ana->setAlg( 1 );
+				}else if (a == "2"){
+					ana->setAlg( 2 );
+				}else{
+					cout << "Algorithm unknown." << endl;
+					exit(2);
+				}
+				cout << "--> using algorithm " << a << endl;	
+				
 			}else if (argv[i][1] == 'o'){
 				string outdir = argToString(argv[i]);
 				ana->setOutputDirectory( outdir );

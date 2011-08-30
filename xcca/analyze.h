@@ -21,8 +21,8 @@ public:
 	Analyzer();
 	~Analyzer();
 
-	int processFiles( vector<string> files, int cenX, int cenY, int num_phi, int num_q);
-	int processFiles( vector<string> files, int cenX, int cenY, int num_phi, int num_q, 
+	int processFiles( vector<string> files, double cenX, double cenY, int num_phi, int num_q);
+	int processFiles( vector<string> files, double cenX, double cenY, int num_phi, int num_q, 
 						double start_q, double stop_q, int LUTx, int LUTy );
 						
 	void setBackground( array2D *back );
@@ -33,6 +33,8 @@ public:
 	array2D *mask();
 	void setOutputDirectory( string outdir );
 	string outputDirectory();
+	void setAlg( int alg );
+	int alg();
 	
 	bool flag_subtract_background;				// subtract background?
 	bool flag_single_correlation_output;		// write every single correlation?
@@ -43,6 +45,7 @@ private:
 	array2D *p_mask;
 	double p_back_weight;
 	string p_out_dir;
+	int p_alg;
 };
 
 #endif
