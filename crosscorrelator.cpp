@@ -3,7 +3,7 @@
  *
  *  XCCA analysis code 
  *  
- *  calculates the average SAXS intensity
+ *  calculates the angular average of the intensity
  *  calculates the angular auto-correlation or cross-correlation
  *
  *  algorithm 1 (direct calculation) written by Jonas Sellberg, 2011-08-20 
@@ -186,9 +186,9 @@ void CrossCorrelator::initPrivateVariables(){
 	
 	p_q = NULL;
 	p_phi = NULL;	
-	p_qave = NULL;
-	p_iave = NULL;
-	p_phiave = NULL;
+	p_qAvg = NULL;
+	p_iAvg = NULL;
+	p_phiAvg = NULL;
 	p_fluctuations = NULL;
 	
 	p_calculatePolarCoordinates = 0;
@@ -215,9 +215,9 @@ void CrossCorrelator::initInternalArrays(){
 	p_q = new array1D(arraySize());
 	p_phi = new array1D(arraySize());
 	
-	p_qave = new array1D(nQ());
-	p_iave = new array1D(nQ());
-	p_phiave = new array1D(nPhi());
+	p_qAvg = new array1D(nQ());
+	p_iAvg = new array1D(nQ());
+	p_phiAvg = new array1D(nPhi());
 }
 
 void CrossCorrelator::destroyInternalArrays(){
@@ -233,9 +233,9 @@ void CrossCorrelator::destroyInternalArrays(){
 	
 	delete p_q;
 	delete p_phi;	
-	delete p_qave;
-	delete p_iave;
-	delete p_phiave;
+	delete p_qAvg;
+	delete p_iAvg;
+	delete p_phiAvg;
 	delete p_fluctuations;
 	
 	delete p_crossCorrelation;
@@ -690,16 +690,16 @@ void CrossCorrelator::updateDependentVariables(){		//update the values that depe
 	p_updateDependentVariables++;
 }
 
-double CrossCorrelator::getQave(unsigned index) const {
-	return p_qave->get(index);
+double CrossCorrelator::getQavg(unsigned index) const {
+	return p_qAvg->get(index);
 }
 
-double CrossCorrelator::getPhiave(unsigned index) const {
-	return p_phiave->get(index);
+double CrossCorrelator::getPhiavg(unsigned index) const {
+	return p_phiAvg->get(index);
 }
 
-double CrossCorrelator::getIave(unsigned index) const {
-	return p_iave->get(index);
+double CrossCorrelator::getIavg(unsigned index) const {
+	return p_iAvg->get(index);
 }
 
 double CrossCorrelator::getAutoCorrelation(unsigned index1, unsigned index2) const {
@@ -773,12 +773,12 @@ void CrossCorrelator::calculatePolarCoordinates(double start_q, double stop_q) {
 		
 		// calculate vector of output |q|
 		for (int i=0; i<nQ(); i++) {
-			p_qave->set( i, qmin()+i*deltaq() );
+			p_qAvg->set( i, qmin()+i*deltaq() );
 		}
 
 		// calculate vector of output angles
 		for (int i=0; i<nPhi(); i++) {
-			p_phiave->set( i, phimin()+i*deltaphi() );
+			p_phiAvg->set( i, phimin()+i*deltaphi() );
 		}
 		
 		p_calculatePolarCoordinates++;
@@ -812,15 +812,15 @@ void CrossCorrelator::calculateSAXS(double start_q, double stop_q) {
 		// create counter array
 		array1D *counter = new array1D( nQ() );
 		
-		// if calculateSAXS() has already been used, free and recreate p_qave, p_iave
+		// if calculateSAXS() has already been used, free and recreate p_qAvg, p_iAvg
 		if (p_calculateSAXS) {
-			delete p_qave;
-			delete p_iave;
-			p_qave = new array1D(nQ());
-			p_iave = new array1D(nQ());
+			delete p_qAvg;
+			delete p_iAvg;
+			p_qAvg = new array1D(nQ());
+			p_iAvg = new array1D(nQ());
 		}
 		
-		if (debug() >= 1) printf("calculating average SAXS intensity...\n");
+		if (debug() >= 1) printf("calculating angular average of the intensity...\n");
 		
 		if (!p_calculatePolarCoordinates && !p_calculateSAXS) {
 			// calculate |q| for each pixel and bin lengths with correct resolution
@@ -832,16 +832,16 @@ void CrossCorrelator::calculateSAXS(double start_q, double stop_q) {
 		if (!p_calculatePolarCoordinates || p_calculateSAXS) {
 			// calculate vector of output |q|
 			for (int i=0; i<nQ(); i++) {
-				p_qave->set( i, qmin()+i*deltaq() );
+				p_qAvg->set( i, qmin()+i*deltaq() );
 			}			
 		}
 		
 		// angular sum for each |q|
 		for (int i=0; i<arraySize(); i++) {
 			if (!maskEnable() || mask()->get(i)) {
-				int qIndex = (int) round((p_q->get(i)-qmin())/deltaq()); // the index in qave[] that corresponds to q[i]
+				int qIndex = (int) round((p_q->get(i)-qmin())/deltaq()); // the index in qAvg[] that corresponds to q[i]
 				if (p_q->get(i) <= qmax() && p_q->get(i) >= qmin()) {
-					p_iave->set( qIndex, p_iave->get(qIndex)+data()->get(i) );
+					p_iAvg->set( qIndex, p_iAvg->get(qIndex)+data()->get(i) );
 					counter->set( qIndex, counter->get(qIndex)+1 );
 				} else if (debug() >= 3) printf("POINT EXCLUDED! q: %4.2f, qmin: %4.2f, qmax: %4.2f, nQ: %4.2f, qIndex: %d\n", p_q->get(i), qmin(), qmax(), nQ(), qIndex );
 			}
@@ -849,13 +849,13 @@ void CrossCorrelator::calculateSAXS(double start_q, double stop_q) {
 		
 		// normalize by number of pixels
 		for (int i=0; i<nQ(); i++) {
-			if (counter->get(i)) p_iave->set( i, p_iave->get(i)/counter->get(i) );
+			if (counter->get(i)) p_iAvg->set( i, p_iAvg->get(i)/counter->get(i) );
 		}
 		
 		if (debug() >= 2) {
-			printf("average SAXS intensity:\n");
+			printf("angular average of the intensity:\n");
 			for (int i=0; i<nQ(); i++)
-				cout << "Q: " << p_qave->get(i) << ",   \t# pixels: " << counter->get(i) << ",\tI: " << p_iave->get(i) << endl;
+				cout << "Q: " << p_qAvg->get(i) << ",   \t# pixels: " << counter->get(i) << ",\tI: " << p_iAvg->get(i) << endl;
 		}
 		
 		// free counter array
@@ -914,8 +914,8 @@ void CrossCorrelator::calculateXCCA(double start_q, double stop_q) {
 		// calculate polar arrays
 		for (int i=0; i<arraySize(); i++) {
 			if (!maskEnable() || mask()->get(i)) {
-				int qIndex = (int) round((p_q->get(i)-qmin())/deltaq()); // the index in qave[] that corresponds to q[i]
-				int phiIndex = (int) round((p_phi->get(i)-phimin())/deltaphi()); // the index in phiave[] that corresponds to phi[i]
+				int qIndex = (int) round((p_q->get(i)-qmin())/deltaq()); // the index in qAvg[] that corresponds to q[i]
+				int phiIndex = (int) round((p_phi->get(i)-phimin())/deltaphi()); // the index in phiAvg[] that corresponds to phi[i]
 				if (qIndex >= 0 && qIndex < nQ() && phiIndex >= 0 && phiIndex < nPhi()) { // make sure qIndex and phiIndex are not out of array bounds
 					polar()->set(qIndex, phiIndex, polar()->get(qIndex, phiIndex) + data()->get(i) );
 					pixelCount->set(qIndex, phiIndex, pixelCount->get(qIndex,phiIndex)+1);
@@ -936,9 +936,9 @@ void CrossCorrelator::calculateXCCA(double start_q, double stop_q) {
 					polar()->set(i, j, polar()->get(i,j)/pixelCount->get(i,j) );
 					// subtract SAXS average for all shots or just subtract the SAXS from the specific shot?
 					// second alternative is used here, since that always produces fluctuations with zero mean
-					fluctuations()->set(i, j, polar()->get(i,j)-p_iave->get(i) );
+					fluctuations()->set(i, j, polar()->get(i,j)-p_iAvg->get(i) );
 				}
-				if (debug() >= 2) printf("q: %f, phi: %f --> bool: %f, count: %f\n", p_qave->get(i), p_phiave->get(j), pixelBool->get(i, j), pixelCount->get(i, j));
+				if (debug() >= 2) printf("q: %f, phi: %f --> bool: %f, count: %f\n", p_qAvg->get(i), p_phiAvg->get(j), pixelBool->get(i, j), pixelCount->get(i, j));
 			}
 		}
 		
@@ -971,9 +971,9 @@ void CrossCorrelator::calculateXCCA(double start_q, double stop_q) {
 					double variance1 = crossCorr()->get(i, i, 0);
 					double variance2 = crossCorr()->get(j, j, 0);
 					for (int k=0; k<nLag(); k++) { // phi lag => phi2 index = (l+k)%nPhi
-//						if (p_iave->get(i) && p_iave->get(j)) {
-//							// normalize the cross-correlation array with the average SAXS intensity
-//							crossCorr()->set(i, j, k, crossCorr()->get(i,j,k) / (p_iave->get(i)*p_iave->get(j)) );
+//						if (p_iAvg->get(i) && p_iAvg->get(j)) {
+//							// normalize the cross-correlation array with the SAXS intensity
+//							crossCorr()->set(i, j, k, crossCorr()->get(i,j,k) / (p_iAvg->get(i)*p_iAvg->get(j)) );
 //						} else { // fail code if average intensity is 0
 //							crossCorr()->set(i, j, k, -1.5);
 //						}
@@ -1000,9 +1000,9 @@ void CrossCorrelator::calculateXCCA(double start_q, double stop_q) {
 						norm += pixelBool->get(i,l)*pixelBool->get(i, phi2_index);
 					}
 					if (norm != 0) {
-//						if (p_iave->get(i) != 0) {
-//							// normalize the cross-correlation array with the average SAXS intensity and the calculated normalization constant					
-//							autoCorr()->set(i, k, autoCorr()->get(i,k) / (norm*p_iave->get(i)*p_iave->get(i)) );
+//						if (p_iAvg->get(i) != 0) {
+//							// normalize the cross-correlation array with the SAXS intensity and the calculated normalization constant					
+//							autoCorr()->set(i, k, autoCorr()->get(i,k) / (norm*p_iAvg->get(i)*p_iAvg->get(i)) );
 //						} else { // fail code if average intensity is 0
 //							autoCorr()->set(i, k, -1.5);						
 //						}

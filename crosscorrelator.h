@@ -96,9 +96,9 @@ public:
 	double deltaphi() const;	
 	
 	//---------------------------------------------getters for calculated arrays
-	double getQave(unsigned index) const;
-	double getPhiave(unsigned index) const;
-	double getIave(unsigned index) const;
+	double getQavg(unsigned index) const;
+	double getPhiavg(unsigned index) const;
+	double getIavg(unsigned index) const;
 	array2D *fluctuations() const;	// intensity fluctuations in polar coordinates produced by calculateXCCA()
 	array2D *polar() const;			// intensities in polar coordinates produced by calculateXCCA()/calculatePolarCoordinates_FAST()
 	array2D *mask_polar() const;	// mask in polar coordinates produced by calculatePolarCoordinates_FAST()
@@ -201,9 +201,9 @@ private:
 	array1D *p_q;				// magnitude of q-vector (1st dimension in correlation) for each pixel
 	array1D *p_phi;				// angle (2nd dimension in correlation) for each pixel
 	
-	array1D *p_qave;			// vector of output magnitudes of q-vector
-	array1D *p_iave;			// vector of output average intensities for magnitudes of q-vector
-	array1D *p_phiave;			// vector of output angles
+	array1D *p_qAvg;			// vector of output magnitudes of q-vector
+	array1D *p_iAvg;			// vector of output average intensities for magnitudes of q-vector
+	array1D *p_phiAvg;			// vector of output angles
 	
 	array2D *p_fluctuations;	// intensity fluctuations in polar coordinates
 	

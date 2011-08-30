@@ -169,14 +169,14 @@ void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 
 	// angular averages
 	for (int i=0; i<cc->nQ(); i++) {
-		buffer[i] = cc->getIave(i);
+		buffer[i] = cc->getIavg(i);
 	}
 	fwrite(&nQD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
 	fwrite(&buffer[0],sizeof(double),cc->nQ(),filePointerWrite);
 	
 	// q binning
 	for (int i=0; i<cc->nQ(); i++) {
-		buffer[i] = cc->getQave(i);
+		buffer[i] = cc->getQavg(i);
 	}
 	fwrite(&nQD,sizeof(double),1,filePointerWrite);
 	fwrite(&buffer[0],sizeof(double),cc->nQ(),filePointerWrite);
@@ -220,21 +220,21 @@ void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *ev
 	
 	// angular averages
 	for (int i=0; i<nQ; i++) {
-		buffer[i] = cc->getIave(i);
+		buffer[i] = cc->getIavg(i);
 	}
 	fwrite(&nQD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
 	fwrite(&buffer[0],sizeof(double),nQ,filePointerWrite);
 	
 	// q binning
 	for (int i=0; i<nQ; i++) {
-		buffer[i] = cc->getQave(i);
+		buffer[i] = cc->getQavg(i);
 	}
 	fwrite(&nQD,sizeof(double),1,filePointerWrite);
 	fwrite(&buffer[0],sizeof(double),nQ,filePointerWrite);
 	
 	// angle binning
 	for (int i=0; i<nPhi; i++) {
-		buffer[i] = cc->getPhiave(i);
+		buffer[i] = cc->getPhiavg(i);
 	}
 	fwrite(&nPhiD,sizeof(double),1,filePointerWrite);
 	fwrite(&buffer[0],sizeof(double),nPhi,filePointerWrite);
