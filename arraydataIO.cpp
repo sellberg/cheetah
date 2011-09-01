@@ -21,7 +21,7 @@ using std::string;
 
 
 arraydataIO::arraydataIO(){
-
+	p_transpose = true;			//should be 'true', generally. see note in header
 }
 
 arraydataIO::~arraydataIO(){
@@ -36,24 +36,22 @@ arraydataIO::~arraydataIO(){
 	// of the tomo/matlib package (see http://xray-lens.de )
 	//--------------------------------------------------------------------------
 	int arraydataIO::readFromEDF( string filename, array2D *&dest ) const{
+		int retval = 0;
 		ns_edf::edf *file = new ns_edf::edf;
 		if (dest->data())
 		{
-			int retval;
-
 			file->read_header(filename);
 			
-			int dim1 = file->get_Dim_x();
-			int dim2 = file->get_Dim_y();
+			int dim1 = (int)file->get_Dim_x();
+			int dim2 = (int)file->get_Dim_y();
 			
 			cout << "Reading " << filename << " (EDF file type " << file->get_FileType_str() << ")"
 				<< ", dimensions (" << dim1 << ", " << dim2 << ")" << endl;
 			
 			double *temp = new double[dim1*dim2];
 			
-			retval = file->read_data( temp, filename );
-			if ( retval )
-			{
+			int fail = file->read_data( temp, filename );
+			if ( fail ){
 				cout << "ERROR. In arraydataIO::readFromEDF - Could not load EDF data file '" << filename << "'." << endl;
 				return 1; // Could not open file fn   (by JP)
 			}
@@ -64,14 +62,18 @@ arraydataIO::~arraydataIO(){
 			dest->arraydata::copy( temp, dim1*dim2);
 			
 			delete []temp;
+			
+			if (transpose()){
+				dest->transpose();
+			}
 		}
 		else
 		{
 			cerr << "ERROR. arraydataIO::readFromEDF - dest data not allocated." << endl;
-			return 1;
+			retval = 1;
 		}
 		delete file;
-		return 0; 
+		return retval; 
 	}
 
 	//-------------------------------------------------------------- writeToEDF
@@ -88,6 +90,9 @@ arraydataIO::~arraydataIO(){
 		ns_edf::scaled_t scaleOut = ns_edf::SF_SCALED;				
 		
 		if ( src->data() ){
+			if (transpose()){//transpose before writing
+				src->transpose();
+			}
 			ns_edf::edf *file = new ns_edf::edf;
 			
 			file->set_Dim_x( src->dim1() );
@@ -101,11 +106,14 @@ arraydataIO::~arraydataIO(){
 			file->set_ScaledFlag( scaleOut );
 			retval = file->write( src->data(), flipByteOrder );
 			delete file;
-		}
-		else
-		{
+			
+			if (transpose()){//transpose back before returning
+				src->transpose();
+			}
+			return 0;
+		}else{
 			cerr << "ERROR. In matrixdata::write() - Matrix not allocated." << endl;
-			retval = -1;
+			return 1;
 		}
 		return retval;
 	}
@@ -132,6 +140,7 @@ arraydataIO::~arraydataIO(){
 	// of the tomo/matlib package (see http://xray-lens.de )
 	//--------------------------------------------------------------------------
 	int arraydataIO::readFromTiff( string filename, array2D *&dest ) const {
+		int retval = 0;
 		TIFF *tiff= TIFFOpen( filename.c_str(), "r" );
 
 		if(tiff){
@@ -156,20 +165,30 @@ arraydataIO::~arraydataIO(){
 					dest->setDim1(width);
 					dest->setDim2(height);
 					for(unsigned int j= 0; j < height; j++){		//y
-						for(unsigned int i= 0; i < width; i++){		//x
-							dest->set( i, j, 1.* (raster[j*width+i] & 0x000000ff));
+						for(unsigned int i= 0; i < width; i++){		//x	
+//							dest->set( i, j, 1.* (raster[j*width+i] & 0x000000ff));			// max value 255
+							dest->set( i, j, 1.* (raster[j*width+i] & 0x0000ffff));			// max value 65535
 						}
 					}
 				}
 				_TIFFfree(raster);
 			}
 			TIFFClose(tiff);
-		//	flipVert();			//yet to be implemented!!!
-			return 0;
+			
+			if (transpose()){
+				dest->transpose();
+			}
+			
+			dest->flipud();
 		} else {
-			return 1;
+			retval = 1;
 		}
+		return retval;
 	}
+
+
+
+
 
 	//-------------------------------------------------------------- writeToTiff
 	// (needs TIFFLIB installation)
@@ -192,11 +211,13 @@ arraydataIO::~arraydataIO(){
 		if (!src->data()) {
 			cerr << "Error in writeToTiff! No data in array." << endl;
 		}
-
 		
 		TIFF *out = TIFFOpen(filename.c_str() ,"w");
 		if(out)
 		{
+			if (transpose()){
+				src->transpose();
+			}
 			const uint32 width = (uint32) src->dim1();
 			const uint32 height = (uint32) src->dim2();
 			
@@ -230,8 +251,6 @@ arraydataIO::~arraydataIO(){
 			TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
 			TIFFSetField(out, TIFFTAG_PHOTOMETRIC, photo);
 
-			
-			
 			//write to file
 			for (uint32 i = 0; i < height; i++)
 			{
@@ -265,6 +284,10 @@ arraydataIO::~arraydataIO(){
 			
 			delete[] tifdata;
 			TIFFClose(out);
+			
+			if (transpose()){//transpose back before returning
+				src->transpose();
+			}
 			return 0;
 		}else{
 			cerr << "Error in array2D::writeToTiff! Could not open '" << filename << "' for writing!" << endl;
@@ -317,9 +340,9 @@ arraydataIO::~arraydataIO(){
 		int rank = H5Sget_simple_extent_ndims(dataspace);
 		hsize_t dims_out[2];
 		int status_n = H5Sget_simple_extent_dims(dataspace, dims_out, NULL);
-		int nx = (int)(dims_out[0]);
-		int ny = (int)(dims_out[1]);
-		cout << "rank " << rank << ", dimensions " << nx << " x " << ny << ", status " << status_n << endl;
+		int ny = (int)(dims_out[0]);
+		int nx = (int)(dims_out[1]);
+		cout << "rank " << rank << ", dimensions nx:" << nx << " x ny:" << ny << ", status " << status_n << endl;
 
 		//allocate data to hold what comes out of the file
 		void *buffer = NULL;
@@ -328,8 +351,8 @@ arraydataIO::~arraydataIO(){
 			cout << "Data set has FLOAT type, data size is " << (int)size;
 			if (size == sizeof(float)){
 				cout << " --> float" << endl;
-				type = 1;
 				buffer = new float[nx*ny];
+				type = 1;
 			}else if (size == sizeof(double)){
 				cout << " --> double" << endl;
 				buffer = new double[nx*ny];
@@ -354,7 +377,7 @@ arraydataIO::~arraydataIO(){
 
 		// read the data using the default properties.
 	//    hid_t status = H5Dread (dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &buffer[0]);
-		hid_t status = H5Dread (datasetID, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &((double*)buffer)[0]);
+		hid_t status = H5Dread (datasetID, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buffer);
 		
 		// close and release resources.
 		status = H5Dclose(datasetID);
@@ -363,18 +386,27 @@ arraydataIO::~arraydataIO(){
 		//copy data back to dest
 		delete dest;
 		dest = new array2D( nx, ny );
-		
+
+
+		//for some reason, the dereferencing of anything else than 'int' seems to fail
+		//need to fix this as this throws away all floating point accurracy
+		dest->arraydata::copy( (int*)buffer, nx*ny);
+
 		if (type == 0) { 
-			dest->arraydata::copy( (double*)buffer, nx*ny);
+			//dest->arraydata::copy( (double*)buffer, nx*ny);
 			delete[] ((double*)buffer);
 		} else if (type == 1) { 
-			dest->arraydata::copy( (float*)buffer, nx*ny);
+			//dest->arraydata::copy( (float*)buffer, nx*ny);
 			delete[] ((float*)buffer);
 		} else if (type == 2) { 
-			dest->arraydata::copy( (int*)buffer, nx*ny);
+			//dest->arraydata::copy( (int*)buffer, nx*ny);
 			delete[] ((int*)buffer);
 		} else { 
 			cerr << "Error in arraydataIO::readFromHDF5. Type not found. " << endl;
+		}
+		
+		if (transpose()){
+			dest->transpose();
 		}
 		
 		return 0;
@@ -387,6 +419,10 @@ arraydataIO::~arraydataIO(){
 	//-------------------------------------------------------------- 
 	int arraydataIO::writeToHDF5( string filename, array2D *src, int type, int debug ) const {
 
+		if (transpose()){
+			src->transpose();
+		}
+		
 		int nx = src->dim1();
 		int ny = src->dim2();
 
@@ -511,6 +547,10 @@ arraydataIO::~arraydataIO(){
 		} else { 
 			delete[] ((double*)data);
 		}
+		
+		if (transpose()){//transpose back before returning
+			src->transpose();
+		}
 		return 0;
 	}
 #else //define empty dummy functions
@@ -526,11 +566,13 @@ arraydataIO::~arraydataIO(){
 
 
 
+bool arraydataIO::transpose() const{
+	return p_transpose;
+}
 
-
-
-
-
+void arraydataIO::setTranspose( bool t ){
+	p_transpose = t;
+}
 
 
 

@@ -25,6 +25,7 @@ using std::ostringstream;
 using std::ofstream;
 
 #include <cmath>
+#include <cassert>
 
 
 
@@ -46,7 +47,7 @@ arraydata::arraydata( unsigned int size_val ){
     if (p_data == 0)
         cerr << "Error in arraydata constructor: could not allocate memory." << endl;
 
-	zero();					// set all elements to zero initially
+	zeros();					// set all elements to zero initially
 }
 
 arraydata::arraydata( const int16_t *CArray, const unsigned int size_val ){
@@ -157,33 +158,19 @@ double *arraydata::data() const{
 
 
 //--------------------------------------------------------------------
-double arraydata::get_atAbsoluteIndex(unsigned int i) const{
-	//check for errors, but fail 'silently', 
-	//i.e., return a valid numeric value 0,
-	//instead of exiting or throwing an exception
-		
-	if (!p_data){
-		std::cerr << "Error in arraydata::get_atAbsoluteIndex(" << i << ")! Internal data not allocated." << endl;
-		throw;
-	} else if (i >= size()) {
-		std::cerr << "Error in arraydata::get_atAbsoluteIndex(" << i 
-			<< "). Index is larger than absolute dimension " << size() << "." << endl;
-		throw;
-	} else {
-		return p_data[i];
-	}
+//time-critical function, check with assert is disabled in release configuration
+double arraydata::get_atIndex( unsigned int i) const{
+	assert(p_data);
+	assert(i < size());
+	return p_data[i];
 }
 
 
 //--------------------------------------------------------------------
-void arraydata::set_atAbsoluteIndex( const unsigned int i, const double val){
-	if ( i < size() ) {
-		p_data[i] = val;
-	} else {									//fail 'silently', as in: don't do anything
-		std::cerr << "Error in arraydata::set_atAbsoluteIndex(" << i 
-			<< ", " << val <<  "). Index is larger than absolute dimension " << size() << "." << endl;
-		throw;
-	}
+//time-critical function, check with assert is disabled in release configuration
+void arraydata::set_atIndex( unsigned int i, double val){
+	assert(i<size());
+	p_data[i] = val;
 }
 
 
@@ -194,25 +181,26 @@ unsigned int arraydata::size() const{
 
 
 //--------------------------------------------------------------------
-void arraydata::zero(){					//set all elements to zero
+void arraydata::zeros(){					//set all elements to zero
 	for (int i = 0; i < size(); i++) {
-		set_atAbsoluteIndex(i, 0);
+		set_atIndex(i, 0);
 	}
 }
 
-void arraydata::zero( unsigned int start, unsigned int stop ){
+void arraydata::zeros( unsigned int start, unsigned int stop ){
 	if ( start >= stop || stop > size() ){
 		cerr << "Error in arraydata::zero("<< start << ", " << stop << "). Check boundaries." << endl;
 		throw;
 	}
 	for (int i = start; i < stop; i++) {
-		set_atAbsoluteIndex(i, 0);
+		set_atIndex(i, 0);
 	}
 }
 
+//--------------------------------------------------------------------
 void arraydata::ones(){					//set all elements to one
 	for (int i = 0; i < size(); i++) {
-		set_atAbsoluteIndex(i, 1);
+		set_atIndex(i, 1);
 	}	
 }
 
@@ -222,7 +210,7 @@ void arraydata::ones( unsigned int start, unsigned int stop ){
 		throw;
 	}
 	for (int i = start; i < stop; i++) {
-		set_atAbsoluteIndex(i, 1);
+		set_atIndex(i, 1);
 	}
 }
 
@@ -230,7 +218,7 @@ void arraydata::ones( unsigned int start, unsigned int stop ){
 void arraydata::range( double neg, double pos ){	//set elements to a range of values, given by the boundaries
 	double delta = (pos-neg)/(size()-1);
 	for (int i = 0; i < size(); i++) {
-		set_atAbsoluteIndex(i, neg+delta*i);
+		set_atIndex(i, neg+delta*i);
 	}	
 }
 
@@ -238,8 +226,8 @@ void arraydata::range( double neg, double pos ){	//set elements to a range of va
 double arraydata::calcMin() const{
 	double tempmin = +INFINITY;
 	for (int i = 0; i < size(); i++) {
-		if (get_atAbsoluteIndex(i) < tempmin) {
-			tempmin = get_atAbsoluteIndex(i);
+		if (get_atIndex(i) < tempmin) {
+			tempmin = get_atIndex(i);
 		}
 	}
 	return tempmin;
@@ -249,8 +237,8 @@ double arraydata::calcMin() const{
 double arraydata::calcMax() const{
 	double tempmax = -INFINITY;
 	for (int i = 0; i < size(); i++) {
-		if (get_atAbsoluteIndex(i) > tempmax) {
-			tempmax = get_atAbsoluteIndex(i);
+		if (get_atIndex(i) > tempmax) {
+			tempmax = get_atIndex(i);
 		}
 	}
 	return tempmax;
@@ -260,7 +248,7 @@ double arraydata::calcMax() const{
 double arraydata::calcSum() const{
 	double sum = 0.;
 	for (int i = 0; i < size(); i++) {
-		sum += get_atAbsoluteIndex(i);
+		sum += get_atIndex(i);
 	}	
 	return sum;
 }
@@ -278,7 +266,7 @@ string arraydata::getASCIIdataAsRow() const{
   		osst << "Array data has size zero." << endl;
 	}else{
 		for (int i = 0; i<size(); i++) {
-			osst << get_atAbsoluteIndex(i) << " ";
+			osst << get_atIndex(i) << " ";
 		}
 		osst << endl;
 	}
@@ -292,72 +280,18 @@ string arraydata::getASCIIdataAsColumn() const{
   		osst << "Array data has size zero." << endl;
 	}else{
 		for (int i = 0; i<size(); i++) {
-			osst << get_atAbsoluteIndex(i) << endl;
+			osst << get_atIndex(i) << endl;
 		}
 	}
     return osst.str();
 }
 
-//--------------------------------------------------------------------arraydata::readFromRawBinary
-void arraydata::readFromRawBinary( std::string filename ){
-	cout << "reading from raw binary file " << filename << endl;
-	
-	FILE *filePointerRead;
-	long lSize;
-	uint16_t *buffer;
-	size_t result;
-	
-	// fiducials for test shots: f909 (black), 13a19 (powder)
-	filePointerRead = fopen( filename.c_str(),"r+");
-	if (filePointerRead == NULL) 
-	{
-		fputs ("Error in arraydata::readFromRawBinary. File error\n",stderr); 
-		exit (1);
-	}
-	
-	// obtain file size:
-	fseek(filePointerRead, 0, SEEK_END);
-	lSize = ftell(filePointerRead);
-	rewind(filePointerRead);
-	lSize /= sizeof(uint16_t);
-	
-	// allocate memory to contain the whole file:
-	buffer = (uint16_t*) malloc(sizeof(uint16_t)*lSize);
-	if (buffer == NULL) 
-	{
-		fputs ("Error in arraydata::readFromRawBinary. Memory error\n",stderr); 
-		exit (2);
-	}
-	
-	// copy the file into the buffer:
-	result = fread(buffer,sizeof(uint16_t),lSize,filePointerRead);
-	if (result != lSize) 
-	{
-		fputs ("Error in arraydata::readFromRawBinary. Reading error\n",stderr); 
-		exit (3);
-	}
-	
-	// the whole file is now loaded in the memory buffer.
-	printf("data contains %ld unsigned 16-bit integers\n",lSize);
-	
-	// printRawData(buffer,lSize);
-	
-	//write read data to array for further processing
-	for (int i=0; i<size(); i++) {
-		set_atAbsoluteIndex( i, buffer[i] );
-	}
-	
-	
-	// terminate reading
-	fclose(filePointerRead);
-	free(buffer);
-}
 
 //--------------------------------------------------------------------array math
 //multiply each element by a numerical factor
 int arraydata::addValue( double val ){
     for (int i = 0; i<this->size(); i++) {
-        this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i) + val);
+        this->set_atIndex(i, this->get_atIndex(i) + val);
     }
     return 0;
 }
@@ -365,7 +299,7 @@ int arraydata::addValue( double val ){
 //multiply each element by a numerical factor
 int arraydata::subtractValue( double val ){
     for (int i = 0; i<this->size(); i++) {
-        this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i) - val);
+        this->set_atIndex(i, this->get_atIndex(i) - val);
     }
     return 0;
 }
@@ -373,7 +307,7 @@ int arraydata::subtractValue( double val ){
 //multiply each element by a numerical value
 int arraydata::multiplyByValue( double value ){
     for (int i = 0; i<this->size(); i++) {
-        this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i) * value);
+        this->set_atIndex(i, this->get_atIndex(i) * value);
     }
     return 0;
 }
@@ -381,7 +315,7 @@ int arraydata::multiplyByValue( double value ){
 //divide each element by a numerical value (enforcing float division)
 int arraydata::divideByValue( double value ){
     for (int i = 0; i<this->size(); i++) {
-        this->set_atAbsoluteIndex(i, ((double) this->get_atAbsoluteIndex(i)) / value);
+        this->set_atIndex(i, ((double) this->get_atIndex(i)) / value);
     }
     return 0;
 }
@@ -396,7 +330,7 @@ int arraydata::addArrayElementwise( const arraydata *secondArray ){
     }
     
     for (int i = 0; i<this->size(); i++) {
-        this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)+secondArray->get_atAbsoluteIndex(i));
+        this->set_atIndex(i, this->get_atIndex(i)+secondArray->get_atIndex(i));
     }
     return 0;
 }
@@ -410,7 +344,7 @@ int arraydata::subtractArrayElementwise( const arraydata *secondArray ){
     }
     
     for (int i = 0; i<this->size(); i++) {
-        this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)-secondArray->get_atAbsoluteIndex(i));
+        this->set_atIndex(i, this->get_atIndex(i)-secondArray->get_atIndex(i));
     }
     return 0;
 }
@@ -424,7 +358,7 @@ int arraydata::multiplyByArrayElementwise( const arraydata *secondArray ){
     }
     
     for (int i = 0; i<this->size(); i++) {
-        this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i) * secondArray->get_atAbsoluteIndex(i) );
+        this->set_atIndex(i, this->get_atIndex(i) * secondArray->get_atIndex(i) );
     }
     return 0;
 }
@@ -438,21 +372,10 @@ int arraydata::divideByArrayElementwise( const arraydata *secondArray ){
     }
     
     for (int i = 0; i<this->size(); i++) {
-        this->set_atAbsoluteIndex(i, this->get_atAbsoluteIndex(i)/secondArray->get_atAbsoluteIndex(i));
+        this->set_atIndex(i, this->get_atIndex(i)/secondArray->get_atIndex(i));
     }
     return 0;
 }
-
-
-//--------------------------------------------------------------------
-//int arraydata::verbose() const{
-//	return p_verbose;
-//}
-//
-//void arraydata::setVerbose( int verbosity ){
-//	p_verbose = verbosity;
-//}
-
 
 
 
@@ -468,14 +391,7 @@ int arraydata::divideByArrayElementwise( const arraydata *secondArray ){
 // CLASS IMPLEMENTATION OF array1D
 //
 //=================================================================================
-
-
 //-----------------------------------------------------constructors & destructors
-//array1D::array1D() 
-//		: arraydata(){
-//    setDim1( 0 );
-//}
-
 array1D::array1D( unsigned int size_dim1 ) 
 		: arraydata(size_dim1){
     setDim1( size_dim1 );
@@ -501,7 +417,7 @@ array1D::array1D( array2D* dataTwoD )
     p_size = dataTwoD->size();
     if (p_size > 0){
         for (int i = 0; i < p_size; i++) {
-            p_data[i] = dataTwoD->get_atAbsoluteIndex(i);
+            p_data[i] = dataTwoD->get_atIndex(i);
         }
     }else{
         p_data = NULL;
@@ -522,24 +438,18 @@ void array1D::copy( const array1D& src ){
 
 
 
-//-----------------------------------------------------data accessors
+//-----------------------------------------------------get
+//time-critical function, check with assert is disabled in release configuration
 double array1D::get( unsigned int i ) const{
-	if ( i < dim1() ) {
-		return arraydata::get_atAbsoluteIndex(i);		
-	} else {
-		std::cerr << "Error in array1D! Index " << i 
-				<< " is larger than dimension " << dim1() << "." << endl;
-		return 0.;
-	}
+	assert(i < dim1());
+	return arraydata::get_atIndex(i);		
 }
 
-void array1D::set( const unsigned int i, const double value ){
-	if ( i < dim1() ) {
-		arraydata::set_atAbsoluteIndex(i, value);
-	} else {
-		std::cerr << "Error in array1D! Index " << i 
-			<< " is larger than dimension " << dim1() << "." << endl;
-	}
+//-----------------------------------------------------set
+//time-critical function, check with assert is disabled in release configuration
+void array1D::set( unsigned int i, double value ){
+	assert(i < dim1());
+	arraydata::set_atIndex(i, value);
 }
 
 
@@ -580,19 +490,17 @@ int array1D::writeToASCII( std::string filename ) const{
 
 
 
+
+
+
+
+
 //=================================================================================
 //
 // CLASS IMPLEMENTATION OF array2D
 //
 //=================================================================================
-
 //-----------------------------------------------------constructors & destructors
-//array2D::array2D()
-//		: arraydata(){
-// 	setDim1( 0 );
-//	setDim2( 0 );
-//}
-
 array2D::array2D( unsigned int size_dim1, unsigned int size_dim2 )
 		: arraydata(size_dim1*size_dim2){
  	setDim1( size_dim1 );
@@ -621,7 +529,7 @@ array2D::array2D( array1D* dataOneD, unsigned int size_dim1, unsigned int size_d
     p_size = dataOneD->size();
     if (p_size > 0){
         for (int i = 0; i < p_size; i++) {
-            p_data[i] = dataOneD->get_atAbsoluteIndex(i);
+            p_data[i] = dataOneD->get_atIndex(i);
         }
     }else{
         p_data = NULL;
@@ -640,42 +548,38 @@ void array2D::copy( const array2D& src ){
     this->arraydata::copy( src.data(), src.size() );
 }
 
-//-----------------------------------------------------data accessors
+//-----------------------------------------------------get
+//time-critical function, check with assert is disabled in release configuration
 double array2D::get( unsigned int i, unsigned int j ) const{
-	if ( i < dim1() && j < dim2()) {
-		return arraydata::get_atAbsoluteIndex( j*dim1() + i );
-	} else {
-		std::cerr << "Error in array2D::get! Index (" << i << ", " << j 
-			<< ") is larger than dimension (" << dim1() << ", " << dim2() << ")." << endl;
-		return 0.;
-	}
+	assert(i < dim1());
+	assert(j < dim2());
+	return arraydata::get_atIndex( j*dim1() + i );
 }
 
-void array2D::set( const unsigned int i, const unsigned int j, const double value ){
-	if ( i < dim1() && j < dim2()) {
-		arraydata::set_atAbsoluteIndex( j*dim1() + i, value);
-	} else {
-		std::cerr << "Error in array2D::set! Index (" << i << ", " << j 
-			<< ") is larger than dimension (" << dim1() << ", " << dim2() << ")." << endl;
-	}
+//-----------------------------------------------------set
+//time-critical function, check with assert is disabled in release configuration
+void array2D::set( unsigned int i, unsigned int j, double value ){
+	assert(i < dim1());
+	assert(j < dim2());
+	arraydata::set_atIndex( j*dim1() + i, value);
 }
 
 
-
+//-----------------------------------------------------more data accessors
 int array2D::getRow( int rownum, array1D *&row ) const{
-	if (rownum >= dim2() || rownum < 0){ 
+	if (rownum >= dim1() || rownum < 0){ 
 		cerr << "Error in array2D::getRow. row number " << rownum << " too big or below zero." << endl; 
 		return 1;
 	}
-	if (this->dim1()==0){
-		cerr << "Error in array2D::getRow. array2D's dimension1 is zero" << endl; 
+	if (this->dim2()==0){
+		cerr << "Error in array2D::getRow. array2D's dimension2 is zero" << endl; 
 		return 2;
 	}
 	
 	// create new array if 'row' doesn't have right size, otherwise, just overwrite data
-	if (row->size() != this->dim1()) {
+	if (row->size() != this->dim2()) {
 		delete row;
-		row = new array1D( this->dim1() );
+		row = new array1D( this->dim2() );
 		if (!row){ 
 			cerr << "Error in array2D::getRow. Could not allocate row." << endl;
 			return 3;
@@ -684,26 +588,26 @@ int array2D::getRow( int rownum, array1D *&row ) const{
 
 	//for a fixed row, i goes through columns (x-values)
 	for (int i = 0; i < row->size(); i++){
-		row->set( i, this->get(i, rownum) );
+		row->set( i, this->get(rownum, i) );
 	}
 	return 0;
 }
 
 
 int array2D::getCol( int colnum, array1D *&col) const{
-    if (colnum >= dim1() || colnum < 0){ 
+    if (colnum >= dim2() || colnum < 0){ 
 		cerr << "Error in array2D::getCol. column number " << colnum << " too big or below zero." << endl; 
 		return 1;
 	}
-	if (this->dim2()==0){
-		cerr << "Error in array2D::getCol. array2D's dimension2 is zero" << endl; 
+	if (this->dim1()==0){
+		cerr << "Error in array2D::getCol. array2D's dimension1 is zero" << endl; 
 		return 2;
 	}
 
 	// create new array if 'col' doesn't have right size, otherwise, just overwrite data
-	if (col->size() != this->dim2()) {		
+	if (col->size() != this->dim1()) {		
     	delete col;
-    	col = new array1D( this->dim2() );
+    	col = new array1D( this->dim1() );
 		if (!col){ 
 			cerr << "Error in array2D::getCol. Could not allocate column." << endl; 
 			return 3;
@@ -712,65 +616,40 @@ int array2D::getCol( int colnum, array1D *&col) const{
 	
 	//for a fixed column number, j goes through the rows (y-values)
 	for (int j = 0; j < col->size(); j++){
-		col->set( j, this->get(colnum, j) );
+		col->set( j, this->get(j, colnum) );
 	}
 	return 0;
 }
 
 
 //-----------------------------------------------------setRow/setCol
-// note: there is no check for the dimensions
+// note: there is no check for dimensions
 // the array2D is updated as long as there is data in the passed array1D
 // therefore, if dim(1D) < dim(2D), there will be old data, which is not overwritten
 //       and, if dim(1D) > dim(2D), not all data from 1D will be present in the 2D
-void array2D::setRow( const int rownum, const array1D *row ){
+void array2D::setRow( int rownum, const array1D *row, int start ){
 	if (!row){
-		cerr << "Error in array2D::setRow. Row not allocated." << endl;
-		throw;
-	}else{
-		for (int i = 0; i < row->size(); i++){			//for a fixed row, i goes through columns (x-values)
-			this->set( i, rownum, row->get(i) );		// copy values of row to this array2D
-		}
-	}
-}
-
-
-// see note for setRow,
-void array2D::setCol( const int colnum, const array1D *col ){
-	if (!col){
-		cerr << "Error in array2D::setRow. Row not allocated." << endl;
-		return;
-	}else{
-        for (int j = 0; j < col->size(); j++){			//for a fixed column number, j goes through the rows (y-values)
-			this->set( colnum, j, col->get(j) );
-		}
-	}
-}
-
-
-void array2D::setRowPart( int rownum, const array1D *row, int start ){
-	if (!row){
-		cerr << "Error in array2D::setRowPart. Row not allocated." << endl;
+		cerr << "Error in array2D::setRow. Passed 'row' not allocated." << endl;
 		throw;
 	}else if( start < 0 || start >= row->size() ){
-		cerr << "Start value " << start << " not allowed." << endl;
+		cerr << "Error in array2D::setRow. Start value " << start << " not allowed." << endl;
 		throw;
 	}else{
-		for (int i = 0; i < row->size() && start+i < this->dim1(); i++){
-			this->set( start+i, rownum, row->get(i) );
+		for (int i = 0; i < row->size() && start+i < this->dim2(); i++){
+			this->set( rownum, start+i, row->get(i) );
 		}
 	}
 }
 
-void array2D::setColPart( int colnum, const array1D *col, int start ){
+void array2D::setCol( int colnum, const array1D *col, int start ){
 	if (!col){
-		cerr << "Error in array2D::setRowPart. Row not allocated." << endl;
+		cerr << "Error in array2D::setCol. Passed 'col' not allocated." << endl;
 		throw;
 	}else if( start < 0 || start >= col->size() ){
-		cerr << "Start value " << start << " not allowed." << endl;
+		cerr << "Error in array2D::setCol. Start value " << start << " not allowed." << endl;
 		throw;
 	}else{
-		for (int i = 0; i < col->size() && start+i < this->dim2(); i++){
+		for (int i = 0; i < col->size() && start+i < this->dim1(); i++){
 			this->set( start+i, colnum, col->get(i) );
 		}
 	}
@@ -790,37 +669,62 @@ void array2D::transpose(){
 	delete old;
 }
 
-//------------------------------------------------------------- xrange
-// example of xrange(-2,2)
-//	 -2 -1  0  1  2
-//	 -2 -1  0  1  2
-//	 -2 -1  0  1  2
-//	 -2 -1  0  1  2
-//	 -2 -1  0  1  2
-//
-void array2D::xrange( double xneg, double xpos ){	//set elements to a range of values, given by the boundaries
-	double xdelta = (xpos-xneg)/(dim1()-1);
-	for (int j = 0; j < dim2(); j++) {
-		for (int i = 0; i < dim1(); i++) {
-			set(i, j, xneg+xdelta*i );
+//------------------------------------------------------------- flipud
+void array2D::flipud(){
+	array2D *old = new array2D(*this);
+	for ( int j = 0; j < dim2(); j++ ){
+		for ( int i = 0; i < dim1(); i++ ){
+			this->set( i, j, old->get(dim1()-1-i,j) );
 		}
 	}
+	delete old;
 }
 
-//------------------------------------------------------------- range2D
-// example of yrange(-2,2)
+//------------------------------------------------------------- fliplr
+void array2D::fliplr(){
+	array2D *old = new array2D(*this);
+	for ( int i = 0; i < dim1(); i++ ){
+		for ( int j = 0; j < dim2(); j++ ){
+			this->set( i, j, old->get(i,dim2()-1-i) );
+		}
+	}
+	delete old;	
+}
+
+
+//------------------------------------------------------------- gradientAlongDim1
+// remains constant along dim1 (columns) 
+// example of gradientAlongDim1(-2,2)
 //	  2  2  2  2  2
 //	  1  1  1  1  1
 //	  0  0  0  0  0
 //	 -1 -1 -1 -1 -1
 //	 -2 -2 -2 -2 -2
 //
-void array2D::yrange( double yneg, double ypos ){	//set elements to a range of values, given by the boundaries
-	double ydelta = (ypos-yneg)/(dim2()-1);
+void array2D::gradientAlongDim1( double lowlim, double highlim ){	//set elements to a range of values, given by the boundaries
 	for (int j = 0; j < dim2(); j++) {
-		for (int i = 0; i < dim1(); i++) {
-			set(i, j, yneg+ydelta*j);
-		}
+		array1D *col = new array1D( dim1() );
+		col->range(lowlim, highlim);
+		this->setCol(j, col);
+		delete col;
+	}
+}
+
+//------------------------------------------------------------- gradientAlongDim2
+// remains constant along dim2 (rows)
+// example of gradientAlongDim2(-2,2)
+//	 -2 -1  0  1  2
+//	 -2 -1  0  1  2
+//	 -2 -1  0  1  2
+//	 -2 -1  0  1  2
+//	 -2 -1  0  1  2
+//
+void array2D::gradientAlongDim2( double lowlim, double highlim ){	//set elements to a range of values, given by the boundaries
+	for (int i = 0; i < dim1(); i++) {
+		array1D *row = new array1D( dim2() );
+		row->range(lowlim, highlim);
+		this->setRow(i, row);
+		delete row;
 	}
 }
 
@@ -832,9 +736,9 @@ std::string array2D::getASCIIdata() const{
   		osst << "2D data has size zero." << endl;
 	}else{
 		osst << "2D data, dim1=" << dim1() << ", dim2=" << dim2() << ", size=" << size() << endl;
-		for (int j = 0; j<dim2(); j++){
+		for (int i = 0; i<dim1(); i++){
 			osst << " [";
-			for (int i = 0; i<dim1(); i++) {
+			for (int j = 0; j<dim2(); j++){
 				osst << " " << get(i, j);
 			}
 			osst << "]" << endl;
@@ -846,9 +750,16 @@ std::string array2D::getASCIIdata() const{
 
 
 //------------------------------------------------------------- writeToASCII
-int array2D::writeToASCII( std::string filename ) const{
+int array2D::writeToASCII( std::string filename, int format ) const{
 	ofstream fout( filename.c_str() );
-	fout << arraydata::getASCIIdataAsColumn();
+	switch (format){
+		case 1:
+			fout << arraydata::getASCIIdataAsColumn();
+		case 2:
+			fout << arraydata::getASCIIdataAsRow();
+		default:
+			fout << getASCIIdata();
+	}
 	fout.close();
 	return 0;
 }
@@ -905,7 +816,7 @@ void array2D::generateTestPattern( int type ){
 					if (val >= 65535) {
 						val = 0; 
 					}
-					set_atAbsoluteIndex(i, val);
+					set_atIndex(i, val);
 					val += 1;
 				}
 			}
@@ -969,7 +880,7 @@ void array2D::generateTestPattern( int type ){
             break;
 		default:                                        
             cout << "zeros";
-			zero();
+			zeros();
 			break;
 	}
     cout << endl;
@@ -983,15 +894,7 @@ void array2D::generateTestPattern( int type ){
 // CLASS IMPLEMENTATION OF array3D
 //
 //=================================================================================
-
 //-----------------------------------------------------constructors & destructors
-//array3D::array3D()
-//		: arraydata(){
-//	setDim1( 0 );
-//	setDim2( 0 );
-//	setDim3( 0 );
-//}
-
 array3D::array3D( unsigned int size_dim1, unsigned int size_dim2, unsigned int size_dim3 )
 		: arraydata(size_dim1*size_dim2*size_dim3){
  	setDim1( size_dim1 );
@@ -1013,24 +916,22 @@ void array3D::copy( const array3D& src ){
 }
 
 
-//-----------------------------------------------------data accessors
+//-----------------------------------------------------get
+//time-critical function, check with assert is disabled in release configuration
 double array3D::get( unsigned int i, unsigned int j, unsigned int k ) const{
-	if ( i < dim1() && j < dim2() && k < dim3() ) {
-		return arraydata::get_atAbsoluteIndex( k*dim1()*dim2() + j*dim1() + i );
-	} else {
-		std::cerr << "Error in array3D! Index (" << i << ", " << j << ", " << k 
-			<< ") is larger than dimension (" << dim1() << ", " << dim2() << ", " << dim3() << ")." << endl;
-		return 0.;
-	}
+	assert(i < dim1());
+	assert(j < dim2());
+	assert(k < dim3());
+	return arraydata::get_atIndex( k*dim1()*dim2() + j*dim1() + i );
 }
 
-void array3D::set( const unsigned int i, const unsigned int j, const unsigned int k, const double value ){
-	if ( i < dim1() && j < dim2() && k < dim3() ) {
-		arraydata::set_atAbsoluteIndex( k*dim1()*dim2() + j*dim1() + i, value);
-	} else {
-		std::cerr << "Error in array3D! Index (" << i << ", " << j  << ", " << k 
-			<< ") is larger than dimension (" << dim1() << ", " << dim2() << ", " << dim3() << ")." << endl;
-	}
+//-----------------------------------------------------set
+//time-critical function, check with assert is disabled in release configuration
+void array3D::set( unsigned int i, unsigned int j, unsigned int k, double value ){
+	assert(i < dim1());
+	assert(j < dim2());
+	assert(k < dim3());
+	arraydata::set_atIndex( k*dim1()*dim2() + j*dim1() + i, value);
 }
 
 

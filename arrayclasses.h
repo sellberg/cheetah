@@ -30,7 +30,6 @@ protected:
 	unsigned int p_size;	
 	
 public:
-//	arraydata();                                                //default constructor
 	arraydata( const unsigned int sizeval = 1 );                     
     arraydata( const int16_t *CArray, const unsigned int size_val );     //initialize with C-array of ints of a given length
 	arraydata( const float *CArray, const unsigned int size_val );			//initialize with C-array of floats of a given length
@@ -48,19 +47,19 @@ public:
     void destroy();
     double *data() const;                            			//return pointer to internal raw data array
     
-    void zero();												//set all elements to 0
-    void zero( unsigned int start, unsigned int stop );			//set all elements between start and stop to 0 (incl. start, excl. stop)
+    void zeros();												//set all elements to 0
+    void zeros( unsigned int start, unsigned int stop );		//set all elements between start and stop to 0 (incl. start, excl. stop)
 	void ones();												//set all elements to 1
     void ones( unsigned int start, unsigned int stop );			//set all elements between start and stop to 1 (incl. start, excl. stop)
 	void range( double neg, double pos );						//set elements to a range of values, given by the boundaries
     
-	// 'atAbsoluteIndex' functions:
+	// 'atIndex' functions:
 	// the following functions change or return properties
 	// assuming a one-dimensional array (consistent with the internal data structure), 
     // no matter what dimension the actual subclass may have
 	unsigned int size() const;										//total size of the array	
-	double get_atAbsoluteIndex( unsigned int index) const;					// get element value
-	void set_atAbsoluteIndex( unsigned int index, double val);			// set element value
+	double get_atIndex( unsigned int index) const;					// get element value
+	void set_atIndex( unsigned int index, double val);			// set element value
 
 	double calcMin() const;
 	double calcMax() const;
@@ -69,9 +68,6 @@ public:
 	
     std::string getASCIIdataAsRow() const;                         //can/should be overridden by subclasses
     std::string getASCIIdataAsColumn() const;
-    
-	void readFromRawBinary( std::string filename );
-	void writeToRawBinary( std::string filename );
     
     //perform some basic math on array
     int addValue( double val );
@@ -83,9 +79,6 @@ public:
 	int subtractArrayElementwise( const arraydata *secondArray );
     int multiplyByArrayElementwise( const arraydata *secondArray );
     int divideByArrayElementwise( const arraydata *secondArray );
-
-//	int verbose() const;
-//	void setVerbose( int verbosity );
 };
 
 
@@ -102,7 +95,6 @@ private:
 	int p_dim1;
 	
 public:
-//    array1D();                                                  //default constructor
 	array1D( unsigned int size_dim1 = 1);                          
     array1D( int16_t *CArray, unsigned int size_val );          //init with C-style array of ints
 	array1D( float *CArray, unsigned int size_val );			//init with C-style array of floats
@@ -128,15 +120,15 @@ public:
 //
 // array2D
 //
+// this class, while as generic as possible, adopts the convention (rows, columns)
+// of packages like matlab or python for its arguments
 //=================================================================================
 class array2D : public arraydata{
-	
 private:
 	int p_dim1;
 	int p_dim2;
 	
 public:
-//    array2D();
 	array2D( unsigned int size_dim1 = 1, unsigned int size_dim2 = 1 );              //default constructor
     array2D( array1D* dataOneD, unsigned int size_dim1, unsigned int size_dim2);   // use 1D data to initialize
 	~array2D();
@@ -150,24 +142,25 @@ public:
 	
 	double get( unsigned int i, unsigned int j ) const;                 //returns single pixel value
 	void set( unsigned int i, unsigned int j, double value );
+
+    std::string getASCIIdata() const;
+	int writeToASCII( std::string filename, int format = 0 ) const;		// format default(0): 2D; (1): column output; (2): row output
+	
+	//-------------functions special to 2D case-----------------
+    int getCol( int colnum, array1D *&col ) const;						//returns one dimensional column, extracted at the specified column number
+	void setCol( int colnum, const array1D *col, int start=0 );			//sets a one-dimensional column, beginning at a 'start' value				
     
     int getRow( int rownum, array1D *&row ) const; 	                    //returns one-dimensional 'row' or 'col'
-    void setRow( int rownum, const array1D *row );						//sets a one-dimensional row
-	void setRowPart( int rownum, const array1D *row, int start=0 );		//like setRow, but only replaces part of the row starting at a certain index
+	void setRow( int rownum, const array1D *row, int start=0 );
 
-    int getCol( int colnum, array1D *&col ) const;
-    void setCol( int colnum, const array1D *col );
-	void setColPart( int colnum, const array1D *col, int start=0 );							
-
-	void transpose();
+	void transpose();													//transpose (dim1,dim2) --> (dim2,dim1)
+	void flipud();														//flip up-down
+	void fliplr();														//flip left-right
 	
-	void xrange( double xneg, double xpos );
-	void yrange( double yneg, double ypos );
+	void gradientAlongDim1( double lowlim, double highlim );			//linear gradient along one dimension, same along other dimension
+	void gradientAlongDim2( double lowlim, double highlim );
     
-    std::string getASCIIdata() const;
-	int writeToASCII( std::string filename ) const;
-	
-	void generateTestPattern( int type );				//for debugging
+	void generateTestPattern( int type );
 };
 
 
@@ -199,7 +192,6 @@ public:
 	unsigned int dim3() const;
 	void setDim3( unsigned int size_dim3 );
 	
-
 	double get( unsigned int i, unsigned int j, unsigned int k ) const;
 	void set( unsigned int i, unsigned int j, unsigned int k, double value );
 
