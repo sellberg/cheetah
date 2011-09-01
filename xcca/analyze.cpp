@@ -57,32 +57,32 @@ int Analyzer::processFiles( std::vector<string> files, double shiftX, double shi
 	arraydataIO *io = new arraydataIO;
 	array2D *detavg = new array2D;
 	io->readFromEDF( files.at(0), detavg );
-	detavg->zero();							// this is now an image of correct dimensions, all zeros
-	int imgdim1 = detavg->dim1();
-	int imgdim2 = detavg->dim2();
+	detavg->zeros();							// this is now an image of correct dimensions, all zeros
+	int imgX = detavg->dim2();
+	int imgY = detavg->dim1();
 	
-	array2D *detavg_copy = new array2D( imgdim1, imgdim2 );
-	array2D *backavg = new array2D( imgdim1, imgdim2 );
+	array2D *detavg_copy = new array2D( imgY, imgX );
+	array2D *backavg = new array2D( imgY, imgX );
 	
 	//make a centered q-range
-	int detX = detavg->dim1();		//detector size	(for example, pilatus = 487 * 619)
-	int detY = detavg->dim2();
+	//get detector size	(for example, pilatus = 487 * 619)
+	int detX = detavg->dim2();
+	int detY = detavg->dim1();
 	
-	array2D *qx = new array2D( imgdim1, imgdim2 );
-	array2D *qy = new array2D( imgdim1, imgdim2 );
-	qx->xrange(-detX/2+shiftX, +detX/2+shiftX);
-	qy->yrange(-detY/2+shiftY, +detY/2+shiftY);
+	array2D *qx = new array2D( imgY, imgX );
+	array2D *qy = new array2D( imgY, imgX );
+	qy->gradientAlongDim1(-detY/2+shiftY, +detY/2+shiftY);
+	qx->gradientAlongDim2(-detX/2+shiftX, +detX/2+shiftX);
 	//cout << "qx: " << qx->getASCIIdata();
 	//cout << "qy: " << qy->getASCIIdata();	
 
-
 	//prepare lookup table once, so it doesn't have to be done every time
 	CrossCorrelator *lutcc = new CrossCorrelator(detavg, qx, qy, num_phi, num_q);
-	lutcc->createLookupTable(LUTx, LUTy);
+	lutcc->createLookupTable(LUTy, LUTx);
 	array2D *LUT = new array2D( *(lutcc->lookupTable()) );
 	io->writeToEDF( outputDirectory()+"LUT.edf", LUT );
 	
-	array2D *polaravg = new array2D( lutcc->nPhi(), lutcc->nQ() );
+	array2D *polaravg = new array2D( lutcc->nQ(), lutcc->nPhi() );
 	array2D *corravg = new array2D( lutcc->nQ(), lutcc->nLag() );
 	
 	delete lutcc;
@@ -157,8 +157,6 @@ int Analyzer::processFiles( std::vector<string> files, double shiftX, double shi
 	backavg->divideByValue( num_files );		//normalize
 	polaravg->divideByValue( num_files );		//normalize	
 	corravg->divideByValue( num_files );		//normalize
-
-	corravg->transpose();
 	
 	io->writeToEDF( outputDirectory()+"det_avg.edf", detavg);			// average background-subtracted detector image
 	io->writeToEDF( outputDirectory()+"polar_avg.edf", polaravg);		// average image in polar coordinates

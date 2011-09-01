@@ -165,12 +165,8 @@ int main (int argc, char * const argv[]) {
 	double stop_q = num_q;
 	int LUTx = 487;				//pilatus detector x and y values
 	int LUTy = 619;
-	
-	//prototype: processFiles( files, shiftX, shiftY, num_phi, num_q);
-	//prototype: processFiles( files, shiftX, shiftY, num_phi, num_q, start_phi, stop_phi, start_q, stop_q, LUTx, LUTy);
+
 	ana->processFiles( files, shiftX, shiftY, num_phi, num_q, start_q, stop_q, LUTx, LUTy);
-//	ana->processFiles( files, -7, 1, 2048, 250, 0, 360, 0, 250, 400, 400);
-//	ana->processFiles( files, -7, 1, 2048, 250 );
 
     delete ana;
 	
