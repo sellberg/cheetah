@@ -39,9 +39,6 @@ public:
 	void initInternalArrays();
 	void destroyInternalArrays();
     void initDefaultQ();
-	void initFromFile( std::string filename, int type=0 );
-	void printRawData(uint16_t *buffer,long lSize);
-//	void dumpResults( std::string filename );				// (arraydataIO needed for this)
 	
 	//---------------------------------------------calculations (Jonas's way)
 	void calculatePolarCoordinates(double start_q = 0, double stop_q = 0);
@@ -56,8 +53,8 @@ public:
 	// a lookup table can be created within this object, if none was available externally
 	// (for cheetah, performance is better if this is calculated once in advance 
 	// and then handed to the CrossCorrelator for each shot)
-	int createLookupTable( int Nx, int Ny );
-	void calcLUTvariables( int lutNx, int lutNy );
+	int createLookupTable( int Ny, int Nx );
+	void calcLookupTableVariables( int lutNy, int lutNx );
 	array2D *lookupTable() const;  
 	void setLookupTable( array2D *LUT );
 	void setLookupTable( const int *cLUT, unsigned int LUT_dim1, unsigned int LUT_dim2 );
@@ -74,7 +71,8 @@ public:
 	
 	// "worker" function for the one above
 	int calculatePolarCoordinates_FAST( array1D* image, array2D* polar2D, 
-										int number_phi, int number_q, double start_q, double stop_q ) const;
+										int number_phi,  double start_phi, double stop_phi, 
+										int number_q, double start_q, double stop_q ) const;
 	
 	// calculate the auto- or cross-correlation function from p_polar and store it in p_corr
     int calculateXCCA_FAST();
