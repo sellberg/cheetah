@@ -116,8 +116,8 @@ int FourierTransformer::crosscorrelation( array1D *&f_real, array1D *&f_imag , a
 	g_real->copy(*FG_imag);
 	
 	//set to zero to avoid potential confusion
-	g_real->zero();
-	g_imag->zero();
+	g_real->zeros();
+	g_imag->zeros();
 
 	delete FG_real;
 	delete FG_imag;

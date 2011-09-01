@@ -499,7 +499,7 @@ void event() {
 
 
 	if (fail) {
-		printf("getCspadData fail %d (%x)\n",fail,fiducial);
+		printf("getCspadData fail %d (%x), skipping this event.\n",fail,fiducial);
 		threadInfo->cspad_fail = fail;
 		return;
 	} else {
