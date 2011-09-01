@@ -501,6 +501,12 @@ void event() {
 	if (fail) {
 		printf("getCspadData fail %d (%x), skipping this event.\n",fail,fiducial);
 		threadInfo->cspad_fail = fail;
+		
+		// cleanup allocated arrays
+		for(int quadrant=0; quadrant<4; quadrant++) 
+			free(threadInfo->quad_data[quadrant]);
+		free(threadInfo);
+		
 		return;
 	} else {
 		nevents++;

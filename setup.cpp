@@ -1296,8 +1296,11 @@ void cGlobal::readGaincal(char *filename){
 			} else 
 				gaincal[i] = 0;
 		}
+	} else if (normalizeGain) {
+		for(long i=0;i<pix_nn;i++) {
+			gaincal[i] = gaincal[i]/sum;
+		}
 	}
-	
 }
 
 
