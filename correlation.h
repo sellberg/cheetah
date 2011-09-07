@@ -23,15 +23,32 @@
 
 #include "setup.h"
 #include "worker.h"
-#include "crosscorrelator.h"
 
 
-/*
- *	Function prototypes
- */
-void correlate(tThreadInfo*, cGlobal*);
-void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
-void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
+//  For the correlation functionality, the cheetah needs the 'giraffe' library
+//  available at git://github.com/feldkamp/giraffe.git
+//
+//  The giraffe library wraps the classes that, previous to Sep 2011 was in cheetah's own
+//     arrayclasses.cpp,h
+//     arraydataIO.cpp,h
+//     crosscorrelator.cpp,h
+//     fouriertransformer.cpp,h
+//  
+//  If the preprocessor flag CORRELATION_ENABLED is not set, cheetah does not need 
+//  the giraffe library (or the supporting libraries for fftw and tiff) 
+//  but, in turn, it cannot perform correlation calculations, either
+//
+#ifdef CORRELATION_ENABLED
 
+	#include "crosscorrelator.h"
+	
+	void correlate(tThreadInfo*, cGlobal*);
+	void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
+	void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
 
+	#else //no correlation functionality --> define a dummy version of correlate that does nothing
+
+	void correlate(tThreadInfo*, cGlobal*);
+
+	#endif
 #endif

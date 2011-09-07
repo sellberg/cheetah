@@ -574,7 +574,7 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
  */
 void addToCorrelation(tThreadInfo *threadInfo, cGlobal *global, cHit *hit) {
 
-	if (global->useCorrelation && global->sumCorrelation) {
+	if (global->useCorrelation && global->sumCorrelation && threadInfo->correlation) {
 		
 		if (hit->standard) {
 			// Sum correlation data
