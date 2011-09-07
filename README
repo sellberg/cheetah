@@ -56,7 +56,24 @@ If you modify anything:
 - Keep it thread safe:  Use appropriate mutexes whenever writing to global variables
 - Clean up your memory: worker.cpp is called once for each image, leaky memory quickly bloats out the system.
 
+**** Library dependence ****
+cheetah depends on the following libraries:
+- hdf5 (http://www.hdfgroup.org/HDF5/)
+- giraffe (for correlation functionality, git@github.com:feldkamp/giraffe.git, email feldkamp-at-slac.stanford.edu for questions)
 
+
+//  For the correlation functionality, the cheetah needs the 'giraffe' library
+//  available at git://github.com/feldkamp/giraffe.git
+//
+//  The giraffe library wraps the classes that, previous to Sep 2011 was in cheetah's own
+//     arrayclasses.cpp,h
+//     arraydataIO.cpp,h
+//     crosscorrelator.cpp,h
+//     fouriertransformer.cpp,h
+//  
+//  If the preprocessor flag CORRELATION_ENABLED is not set, cheetah does not need 
+//  the giraffe library (or the supporting libraries for fftw and tiff) 
+//  but, in turn, it cannot perform correlation calculations, either
 
 
 **** Major contributions (in alphabetical order) ***

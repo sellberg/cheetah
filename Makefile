@@ -11,8 +11,8 @@
 #	if not done, you'll get an error such as 'can not find libacqdata.so'.
 #	Change the target CPU/OS combination if working on a different system, eg: OS-X)
 #	
-#	the preprocessor flag CHEETAH is used to specify code that's compiled for the 
-#	use in cheetah specifically
+#   if the preprocessor flag CORRELATION_ENABLED is not set, cheetah does not need 
+#   the giraffe library, but cannot perform correlation calculations, either
 ###############################################
 
 
@@ -27,20 +27,23 @@ LCLSDIR 		= release
 HDF5DIR 		= /reg/neh/home/barty/hdf5
 TIFFDIR			= /reg/neh/home/feldkamp/tiff
 FFTWDIR         = /reg/neh/home/feldkamp/fftw
+GIRAFFEDIR      = /reg/neh/home/feldkamp/giraffe
 ROOTSYS			= /reg/g/pcds/package/root
 ###OBJFILES		= main.o XtcRun.o
 
-INCLUDEDIRS		= -Irelease \
+INCLUDEDIRS     = -Irelease \
                   -I$(HDF5DIR)/include \
                   -I$(TIFFDIR)/include \
-                  -I$(FFTWDIR)/include
+                  -I$(FFTWDIR)/include \
+                  -I$(GIRAFFEDIR)
 
-LIBDIRS			= -Lrelease/build/pdsdata/lib/$(ARCH)/ \
+LIBDIRS         = -Lrelease/build/pdsdata/lib/$(ARCH)/ \
                   -L$(HDF5DIR)/lib \
                   -L$(TIFFDIR)/lib \
-                  -L$(FFTWDIR)/lib
+                  -L$(FFTWDIR)/lib \
+                  -L$(GIRAFFEDIR)
 
-LIBRARIES		= -lacqdata \
+LIBRARIES       = -lacqdata \
                   -lbld \
                   -lxtcdata \
                   -lopal1kdata \
@@ -57,16 +60,18 @@ LIBRARIES		= -lacqdata \
                   -ltiff \
                   -lpthread \
                   -lfftw3 \
-                  -lm
+                  -lm \
+                  -lgiraffe_static 
 
-CPP				= g++ -c -g
-LD 				= g++
-CPP_LD_FLAGS	= -O4 -Wall
-CFLAGS			= $(INCLUDEDIRS) -DCHEETAH
+CPP             = g++ -c -g
+LD              = g++
+CPP_LD_FLAGS    = -O4 -Wall
+#CFLAGS          = $(INCLUDEDIRS) #no correlation
+CFLAGS          = $(INCLUDEDIRS) -DCORRELATION_ENABLED #with correlation and giraffe dependence
 
-LD_FLAGS		= -Wl,-rpath=$(LCLSDIR)/build/pdsdata/lib/$(ARCH)/:$(HDF5DIR)/lib
-CFLAGS_ROOT		= $(shell $(ROOTSYS)/bin/root-config --cflags)
-LDFLAGS_ROOT	= $(shell $(ROOTSYS)/bin/root-config --libs) -Wl,-rpath=$(ROOTSYS)/lib:release/build/pdsdata/lib/$(ARCH)/
+LD_FLAGS        = -Wl,-rpath=$(LCLSDIR)/build/pdsdata/lib/$(ARCH)/:$(HDF5DIR)/lib
+CFLAGS_ROOT     = $(shell $(ROOTSYS)/bin/root-config --cflags)
+LDFLAGS_ROOT    = $(shell $(ROOTSYS)/bin/root-config --libs) -Wl,-rpath=$(ROOTSYS)/lib:release/build/pdsdata/lib/$(ARCH)/
 
 
 all: $(TARGET)
@@ -153,29 +158,10 @@ attenuation.o: attenuation.cpp attenuation.h \
 	$(CPP) $(CFLAGS) $<
 
 correlation.o: correlation.cpp correlation.h \
-  arrayclasses.h \
-  arraydataIO.h \
-  crosscorrelator.h \
   setup.h \
   worker.h
 	$(CPP) $(CFLAGS) $<
 
-crosscorrelator.o: crosscorrelator.cpp crosscorrelator.h \
-  arrayclasses.h \
-  arraydataIO.h \
-  fouriertransformer.h 
-	$(CPP) $(CFLAGS) $<
-
-arrayclasses.o: arrayclasses.cpp arrayclasses.h
-	$(CPP) $(CFLAGS) $<
-
-arraydataIO.o: arraydataIO.cpp arraydataIO.h \
-  arrayclasses.h
-	$(CPP) $(CFLAGS) $<
-
-fouriertransformer.o: fouriertransformer.cpp fouriertransformer.h \
-  arrayclasses.h
-	$(CPP) $(CFLAGS) $<
 
 #--------------------------------------------------------------
 #compile the different parts of the cheetah and link them together
@@ -190,10 +176,6 @@ cheetah: cheetah.o \
   hitfinder.o \
   attenuation.o \
   correlation.o \
-  crosscorrelator.o \
-  arrayclasses.o \
-  arraydataIO.o \
-  fouriertransformer.o \
   $(MYANADIR)/XtcRun.o \
   $(MYANADIR)/main.o \
   $(CSPADDIR)/CspadCorrector.o \
@@ -214,8 +196,6 @@ remake: clean all
 
 .PHONY: all clean remake
 
-
-
 # test data
 test: cspad_cryst
 	./cspad_cryst -f ~gjwillms/cfel-cspad/e55-r0461-s00-c00.xtc -n 2
@@ -225,4 +205,5 @@ gdb: cspad_cryst
 
 valgrind: cspad_cryst
 	valgrind ./cspad_cryst -f ~gjwillms/cfel-cspad/e55-r0461-s00-c00.xtc -n 2
+
 
