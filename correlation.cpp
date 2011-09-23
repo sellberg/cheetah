@@ -162,14 +162,14 @@ using std::string;
 
 		// angular averages
 		for (int i=0; i<cc->nQ(); i++) {
-			buffer[i] = cc->getIavg(i);
+			buffer[i] = cc->iAvg()->get(i);
 		}
 		fwrite(&nQD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
 		fwrite(&buffer[0],sizeof(double),cc->nQ(),filePointerWrite);
 		
 		// q binning
 		for (int i=0; i<cc->nQ(); i++) {
-			buffer[i] = cc->getQavg(i);
+			buffer[i] = cc->qAvg()->get(i);
 		}
 		fwrite(&nQD,sizeof(double),1,filePointerWrite);
 		fwrite(&buffer[0],sizeof(double),cc->nQ(),filePointerWrite);
@@ -213,21 +213,21 @@ using std::string;
 		
 		// angular averages
 		for (int i=0; i<nQ; i++) {
-			buffer[i] = cc->getIavg(i);
+			buffer[i] = cc->iAvg()->get(i);
 		}
 		fwrite(&nQD,sizeof(double),1,filePointerWrite); // saving dimensions of array before the actual data
 		fwrite(&buffer[0],sizeof(double),nQ,filePointerWrite);
 		
 		// q binning
 		for (int i=0; i<nQ; i++) {
-			buffer[i] = cc->getQavg(i);
+			buffer[i] = cc->qAvg()->get(i);
 		}
 		fwrite(&nQD,sizeof(double),1,filePointerWrite);
 		fwrite(&buffer[0],sizeof(double),nQ,filePointerWrite);
 		
 		// angle binning
 		for (int i=0; i<nPhi; i++) {
-			buffer[i] = cc->getPhiavg(i);
+			buffer[i] = cc->phiAvg()->get(i);
 		}
 		fwrite(&nPhiD,sizeof(double),1,filePointerWrite);
 		fwrite(&buffer[0],sizeof(double),nPhi,filePointerWrite);
@@ -239,9 +239,9 @@ using std::string;
 				for (int i=0; i < nQ; i++) {
 					for (int k=0; k < nLag; k++) {
 						if (global->sumCorrelation)
-							info->correlation[i*nLag + k] = cc->getAutoCorrelation(i,k);
+							info->correlation[i*nLag + k] = cc->autoCorr()->get(i,k);
 						else 
-							buffer[i*nLag + k] = cc->getAutoCorrelation(i,k);
+							buffer[i*nLag + k] = cc->autoCorr()->get(i,k);
 					}
 				}
 				fwrite(&nQD,sizeof(double),1,filePointerWrite);
@@ -253,9 +253,9 @@ using std::string;
 					for (int j=0; j < nQ; j++) {
 						for (int k=0; k < nLag; k++) {
 							if (global->sumCorrelation)
-								info->correlation[i*nQ*nLag + j*nLag + k] = cc->getCrossCorrelation(i,j,k);
+								info->correlation[i*nQ*nLag + j*nLag + k] = cc->crossCorr()->get(i,j,k);
 							else 
-								buffer[i*nQ*nLag + j*nLag + k] = cc->getCrossCorrelation(i,j,k);
+								buffer[i*nQ*nLag + j*nLag + k] = cc->crossCorr()->get(i,j,k);
 						}
 					}
 				}
