@@ -98,9 +98,9 @@ public:
 	int			generateDarkcal;		// Flip this on to generate a darkcal (auto-turns-on appropriate other options)
 	
 	// Common mode and pedastal subtraction
-	int			cmModule;				// Subtract common mode from each 2x1 Module (2 ASICs)
-	int			cmSubModule;			// Subtract common mode from subsets of each ASIC, the value of cmSubModule defines how many times each dimension of each ASIC will be divided by and should be 1 or a multiple of 2
-	float		cmFloor;				// Use lowest x% of values as the offset to subtract (typically lowest 2%)
+	int			cmModule;				// Subtract common mode from each 2x1 Module (2 ASICs), can be done by finding the zero-photon peak (algorithm 1) in the intensity histogram or by using the cmFloor-weighted median (algorithm 2)
+	int			cmSubModule;			// Subtract common mode from subsets of each ASIC (only implemented using algorithm 2), the value of cmSubModule defines how many times each dimension of each ASIC will be divided by and should be 1 or a multiple of 2
+	float		cmFloor;				// Algorithm 2: use lowest x% of values as the offset to subtract (typically lowest 2%)
 	int			cmSaveHistograms;		// Save intensity histograms for each 2x1 Module. Histograms are saved into separate files for each event. The median defined by cmFloor is saved in the first element unless terminal output states otherwise
 
 	// Gain correction

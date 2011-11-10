@@ -139,7 +139,9 @@ data2d.o: data2d.cpp data2d.h
 
 commonmode.o: commonmode.cpp commonmode.h \
   setup.h \
-  worker.h
+  worker.h \
+  peakdetect.h \
+  point.h
 	$(CPP) $(CFLAGS) $<
 
 background.o: background.cpp background.h \
@@ -162,6 +164,18 @@ correlation.o: correlation.cpp correlation.h \
   worker.h
 	$(CPP) $(CFLAGS) $<
 
+peakdetect.o: peakdetect.cpp peakdetect.h \
+  pointvector.h \
+  point.h
+	$(CPP) $(CFLAGS) $<
+
+pointvector.o: pointvector.cpp pointvector.h \
+  point.h
+	$(CPP) $(CFLAGS) $<
+
+point.o: point.cpp point.h 
+	$(CPP) $(CFLAGS) $<
+
 
 #--------------------------------------------------------------
 #compile the different parts of the cheetah and link them together
@@ -176,6 +190,9 @@ cheetah: cheetah.o \
   hitfinder.o \
   attenuation.o \
   correlation.o \
+  peakdetect.o \
+  pointvector.o \
+  point.o \
   $(MYANADIR)/XtcRun.o \
   $(MYANADIR)/main.o \
   $(CSPADDIR)/CspadCorrector.o \
