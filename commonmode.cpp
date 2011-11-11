@@ -58,9 +58,9 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	histograms = (uint16_t*) calloc(32*nhist, sizeof(uint16_t));
 	
 	// Peak detection parameters
-	int			peakfinderStart = -100;
-	int			peakfinderStop = 5000;
-	float		peakfinderDelta = 20;
+	int			peakfinderStart = global->cmStart;
+	int			peakfinderStop = global->cmStop;
+	float		peakfinderDelta = global->cmDelta;
 	int			nPeakfinder = peakfinderStop-peakfinderStart+1;
 	
 	// Loop over 2x1 modules (4x8 array)

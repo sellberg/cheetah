@@ -100,9 +100,12 @@ void cGlobal::defaultConfiguration(void) {
 	// Common mode subtraction from each ASIC
 	cmModule = 0;
 	cmSubModule = 0;
-	cmSaveHistograms = 0;
+	cmStart = -100;
+	cmStop = 5000;
+	cmDelta = 20;
 	cmFloor = 0.02;
-
+	cmSaveHistograms = 0;
+	
 	// Gain calibration correction
 	strcpy(gaincalFile, "gaincal.h5");
 	useGaincal = 0;
@@ -776,6 +779,15 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	
 	// Power user settings
+	else if (!strcmp(tag, "cmstart")) {
+		cmStart = atoi(value);
+	}
+	else if (!strcmp(tag, "cmstop")) {
+		cmStop = atoi(value);
+	}
+	else if (!strcmp(tag, "cmdelta")) {
+		cmDelta = atof(value);
+	}
 	else if (!strcmp(tag, "cmfloor")) {
 		cmFloor = atof(value);
 	}
