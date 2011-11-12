@@ -359,7 +359,7 @@ void *worker(void *threadarg) {
 			printf("; background=%i, nat/npeaks=%i", (hit.background) ? 0 : 1, hit.backgroundPeaks);
 		}
 		printf(")\n");
-	} else if ((global->nprocessedframes % 100) == 0) {
+	} else if ((threadInfo->threadNum % 100) == 0) {
 		printf("r%04u:%i (%3.1f Hz): Processed %ld events\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, global->nprocessedframes);
 	}
 	
