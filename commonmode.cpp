@@ -55,7 +55,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	long		nhist = 65536+noffset;
 	uint16_t	*histograms;
 	//histogram = (uint16_t*) calloc(nhist, sizeof(uint16_t));
-	histograms = (uint16_t*) calloc(32*nhist, sizeof(uint16_t));
+	histograms = (uint16_t*) calloc(64*nhist, sizeof(uint16_t)); //histograms = (uint16_t*) calloc(32*nhist, sizeof(uint16_t));
 	
 	// Peak detection parameters
 	int			peakfinderStart = global->cmStart;
@@ -63,18 +63,18 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 	float		peakfinderDelta = global->cmDelta;
 	int			nPeakfinder = peakfinderStop-peakfinderStart+1;
 	
-	// Loop over 2x1 modules (4x8 array)
-	for(long mi=0; mi<4; mi++){ //for(long mi=0; mi<8; mi++){
+	// Loop over each ASIC (8x8 array)
+	for(long mi=0; mi<8; mi++){ //for(long mi=0; mi<4; mi++){
 		for(long mj=0; mj<8; mj++){
 
 			// Zero histogram
 			//memset(histogram, 0, nhist*sizeof(uint16_t));
 			
-			// Loop over pixels within a 2x1 module
-			for(int i=0; i<2*ROWS; i++){ //for(long i=0; i<ROWS; i++){
+			// Loop over pixels within an ASIC
+			for(int i=0; i<ROWS; i++){ //for(long i=0; i<2*ROWS; i++){
 				for(int j=0; j<COLS; j++){
 					e = (j + mj*COLS) * (8*ROWS);
-					e += i + mi*2*ROWS; //e += i + mi*ROWS;
+					e += i + mi*ROWS; //e += i + mi*2*ROWS;
 					//histogram[int(round(threadInfo->corrected_data[e])+noffset)] += 1;
 					histograms[int(round(threadInfo->corrected_data[e])+noffset)+mj*nhist+mi*8*nhist]++;
 				}
@@ -98,31 +98,32 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 						for (int k=0; k<peakfinder.maxima->size(); k++) {
 							min = peakfinder.minima->get(k);
 							max = peakfinder.maxima->get(k);
-							if (max->getX()-min->getX() > 2 && max->getY()-peakfinderHist[max->getX()-peakfinderStart-1] < peakfinderDelta && max->getY()-peakfinderHist[max->getX()-peakfinderStart+1] < peakfinderDelta) {
+							DEBUGL1_ONLY cout << "max->getX()-min->getX() = " << max->getX()-min->getX() << ", max->getY()-peakfinderHist[max->getX()-peakfinderStart-1] = " << max->getY()-peakfinderHist[max->getX()-peakfinderStart-1] << ", max->getY()-peakfinderHist[max->getX()-peakfinderStart+1] = " << max->getY()-peakfinderHist[max->getX()-peakfinderStart+1] << endl;
+							if (max->getX()-min->getX() > 4) { //if (max->getX()-min->getX() > 2 && max->getY()-peakfinderHist[max->getX()-peakfinderStart-1] < peakfinderDelta && max->getY()-peakfinderHist[max->getX()-peakfinderStart+1] < peakfinderDelta) {
 								int commonmode = max->getX();
-								for (int i=0; i<2*ROWS; i++) {
+								for (int i=0; i<ROWS; i++) { //for (int i=0; i<2*ROWS; i++) {
 									for (int j=0; j<COLS; j++) {
 										e = (j + mj*COLS) * (8*ROWS);
-										e += i + mi*2*ROWS;
+										e += i + mi*ROWS; //e += i + mi*2*ROWS;
 										threadInfo->corrected_data[e] -= commonmode;
 									}
 								}
 								DEBUGL1_ONLY printf("r%04u:%i ", (int)threadInfo->runNumber, (int)threadInfo->threadNum);
-								DEBUGL1_ONLY cout << "Commonmode (Q" << mi << ", S" << mj << "): " << commonmode << endl;
+								DEBUGL1_ONLY cout << "Commonmode (Q" << mi/2 << ", S" << mi%2+2*mj << "): " << commonmode << endl; //DEBUGL1_ONLY cout << "Commonmode (Q" << mi << ", S" << mj << "): " << commonmode << endl;
 								break;
 							} else if (k == peakfinder.maxima->size()-1) {
 								// June data
 								//cout << "Commonmode (Q" << mi << ", S" << mj << "): N/A" << endl;
 								// Feb data (ASICs missing)
-								if ((mi != 0 || mj != 5) && (mi != 3 || mj != 4) && (mi != 3 || mj != 6)) {
+								if ((mi != 0 || mj != 5) && (mi != 1 || mj != 5) && (mi != 5 || mj != 3) && (mi != 6 || mj != 4) && (mi != 7 || mj != 4) && (mi != 6 || mj != 6) && (mi != 7 || mj != 6)) { //if ((mi != 0 || mj != 5) && (mi != 3 || mj != 4) && (mi != 3 || mj != 6)) {
 									printf("r%04u:%i ", (int)threadInfo->runNumber, (int)threadInfo->threadNum);
-									cout << "Commonmode (Q" << mi << ", S" << mj << "): N/A" << endl;
+									cout << "Commonmode (Q" << mi/2 << ", S" << mi%2+2*mj << "): N/A" << endl; //cout << "Commonmode (Q" << mi << ", S" << mj << "): N/A" << endl;
 								}
 							}
 						}
 					} else {
 						printf("r%04u:%i ", (int)threadInfo->runNumber, (int)threadInfo->threadNum);
-						cout << "Commonmode (Q" << mi << ", S" << mj << "): N/A (no maxima)" << endl;
+						cout << "Commonmode (Q" << mi/2 << ", S" << mi%2+2*mj << "): N/A (no maxima)" << endl; //cout << "Commonmode (Q" << mi << ", S" << mj << "): N/A (no maxima)" << endl;
 					}
 					
 					free(peakfinderHist);
@@ -141,7 +142,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 				for(long i=0; i<nhist; i++){
 					//counter += histogram[i];
 					counter += histograms[i+mj*nhist+mi*8*nhist];
-					if(counter > (global->cmFloor*2*ROWS*COLS)) { //if(counter > (global->cmFloor*ROWS*COLS)) {
+					if(counter > (global->cmFloor*ROWS*COLS)) { //if(counter > (global->cmFloor*2*ROWS*COLS)) {
 						median = i-noffset;
 						
 						if (global->cmSaveHistograms) {
@@ -169,12 +170,11 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 				}
 				
 				// Subtract median value
-				for(long i=0; i<2*ROWS; i++){
+				for(long i=0; i<ROWS; i++){ //for(long i=0; i<2*ROWS; i++){
 					for(long j=0; j<COLS; j++){
 						e = (j + mj*COLS) * (8*ROWS);
-						e += i + mi*2*ROWS; //e += i + mi*ROWS;
+						e += i + mi*ROWS; //e += i + mi*2*ROWS;
 						threadInfo->corrected_data[e] -= median;
-						
 					}
 				}
 			} else {
@@ -182,11 +182,13 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 			}
 		}
 	}
+	
 	//free(histogram);
 	if (global->cmSaveHistograms) {
 		sprintf(filename,"%s-hist.h5",threadInfo->eventname);
 		//writeSimpleHDF5(filename, histograms, (int)nhist, 8, 4, H5T_STD_U16LE);
-		writeSimpleHDF5(filename, histograms, (int)nhist, 32, H5T_STD_U16LE); // save as 2D array with each 2x1 sorted by quad
+		// save as 2D array with each ASIC sorted by quad
+		writeSimpleHDF5(filename, histograms, (int)nhist, 64, H5T_STD_U16LE); //writeSimpleHDF5(filename, histograms, (int)nhist, 32, H5T_STD_U16LE);
 	}
 	free(histograms);
 }
