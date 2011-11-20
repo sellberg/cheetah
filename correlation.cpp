@@ -100,7 +100,7 @@ using std::string;
 			cc->calculateXCCA_FAST();
 			pthread_mutex_unlock(&global->correlationFFT_mutex);
 			
-			io->writeToTiff( eventname_str+"-polar.tif", cc->polar(), 1, 1 );		// 0: unscaled, 1: scaled
+			io->writeToTiff( eventname_str+"-polar.tif", cc->polar(), 1 );		// 0: unscaled, 1: scaled
 
 		} else {
 			cerr << "Error in correlate()! Correlation algorithm " << global->useCorrelation << " not known." << endl;
