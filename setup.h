@@ -123,6 +123,10 @@ public:
 	int			hotpixMemory;			 // number of frames to look for hot pixels in
 	float		hotpixFreq;				 // hot often a pixel needs to be above the threshold to be regarded as hot.
 	
+	// Polarization correction
+	int			usePolarizationCorrection;	// set to nonzero to calculate and apply polarization correction to each hit (or saved event)
+	double		horizontalPolarization;		// determines the ratio of horizontal polarization versus vertical polarization of the FEL beam, valid values are [0,1]
+	
 	// Attenuation correction
 	int			useAttenuationCorrection;		// Whether to correct each event's intensity with the calculated attenuation
 	char		attenuationFile[1024];			// Name of the file containing the attenuation list
@@ -225,7 +229,7 @@ public:
 	float			*pix_x;
 	float			*pix_y;
 	float			*pix_z;
-	float			pix_dx;
+	double			*pix_r;
 	float			pix_xmax;
 	float			pix_xmin;
 	float			pix_ymax;
@@ -244,6 +248,10 @@ public:
 	int			*angularAvg_i;	// stores index for each pixel in angular average array
 	double		*angularAvgQ;	// stores q-values (in pixels) for angular averages	
 	double		*angularAvgQcal;	// stores absolute q-values calibrated from the mean photon energy of the run
+	
+	
+	// Polarization correction variables
+	double		*phi;
 	
 	
 	// Attenuation variables

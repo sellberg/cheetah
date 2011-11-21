@@ -124,6 +124,10 @@ void cGlobal::defaultConfiguration(void) {
 	hotpixADC = 1000;
 	hotpixMemory = 50;
 	
+	// Polarization correction
+	usePolarizationCorrection = 0;
+	horizontalPolarization = 1;
+	
 	// Attenuation correction
 	useAttenuationCorrection = 0;
 	strcpy(attenuationFile, "attenuations.dat");
@@ -282,6 +286,7 @@ void cGlobal::setup() {
 		calculateCenterCorrectionPowder = 0;
 		calculateCenterCorrectionHit = 0;
 		refineMetrology = 0;
+		usePolarizationCorrection = 0;
 		useAttenuationCorrection = -1;
 		useEnergyCalibration = 0;
 		useCorrelation = 0;
@@ -336,7 +341,7 @@ void cGlobal::setup() {
 		// calculate index for each pixel with correct bin lengths in angular average array
 		angularAvg_i = new int[pix_nn];
 		for (int i=0; i<pix_nn; i++) {
-			angularAvg_i[i] = (int) round( (sqrt(((double) pix_x[i])*pix_x[i] + ((double) pix_y[i])*pix_y[i]) - angularAvgStartQ) / angularAvgDeltaQ );
+			angularAvg_i[i] = (int) round( (pix_r[i] - angularAvgStartQ) / angularAvgDeltaQ );
 		}	
 	}
 	
@@ -402,6 +407,36 @@ void cGlobal::setup() {
 	runNumber = getRunNumber();
 	time(&tstart);
 	avgGMD = 0;
+	
+	/*
+	 *	Setup global polarization correction variables
+	 */
+	phi = NULL;
+	if (usePolarizationCorrection) {
+		phi = new double[pix_nn];
+		// check that horizontal polarization is in range [0,1]
+		if (horizontalPolarization > 1) horizontalPolarization = 1;
+		else if (horizontalPolarization < 0) horizontalPolarization = 0;
+		// calculate azimuthal angle (phi) for each pixel
+		for (int i = 0; i < pix_nn; i++) {
+			double phii;
+			// setup UHP
+			if (pix_x[i] == 0) { // make sure that the column with x = 0 has angle 0 (r = 0 is assumed to have phi = 0)
+				phii = 0;
+			} else {
+				phii = atan(pix_x[i]/pix_y[i]); // If pix_y = 0 and pix_x != 0, atan gives the correct result, but only for the UHP! Need to add PI for all LHP!
+			}
+			// correct LHP by adding PI
+			if (pix_y[i] < 0) {
+				phii += M_PI;
+			}
+			if (phii < 0) { // make sure the binned angle is between 0 and 2PI
+				phii += 2*M_PI;
+			}
+			// assign phi to each pixel
+			phi[i] = phii;
+		}
+	}
 	
 	/*
 	 *	Setup global attenuation variables
@@ -771,6 +806,12 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "usesubtractpersistentbackground")) {
 		useSubtractPersistentBackground = atoi(value);
 	}
+	else if (!strcmp(tag, "usepolarizationcorrection")) {
+		usePolarizationCorrection = atoi(value);
+	}
+	else if (!strcmp(tag, "horizontalpolarization")) {
+		horizontalPolarization = atof(value);
+	}
 	else if (!strcmp(tag, "useattenuationcorrection")) {
 		useAttenuationCorrection = atoi(value);
 	}
@@ -983,8 +1024,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	// Pixel size (measurements in geometry file are in m)
 	module_rows = ROWS;
 	module_cols = COLS;
-	pix_dx = pixelSize;
-
+	
 	
 	// Set filename here 
 	printf("Reading detector configuration:\n");
@@ -1024,7 +1064,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	}
 	
 	
-	// Create local arrays for detector pixel locations
+	// Create cGlobal arrays for detector pixel locations
 	long	nx = 8*ROWS;
 	long	ny = 8*COLS;
 	long	nn = nx*ny;
@@ -1034,6 +1074,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	pix_x = (float *) calloc(nn, sizeof(float));
 	pix_y = (float *) calloc(nn, sizeof(float));
 	pix_z = (float *) calloc(nn, sizeof(float));
+	pix_r = (double *) calloc(nn, sizeof(double));
 	printf("\tPixel map is %li x %li pixel array\n",nx,ny);
 	
 	
@@ -1047,9 +1088,9 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	
 	// Divide array (in m) by pixel size to get pixel location indices (ijk)
 	for(long i=0;i<nn;i++){
-		pix_x[i] /= pix_dx;
-		pix_y[i] /= pix_dx;
-		pix_z[i] /= pix_dx;
+		pix_x[i] /= pixelSize;
+		pix_y[i] /= pixelSize;
+		pix_z[i] /= pixelSize;
 	}
 	
 	
@@ -1107,8 +1148,8 @@ void cGlobal::readDetectorGeometry(char* filename) {
 		if (pix_x[i] < xmin) xmin = pix_x[i];
 		if (pix_y[i] > ymax) ymax = pix_y[i];
 		if (pix_y[i] < ymin) ymin = pix_y[i];
-		float rtemp = sqrt(pix_x[i]*pix_x[i] + pix_y[i]*pix_y[i]);
-		if (rtemp > rmax) rmax = rtemp;
+		pix_r[i] = sqrt(((double) pix_x[i])*pix_x[i] + ((double) pix_y[i])*pix_y[i]);
+		if (pix_r[i] > rmax) rmax = pix_r[i];
 	}
 	
 	// Initialize global variables

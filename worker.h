@@ -149,6 +149,7 @@ void subtractDarkcal(tThreadInfo*, cGlobal*);
 void applyGainCorrection(tThreadInfo*, cGlobal*);
 void applyBadPixelMask(tThreadInfo*, cGlobal*);
 void killHotpixels(tThreadInfo*, cGlobal*);
+void calculatePolarizationCorrection(tThreadInfo*, cGlobal*);
 void applyAttenuationCorrection(tThreadInfo*, cGlobal*);
 void addToPowder(tThreadInfo*, cGlobal*, cHit*);
 void addToCorrelation(tThreadInfo *threadInfo, cGlobal *global, cHit *hit);

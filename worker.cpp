@@ -82,6 +82,7 @@ void *worker(void *threadarg) {
 	 */
 	threadInfo->angularAvg = NULL;
 	threadInfo->correlation = NULL;
+	threadInfo->image = NULL;
 	
 	
 	/*
@@ -200,7 +201,6 @@ void *worker(void *threadarg) {
 	 */
 	if(threadInfo->threadNum < global->startFrames) {
 		printf("r%04u:%i (%3.1f Hz): Digesting initial frames\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate);
-		threadInfo->image = NULL;
 		goto cleanup;
         //ATTENTION! goto should not be used at all ( see http://www.cplusplus.com/forum/general/29190/ )
         //should be replaced by a while loop with a break statement... by JF (2011/04/25)
@@ -227,6 +227,17 @@ void *worker(void *threadarg) {
 	 *	Calculate Q calibration
 	 */
 	
+	
+	
+	/*
+	 *	Calculate polarization correction
+	 */
+	if (global->usePolarizationCorrection && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
+															   || (hit.water && global->waterfinder.savehits) 
+															   || (hit.ice && global->icefinder.savehits) 
+															   || (!hit.background && global->backgroundfinder.savehits) )) {
+		calculatePolarizationCorrection(threadInfo, global);
+	}
 	
 	
 	/*
@@ -268,14 +279,19 @@ void *worker(void *threadarg) {
 	/*
 	 *	Assemble quadrants into a 'realistic' 2D image
 	 */
-	assemble2Dimage(threadInfo, global);
+	if (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
+						 || (hit.water && global->waterfinder.savehits) 
+						 || (hit.ice && global->icefinder.savehits) 
+						 || (!hit.background && global->backgroundfinder.savehits) ) {
+		assemble2Dimage(threadInfo, global);
+	}
 	
 	
 	/*
 	 *	Add to powder if it's a hit or if we wish to generateDarkcal(member data of global)
 	 */
 	addToPowder(threadInfo, global, &hit);
-
+	
 	
 	/*
 	 *	Add to correlation sum if it's a hit and if correlation sum is activated
@@ -473,13 +489,35 @@ void killHotpixels(tThreadInfo *threadInfo, cGlobal *global){
 
 
 /*
+ *	Calculate polarization correction
+ */
+void calculatePolarizationCorrection(tThreadInfo *threadInfo, cGlobal *global) {
+	
+	// initialize local angle arrays
+	double *theta = new double[global->pix_nn];
+	
+	// calculate scattering angle (theta) for each pixel
+	for (int i = 0; i < global->pix_nn; i++) {
+		theta[i] = atan(global->pixelSize*global->pix_r[i]*1000/threadInfo->detectorPosition);
+	}
+	
+	// calculate and apply polarization correction to corrected_data (from Hura et al JCP 2000)
+	for (int i = 0; i < global->pix_nn; i++) {
+		threadInfo->corrected_data[i] /= global->horizontalPolarization*(1 - sin(global->phi[i])*sin(global->phi[i])*sin(theta[i])*sin(theta[i])) + (1 - global->horizontalPolarization)*(1 - cos(global->phi[i])*cos(global->phi[i])*sin(theta[i])*sin(theta[i]));
+	}
+	
+	delete[] theta;
+}
+
+
+/*
  *	Apply attenuation correction
  */
 void applyAttenuationCorrection(tThreadInfo *threadInfo, cGlobal *global){
 	
 	for(long i=0; i<global->pix_nn; i++) 
 		threadInfo->corrected_data[i] *= threadInfo->attenuation;
-
+	
 }
 
 

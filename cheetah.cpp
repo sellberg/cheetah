@@ -701,7 +701,8 @@ void endjob()
 	free(global.waterCorrelation);
 	free(global.pix_x);
 	free(global.pix_y);
-	free(global.pix_z);	
+	free(global.pix_z);
+	free(global.pix_r);
 	free(global.quad_dx);
 	free(global.quad_dy);
 	free(global.hotpixelmask);
@@ -721,6 +722,7 @@ void endjob()
 	delete[] global.totalThicknesses;
 	delete[] global.energies;
 	delete[] global.wavelengths;
+	delete[] global.phi;
 	delete[] global.angularAvg_i;
 	delete[] global.angularAvgQ;
 	delete[] global.angularAvgQcal;
