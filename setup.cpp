@@ -94,7 +94,7 @@ void cGlobal::defaultConfiguration(void) {
 
 	// Static dark calibration (electronic offsets)
 	strcpy(darkcalFile, "darkcal.h5");
-	useDarkcalSubtraction = 1;
+	useDarkcalSubtraction = 0;
 	generateDarkcal = 0;
 	
 	// Common mode subtraction from each ASIC
@@ -119,7 +119,7 @@ void cGlobal::defaultConfiguration(void) {
 	scaleBackground = 0;
 	
 	// Kill persistently hot pixels
-	useAutoHotpixel = 1;
+	useAutoHotpixel = 0;
 	hotpixFreq = 0.9;
 	hotpixADC = 1000;
 	hotpixMemory = 50;
@@ -214,7 +214,7 @@ void cGlobal::defaultConfiguration(void) {
 	saveRaw = 0;
 	hdf5dump = 0;
 	saveInterval = 500;
-	flushInterval = 5000;
+	flushInterval = 20000;
 	
 	// Verbosity
 	debugLevel = 0;

@@ -26,8 +26,8 @@ CSPADDIR		= cspad-gjw
 LCLSDIR 		= release
 HDF5DIR 		= /reg/neh/home/barty/hdf5
 TIFFDIR			= /reg/neh/home/feldkamp/tiff
-FFTWDIR         = /reg/neh/home/feldkamp/fftw
-GIRAFFEDIR      = /reg/neh/home/feldkamp/giraffe
+FFTWDIR         	= /reg/neh/home/feldkamp/fftw
+GIRAFFEDIR      	= /reg/neh/home/sellberg/source/giraffe
 ROOTSYS			= /reg/g/pcds/package/root
 ###OBJFILES		= main.o XtcRun.o
 

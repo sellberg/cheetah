@@ -177,7 +177,7 @@ public:
 	int			hdf5dump;			 // set to write every frame to h5 format 
 	
 	// Verbosity
-	int			debugLevel;			 // doesn't seem to be implemented
+	int			debugLevel;			 // set to 0 for regular, 1 for debug mode, and 2 for extra verbose
 	
 	// Log files
 	char		logfile[1024];

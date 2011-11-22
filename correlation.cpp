@@ -86,7 +86,6 @@ using std::string;
 			DEBUGL1_ONLY cout << "XCCA regular (algorithm 1)" << endl;
 			
 			cc->calculatePolarCoordinates(global->correlationStartQ, global->correlationStopQ);
-			cc->calculateSAXS();
 			cc->calculateXCCA();
 			
 		//--------------------------------------------------------------------------------------------alg2

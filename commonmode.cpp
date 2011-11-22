@@ -98,7 +98,7 @@ void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 						for (int k=0; k<peakfinder.maxima->size(); k++) {
 							min = peakfinder.minima->get(k);
 							max = peakfinder.maxima->get(k);
-							DEBUGL1_ONLY cout << "max->getX()-min->getX() = " << max->getX()-min->getX() << ", max->getY()-peakfinderHist[max->getX()-peakfinderStart-1] = " << max->getY()-peakfinderHist[max->getX()-peakfinderStart-1] << ", max->getY()-peakfinderHist[max->getX()-peakfinderStart+1] = " << max->getY()-peakfinderHist[max->getX()-peakfinderStart+1] << endl;
+							DEBUGL2_ONLY cout << "max->getX()-min->getX() = " << max->getX()-min->getX() << ", max->getY()-peakfinderHist[max->getX()-peakfinderStart-1] = " << max->getY()-peakfinderHist[max->getX()-peakfinderStart-1] << ", max->getY()-peakfinderHist[max->getX()-peakfinderStart+1] = " << max->getY()-peakfinderHist[max->getX()-peakfinderStart+1] << endl;
 							if (max->getX()-min->getX() > 4) { //if (max->getX()-min->getX() > 2 && max->getY()-peakfinderHist[max->getX()-peakfinderStart-1] < peakfinderDelta && max->getY()-peakfinderHist[max->getX()-peakfinderStart+1] < peakfinderDelta) {
 								int commonmode = max->getX();
 								for (int i=0; i<ROWS; i++) { //for (int i=0; i<2*ROWS; i++) {
