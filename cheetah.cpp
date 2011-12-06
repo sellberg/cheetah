@@ -380,7 +380,6 @@ void event() {
 		// printf("New detector pos %e\n", detposnew);
 		global.detectorZ = 500.0 + detposnew + 79.0;
 	}
-
 	
 	
 	/*

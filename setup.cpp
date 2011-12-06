@@ -51,6 +51,8 @@ using std::string;
 #include "data2d.h"
 #include "attenuation.h"
 #include "arrayclasses.h"
+#include "arraydataIO.h"
+#include "util.h"
 
 
 /*
@@ -419,23 +421,69 @@ void cGlobal::setup() {
 		else if (horizontalPolarization < 0) horizontalPolarization = 0;
 		// calculate azimuthal angle (phi) for each pixel
 		for (int i = 0; i < pix_nn; i++) {
-			double phii;
-			// setup UHP
-			if (pix_x[i] == 0) { // make sure that the column with x = 0 has angle 0 (r = 0 is assumed to have phi = 0)
-				phii = 0;
-			} else {
-				phii = atan(pix_x[i]/pix_y[i]); // If pix_y = 0 and pix_x != 0, atan gives the correct result, but only for the UHP! Need to add PI for all LHP!
-			}
-			// correct LHP by adding PI
-			if (pix_y[i] < 0) {
-				phii += M_PI;
-			}
-			if (phii < 0) { // make sure the binned angle is between 0 and 2PI
+			// OLD ALGORITHM
+//			double phii;
+//			// setup UHP
+//			if (pix_x[i] == 0) { // make sure that the column with x = 0 has angle 0 (r = 0 is assumed to have phi = 0)
+//				phii = 0;
+//			} else {
+//				phii = atan(pix_x[i]/pix_y[i]); // If pix_y = 0 and pix_x != 0, atan gives the correct result, but only for the UHP! Need to add PI for all LHP!
+//			}
+//			// correct LHP by adding PI
+//			if (pix_y[i] < 0) {
+//				phii += M_PI;
+//			}
+//			if (phii < 0) { // make sure the binned angle is between 0 and 2PI
+//				phii += 2*M_PI;
+//			}
+			// NEW ALGORITHM
+			double phii = atan2( pix_x[i], pix_y[i] );
+			if (phii < 0) { // make sure the angle is between 0 and 2PI
 				phii += 2*M_PI;
 			}
 			// assign phi to each pixel
 			phi[i] = phii;
 		}
+		
+		if (debugLevel >= 1) {
+			// VERIFY OUTPUT
+			array1D *one = new array1D(phi, pix_nn);
+			array1D *oneX = new array1D(pix_x, pix_nn);
+			array1D *oneY = new array1D(pix_y, pix_nn);
+			array1D *onePhi = new array1D(phi, pix_nn);		
+			arraydataIO *io = new arraydataIO();
+			array2D *two = 0;
+			
+			//raw images
+			char	filename[1024];
+			
+			sprintf(filename,"pixX_raw.h5");
+			writeSimpleHDF5(filename, pix_x, (int) pix_nx, (int) pix_ny, H5T_NATIVE_FLOAT);
+			sprintf(filename,"pixY_raw.h5");			
+			writeSimpleHDF5(filename, pix_y, (int) pix_nx, (int) pix_ny, H5T_NATIVE_FLOAT);
+			sprintf(filename,"pixPHI_raw.h5");			
+			writeSimpleHDF5(filename, phi, (int) pix_nx, (int) pix_ny, H5T_NATIVE_DOUBLE);
+			
+			//assembled images
+			string ext = "_asm.h5";
+			
+			ns_cspad_util::createAssembledImageCSPAD( oneX, oneX, oneY, two );		
+			io->writeToFile( "pixX"+ext, two );
+			
+			ns_cspad_util::createAssembledImageCSPAD( oneY, oneX, oneY, two );
+			io->writeToFile( "pixY"+ext, two );
+			
+			ns_cspad_util::createAssembledImageCSPAD( onePhi, oneX, oneY, two );
+			io->writeToFile( "pixPHI"+ext, two );
+			
+			delete one;
+			delete oneX;
+			delete oneY;
+			delete onePhi;
+			delete two;
+			delete io;
+		}
+		
 	}
 	
 	/*
