@@ -46,7 +46,7 @@ using std::string;
 
 		//prepare some things for output
 		bool tif_out = false;
-		bool bin_out = false;
+		bool bin_out = true;
 		bool h5_out = true;
 		
 		arraydataIO *io = new arraydataIO;
@@ -107,6 +107,7 @@ using std::string;
 		
 		//bin output
 		if (bin_out){
+			// OBS: this function corrently holds the funtionality of adding to crossCorrelationSum
 			writeXCCA(threadInfo, global, cc, threadInfo->eventname); 			// writes XCCA+SAXS to binary
 		}
 		//TIFF image output
