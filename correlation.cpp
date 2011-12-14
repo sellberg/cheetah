@@ -45,8 +45,8 @@ using std::string;
 		DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 
 		//prepare some things for output
-		bool tif_out = true;
-		bool bin_out = true;
+		bool tif_out = false;
+		bool bin_out = false;
 		bool h5_out = true;
 		
 		arraydataIO *io = new arraydataIO;
@@ -58,23 +58,18 @@ using std::string;
 		//the arguments that are passed to the constructor determine 2D/3D calculations with/without mask
 		CrossCorrelator *cc = NULL;
 		if (global->autoCorrelateOnly) {
-			if (global->useBadPixelMask) 
-				cc = new CrossCorrelator( //auto-correlation 2D case, with mask
-							threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
-							global->correlationNumPhi, global->correlationNumQ, 0, global->badpixelmask );
-			else 
-				cc = new CrossCorrelator( //auto-correlation 2D case, no mask
-							threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
-							global->correlationNumPhi, global->correlationNumQ );
+			cc = new CrossCorrelator( //auto-correlation 2D case, no mask
+					threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+					global->correlationNumPhi, global->correlationNumQ );
 		} else {
-			if (global->useBadPixelMask) 
-				cc = new CrossCorrelator( //full cross-correlation 3D case, with mask
-							threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
-							global->correlationNumPhi, global->correlationNumQ, global->correlationNumQ, global->badpixelmask );
-			else 
-				cc = new CrossCorrelator( //full cross-correlation 3D case, no mask
-							threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
-							global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );	
+			cc = new CrossCorrelator( //full cross-correlation 3D case
+					threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+					global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );	
+		}
+		
+		//set bad pixel mask, if necessary
+		if (global->useBadPixelMask){
+			cc->setMask( global->badpixelmask, RAW_DATA_LENGTH );		
 		}
 		
 		//turn on debug level inside the CrossCorrelator, if needed
