@@ -45,6 +45,7 @@ using std::endl;
 using std::string;
 
 #include <fstream>
+#include <vector>
 
 #include "setup.h"
 #include "worker.h"
@@ -186,7 +187,21 @@ void cGlobal::defaultConfiguration(void) {
 	backgroundfinder.UsePeakmask = 0;
 	backgroundfinder.savehits = 0;
 	strcpy(backgroundfinder.peaksearchFile, "backgroundmask.h5");
-
+	
+	// Listfinding
+	listfinder.use = 0;
+	listfinder.ADC = 500;
+	listfinder.NAT = 100;
+	listfinder.Npeaks = 50;
+	listfinder.NpeaksMax = 100000;
+	listfinder.Algorithm = 3;
+	listfinder.MinPixCount = 3;
+	listfinder.MaxPixCount = 20;
+	listfinder.UsePeakmask = 0;
+	listfinder.savehits = 0;
+	strcpy(listfinder.peaksearchFile, "listfindermask.h5");
+	strcpy(listfinderFile, "hits_sorted.txt");
+	
 	// Powder pattern generation
 	powdersum = 1;
 	powderthresh = 0;
@@ -273,10 +288,12 @@ void cGlobal::setup() {
 		waterfinder.use = 0;
 		icefinder.use = 0;
 		backgroundfinder.use = 0;
+		listfinder.use = 0;
 		hitfinder.savehits = 0;
 		waterfinder.savehits = 0;
 		icefinder.savehits = 0;
-		backgroundfinder.savehits = 0;		
+		backgroundfinder.savehits = 0;
+		listfinder.savehits = 0;
 		hdf5dump = 0;
 		saveRaw = 0;
 		useAutoHotpixel = 0;
@@ -409,6 +426,29 @@ void cGlobal::setup() {
 	runNumber = getRunNumber();
 	time(&tstart);
 	avgGMD = 0;
+	
+	/*
+	 *	Setup global listfinder variables
+	 */
+	eventIsHit = false;
+	if (listfinder.use) {
+		
+		// disable other hitfinders
+		hitfinder.use = 0;
+		hitfinder.savehits = 0;
+		icefinder.use = 0;
+		icefinder.savehits = 0;
+		waterfinder.use = 0;
+		waterfinder.savehits = 0;
+		backgroundfinder.use = 0;
+		backgroundfinder.savehits = 0;
+		
+		// enable hdf5 output
+		if (listfinder.savehits) hdf5dump = 1;
+		
+		// read hits from list
+		readHits(listfinderFile);
+	}
 	
 	/*
 	 *	Setup global polarization correction variables
@@ -1055,6 +1095,49 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 		backgroundfinder.savehits = atoi(value);
 	}
 	
+	/* 	
+	 *	Tags for listfinder
+	 */
+	else if (!strcmp(tag, "list")) {
+		strcpy(listfinderFile, value);
+	}
+	else if (!strcmp(tag, "listfindermask")) {
+		strcpy(listfinder.peaksearchFile, value);	
+	}	
+	else if (!strcmp(tag, "listfinder")) {
+		listfinder.use = atoi(value);
+	}
+	else if (!strcmp(tag, "listfinderadc")) {
+		listfinder.ADC = atoi(value);
+	}
+	else if (!strcmp(tag, "listfindernat")) {
+		listfinder.NAT = atoi(value);
+	}
+	else if (!strcmp(tag, "listfindercluster")) {
+		listfinder.Cluster = atoi(value);
+	}
+	else if (!strcmp(tag, "listfindernpeaks")) {
+		listfinder.Npeaks = atoi(value);
+	}
+	else if (!strcmp(tag, "listfindernpeaksmax")) {
+		listfinder.NpeaksMax = atoi(value);
+	}
+	else if (!strcmp(tag, "listfinderalgorithm")) {
+		listfinder.Algorithm = atoi(value);
+	}
+	else if (!strcmp(tag, "listfinderminpixcount")) {
+		listfinder.MinPixCount = atoi(value);
+	}
+	else if (!strcmp(tag, "listfindermaxpixcount")) {
+		listfinder.MaxPixCount = atoi(value);
+	}
+	else if (!strcmp(tag, "listfinderusepeakmask")) {
+		listfinder.UsePeakmask = atoi(value);
+	}
+	else if (!strcmp(tag, "savelisthits")) {
+		listfinder.savehits = atoi(value);
+	}
+	
 	// Unknown tags
 	else {
 		printf("\tUnknown tag (ignored): %s = %s\n",tag,value);
@@ -1496,6 +1579,43 @@ void cGlobal::readBadpixelMask(char *filename){
 
 
 /*
+ *	Read in list of hits
+ */
+void cGlobal::readHits(char *filename) {
+	
+	printf("Reading list of hits:\n");
+	printf("\t%s\n",filename);
+	
+	std::ifstream infile;
+	infile.open(filename);
+	if (infile.fail()) {
+		cout << "\tUnable to open " << filename << endl;
+		infile.clear();
+		printf("\tReading default list of hits\n");
+		infile.open("hits_sorted.txt");
+		if (infile.fail()) {
+			cout << "\tUnable to open default file" << endl;
+			infile.clear();
+			printf("\tDisabling the listfinder\n");
+			listfinder.use = 0;
+			return;
+		}
+	}
+	
+	string line;
+	while (true) {
+		getline(infile, line);
+		if (infile.fail()) break;
+		if (line[0] != '#') {
+			hitlist.push_back(line);
+		}
+	}
+	
+	cout << "\tList contained " << hitlist.size() << " hits." << endl;
+}
+
+
+/*
  *	Read in list of attenuations
  */
 void cGlobal::readAttenuations(char *filename) {
@@ -1518,7 +1638,7 @@ void cGlobal::readAttenuations(char *filename) {
 			return;
 		}
 	}
-
+	
 	string line;
 	int counter = 0;
 	while (true) {
@@ -1688,7 +1808,7 @@ void cGlobal::writeInitialLog(void){
 	printf("Writing initial log file: %s\n", logfile);
 
 	fp = fopen (logfile,"w");
-	fprintf(fp, "start time: %s\n",timestr);
+	fprintf(fp, "Start time: %s\n",timestr);
 	fprintf(fp, ">-------- Start of job --------<\n");
 	fclose (fp);
 	
@@ -1698,7 +1818,7 @@ void cGlobal::writeInitialLog(void){
 	
 	sprintf(framefile,"r%04u-frames.txt",getRunNumber());
 	framefp = fopen (framefile,"w");
-	fprintf(framefp, "# FrameNumber, UnixTime, EventName, Iavg");
+	fprintf(framefp, "# ThreadNumber, UnixTime, EventName, Iavg");
 	if (hitfinder.use) {
 		fprintf(framefp, ", nPeaks (standard)");
 	}

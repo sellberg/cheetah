@@ -32,8 +32,10 @@
 #include <fenv.h>
 #include <stdlib.h>
 #include <iostream>
+#include <string>
 using std::cout;
 using std::endl;
+using std::string;
 
 #include "worker.h"
 #include "hitfinder.h"
@@ -181,7 +183,7 @@ void *worker(void *threadarg) {
 	/*
 	 *	Hitfinding - Update central hit counter
 	 */
-	if(hit.standard || hit.water || hit.ice) {
+	if (hit.standard || hit.water || hit.ice) {
 		pthread_mutex_lock(&global->nhits_mutex);
 		global->nhits++;
 		pthread_mutex_unlock(&global->nhits_mutex);
@@ -257,9 +259,9 @@ void *worker(void *threadarg) {
      *  Calculate angular averages
      */
 	if (global->hitAngularAvg && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
-								   || (hit.water && global->waterfinder.savehits) 
-								   || (hit.ice && global->icefinder.savehits) 
-								   || (!hit.background && global->backgroundfinder.savehits) )) {
+												   || (hit.water && global->waterfinder.savehits) 
+												   || (hit.ice && global->icefinder.savehits) 
+								  				   || (!hit.background && global->backgroundfinder.savehits) )) {
 		calculateAngularAvg(threadInfo, global);
 		saveAngularAvg(threadInfo, global);
 	}
@@ -360,7 +362,7 @@ void *worker(void *threadarg) {
 			printf("; background=%i, nat/npeaks=%i", (hit.background) ? 0 : 1, hit.backgroundPeaks);
 		}
 		printf(")\n");
-	} else if (global->hitfinder.use || global->icefinder.use || global->waterfinder.use || global->backgroundfinder.use) {
+	} else if (global->hitfinder.use || global->icefinder.use || global->waterfinder.use || global->backgroundfinder.use || global->listfinder.use) {
 		printf("r%04u:%i (%3.1f Hz): Processed (iavg=%4.2f", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, threadInfo->intensityAvg);
 		if (global->hitfinder.use) {
 			printf("; hit=%i, nat/npeaks=%i", hit.standard, hit.standardPeaks);
@@ -373,6 +375,9 @@ void *worker(void *threadarg) {
 		}
 		if (global->backgroundfinder.use) {
 			printf("; background=%i, nat/npeaks=%i", (hit.background) ? 0 : 1, hit.backgroundPeaks);
+		}
+		if (global->listfinder.use) {
+			printf("; %s", threadInfo->eventname);
 		}
 		printf(")\n");
 	} else if ((threadInfo->threadNum % 100) == 0) {
@@ -543,7 +548,7 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 	}
 
     //standard hit
-	if (hit->standard){
+	if (hit->standard || global->listfinder.use){
 		// Sum raw format data
 		if (global->powdersum && global->saveRaw) {
 			pthread_mutex_lock(&global->powdersumraw_mutex);
@@ -614,7 +619,7 @@ void addToCorrelation(tThreadInfo *threadInfo, cGlobal *global, cHit *hit) {
 
 	if (global->useCorrelation && global->sumCorrelation && threadInfo->correlation) {
 		
-		if (hit->standard) {
+		if (hit->standard || global->listfinder.use) {
 			// Sum correlation data
 			pthread_mutex_lock(&global->powdersumcorrelation_mutex);
 			if (!global->powdersum) global->npowder += 1;
@@ -730,10 +735,10 @@ void assemble2Dimage(tThreadInfo *threadInfo, cGlobal *global){
 
 
 
+/*
+ *	Create filename based on date, time and fiducial for this image
+ */
 void nameEvent(tThreadInfo *info, cGlobal *global){
-	/*
-	 *	Create filename based on date, time and fiducial for this image
-	 */
 //	char outfile[1024];
 	char buffer1[80];
 	char buffer2[80];	
@@ -746,8 +751,20 @@ void nameEvent(tThreadInfo *info, cGlobal *global){
 	strftime(buffer2,80,"%H%M%S",&timelocal);
 	sprintf(info->eventname,"LCLS_%s_r%04u_%s_%x_cspad",buffer1,info->runNumber,buffer2,info->fiducial);
 }
-	
-	
+
+
+
+/*
+ *	Check if the list of hits contains the current event
+ */
+bool containsEvent(string event, cGlobal *global) {
+	if (global->nhits < global->hitlist.size()) {
+		return (event == global->hitlist[global->nhits]);
+	}
+}
+
+
+
 /*
  *	Write out processed data to our 'standard' HDF5 format
  */
@@ -1160,7 +1177,7 @@ void saveRunningSums(cGlobal *global) {
 	}
 
 	else {
-		if(global->hitfinder.use) {
+		if(global->hitfinder.use || global->listfinder.use) {
 			if (global->powdersum) {
 				
 				/*
@@ -1346,7 +1363,7 @@ void calculatePowderAngularAvg(cGlobal *global) {
 	unsigned *counterp = NULL;
 	unsigned *counteri = NULL;
 	unsigned *counterw = NULL;
-	if (global->hitfinder.use) {
+	if (global->hitfinder.use || global->listfinder.use) {
 		counterp = (unsigned*) calloc(global->angularAvg_nn, sizeof(unsigned));
 	}
 	if (global->icefinder.use) {
@@ -1362,7 +1379,7 @@ void calculatePowderAngularAvg(cGlobal *global) {
 	
 	for (int i=0; i<global->pix_nn; i++) {
 		if ( global->angularAvg_i[i] < global->angularAvg_nn && global->angularAvg_i[i] >= 0 && (!global->useBadPixelMask || global->badpixelmask[i]) ) {
-			if (global->hitfinder.use) {
+			if (global->hitfinder.use || global->listfinder.use) {
 				global->powderAverage[global->angularAvg_i[i]] += global->powderRaw[i];
 				counterp[global->angularAvg_i[i]]++;
 			}
@@ -1378,7 +1395,7 @@ void calculatePowderAngularAvg(cGlobal *global) {
 	}
 	
 	for (int i=0; i<global->angularAvg_nn; i++) {
-		if (global->hitfinder.use) {
+		if (global->hitfinder.use || global->listfinder.use) {
 			if (counterp[i]) global->powderAverage[i] /= counterp[i];
 		}
 		if (global->icefinder.use) {
@@ -1389,7 +1406,7 @@ void calculatePowderAngularAvg(cGlobal *global) {
 		}
 		
 		DEBUGL2_ONLY {
-			if (global->hitfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterp[i] << ",\tI(powder): " << global->powderAverage[i] << endl;
+			if (global->hitfinder.use || global->listfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterp[i] << ",\tI(powder): " << global->powderAverage[i] << endl;
 			if (global->icefinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counteri[i] << ",\tI(water): " << global->iceAverage[i] << endl;
 			if (global->waterfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterw[i] << ",\tI(ice): " << global->waterAverage[i] << endl;
 		}
@@ -1417,7 +1434,7 @@ void savePowderAngularAvg(cGlobal *global) {
 		/*
 		 *	Save angular average of powder pattern
 		 */
-		if (global->hitfinder.use) {
+		if (global->hitfinder.use || global->listfinder.use) {
 			printf("Saving angular average of powder data to file\n");
 			sprintf(filename,"r%04u-angavg.h5",global->runNumber);
 			for(long i=0; i<global->angularAvg_nn; i++)

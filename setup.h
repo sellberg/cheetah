@@ -23,6 +23,8 @@
 
 #include <stdio.h>
 #include <pthread.h>
+#include <string>
+#include <vector>
 
 /*
  *	Structure for hitfinder parameters
@@ -141,10 +143,13 @@ public:
 	
 	// Hitfinding
 	cHitfinder 	hitfinder;				// instance of the standard hitfinder
-	cHitfinder	icefinder;				// hitfinder to finder patterns with ice peaks
+	cHitfinder	icefinder;				// hitfinder to find patterns with ice peaks
 	cHitfinder	waterfinder;				// hitfinder to identify shots with water
 	cHitfinder	backgroundfinder;			// identify shots that are definitely part of the background (to make a more conservative background estimate)	
-
+	
+	// Listfinding
+	cHitfinder	listfinder;				// instance of the hitfinder for using a list as input criteria
+	char		listfinderFile[1024];	// Name of the file containing the hit list
 	
 	// Powder pattern generation
 	int			powdersum;			 // set to calculate powder pattern
@@ -283,6 +288,10 @@ public:
 	unsigned		*Lhist;	// Histogram of wavelengths
 	
 	
+	// Listfinding variables
+	bool			eventIsHit;				// keeps track of whether the event is a hit contained in the list
+	std::vector<std::string>	hitlist;	// list of all hits as output string names
+	
 	// Common variables
 	int32_t			*darkcal;		// stores darkcal from the file darkcalFile
 	double			*powderRaw;		// stores powder pattern in raw format
@@ -332,6 +341,7 @@ public:
 	void readIcemask(char *);
 	void readWatermask(char *);
 	void readBackgroundmask(char *);
+	void readHits(char *);
 	void readAttenuations(char *);
 	void expandAttenuationCapacity();
 	void expandEnergyCapacity();

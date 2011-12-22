@@ -43,6 +43,7 @@
 #include <iostream>
 using std::cout;
 using std::endl;
+using std::string;
 
 #include <string.h>
 #include <sys/time.h>
@@ -489,6 +490,14 @@ void event() {
 	}
 	
 	
+	/*
+	 *	Check if the list contains the event if the listfinder is enabled
+	 */
+	if (global.listfinder.use) {
+		nameEvent(threadInfo, &global);
+		global.eventIsHit = containsEvent((string) threadInfo->eventname, &global);
+		if (global.eventIsHit) global.nhits++;
+	}
 	
 	/*
 	 *	Copy raw cspad image data into worker thread structure for processing
@@ -497,9 +506,38 @@ void event() {
 	fail=getCspadData(DetInfo::CxiDs1, iter);
 
 
-	if (fail) {
-		printf("getCspadData fail %d (%x), skipping this event.\n",fail,fiducial);
-		threadInfo->cspad_fail = fail;
+	if (fail || (global.listfinder.use && !global.eventIsHit)) { 
+		if (fail) {
+			printf("getCspadData fail=%d, skipping this event (%x).\n",fail,fiducial);
+			threadInfo->cspad_fail = fail;
+		}
+		
+		// if the event is not a hit, update counters, save log files, and flush memory
+		if (!fail) {
+			nevents++;
+			global.nprocessedframes++;
+			
+			/*
+			 *	Save periodic powder patterns and update log file
+			 */
+			if(global.saveInterval!=0 && (global.nprocessedframes%global.saveInterval)==0 && (global.nprocessedframes > global.startFrames+50) ){
+				saveRunningSums(&global);
+				global.updateLogfile();
+			}
+			
+			/*
+			 *	Periodically flush all HDF5 data and memory
+			 */
+			if(global.flushInterval != 0 && (global.nprocessedframes%global.flushInterval) == 0) {
+				cout << "Preparing for HDF5 memory flush..." << endl;
+				// Wait for threads to finish before flushing
+				while(global.nActiveThreads > 0) {
+					printf("\twaiting for %i worker threads to terminate\n", (int)global.nActiveThreads);
+					usleep(100000);
+				}
+				flushHDF5();
+			}
+		}
 		
 		// cleanup allocated arrays
 		for(int quadrant=0; quadrant<4; quadrant++) 
