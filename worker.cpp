@@ -83,6 +83,7 @@ void *worker(void *threadarg) {
 	 *	Initialize pointers to analysis arrays to NULL
 	 */
 	threadInfo->angularAvg = NULL;
+	threadInfo->angularAvgQ = NULL;
 	threadInfo->correlation = NULL;
 	threadInfo->image = NULL;
 	
@@ -272,7 +273,9 @@ void *worker(void *threadarg) {
 												   || (hit.ice && global->icefinder.savehits) 
 								  				   || (!hit.background && global->backgroundfinder.savehits) )) {
 		calculateAngularAvg(threadInfo, global);
-		saveAngularAvg(threadInfo, global);
+		int fail = makeQcalibration(threadInfo, global);
+		if (!fail) saveAngularAvg(threadInfo, global);
+		else cout << "Q-calibration failed, angular average not saved for " << threadInfo->eventname << endl;
 	}
 	
 	
@@ -386,7 +389,7 @@ void *worker(void *threadarg) {
 			printf("; background=%i, nat/npeaks=%i", (hit.background) ? 0 : 1, hit.backgroundPeaks);
 		}
 		if (global->listfinder.use) {
-			printf("; hit=%i, nat/npeaks=%i", hit.list, hit.listPeaks);
+			printf("; nat/npeaks=%i", hit.listPeaks);
 		}
 		printf(")\n");
 	} else if ((threadInfo->threadNum % 100) == 0) {
@@ -430,6 +433,7 @@ void *worker(void *threadarg) {
 	free(threadInfo->corrected_data);
 	free(threadInfo->image);
 	free(threadInfo->angularAvg);
+	free(threadInfo->angularAvgQ);
 	free(threadInfo->correlation);
 	free(threadInfo);
 	
@@ -1522,13 +1526,14 @@ void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
 	if (global->hitAngularAvg) {
 		
 		char	filename[1024];
-		float *buffer = (float*) calloc(global->angularAvg_nn, sizeof(float));
+		float *buffer = (float*) calloc(2*global->angularAvg_nn, sizeof(float));
 		sprintf(filename,"%s-angavg.h5",threadInfo->eventname);
 		
 		for(long i=0; i<global->angularAvg_nn; i++) {
 			buffer[i] = (float) threadInfo->angularAvg[i];
+			buffer[global->angularAvg_nn+i] = (float) threadInfo->angularAvgQ[i];
 		}
-		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 1, H5T_NATIVE_FLOAT);
+		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
 		
 		free(buffer);
 		
@@ -1637,6 +1642,22 @@ void makePowderQcalibration(cGlobal *global) {
 	writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 1, H5T_NATIVE_FLOAT);
 	// free local arrays
 	free(buffer);
+	
+}
+
+
+int makeQcalibration(tThreadInfo *threadInfo, cGlobal *global) {
+	
+	// sanity check
+	if (threadInfo->detectorPosition > 60 && threadInfo->detectorPosition < 600 && threadInfo->wavelengthA == threadInfo->wavelengthA) {
+		// allocate arrays
+		threadInfo->angularAvgQ = (double*) calloc(global->angularAvg_nn, sizeof(double));
+		// calculate Q-calibration (using the detector position and energy from the current event)
+		for (int i=0; i<global->angularAvg_nn; i++) {
+			threadInfo->angularAvgQ[i] = 4*M_PI*sin(atan(global->pixelSize*global->angularAvgQ[i]*1000/threadInfo->detectorPosition)/2)/threadInfo->wavelengthA;
+		}		
+		return 0;
+	} else return 1;
 	
 }
 

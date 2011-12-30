@@ -689,7 +689,7 @@ void endjob()
 	if (global.useEnergyCalibration) {
 		saveEnergies(&global);
 		makeEnergyHistograms(&global);
-		if (global.hitAngularAvg || (global.powdersum && global.powderAngularAvg)) makeQcalibration(&global);
+		if (global.hitAngularAvg || (global.powdersum && global.powderAngularAvg)) makePowderQcalibration(&global);
 	}
 	
 	

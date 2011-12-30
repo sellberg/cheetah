@@ -68,6 +68,7 @@ typedef struct {
 	float		*corrected_data;
 	float		*image;
 	double		*angularAvg;
+	double		*angularAvgQ;
 	double		*correlation;
 	double		intensityAvg;
 	int			nPeaks;
@@ -171,7 +172,8 @@ void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global);
 void calculateIntensityAvg(tThreadInfo *threadInfo, cGlobal *global);
 void saveEnergies(cGlobal *global);
 void makeEnergyHistograms(cGlobal *global);
-void makeQcalibration(cGlobal *global);
+void makePowderQcalibration(cGlobal *global);
+int makeQcalibration(tThreadInfo *threadInfo, cGlobal *global);
 void calculateCenterCorrection(cGlobal *global, double *intensities, double normalization);
 void calculateCenterCorrection(tThreadInfo *info, cGlobal *global, float *intensities, float normalization);
 void updatePixelArrays(cGlobal *global);
