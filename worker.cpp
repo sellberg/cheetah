@@ -181,6 +181,15 @@ void *worker(void *threadarg) {
 	}
 	
 	/*
+	 *	Hitfinding - List
+	 */
+	hit.list = 0;
+	if(global->listfinder.use){
+		hit.list = hitfinder(threadInfo, global, &(global->listfinder));
+		hit.listPeaks = threadInfo->nPeaks;
+	}
+	
+	/*
 	 *	Hitfinding - Update central hit counter
 	 */
 	if (hit.standard || hit.water || hit.ice) {
@@ -377,7 +386,7 @@ void *worker(void *threadarg) {
 			printf("; background=%i, nat/npeaks=%i", (hit.background) ? 0 : 1, hit.backgroundPeaks);
 		}
 		if (global->listfinder.use) {
-			printf("; %s", threadInfo->eventname);
+			printf("; hit=%i, nat/npeaks=%i", hit.list, hit.listPeaks);
 		}
 		printf(")\n");
 	} else if ((threadInfo->threadNum % 100) == 0) {
@@ -1608,7 +1617,7 @@ void makeEnergyHistograms(cGlobal *global) {
 }
 
 
-void makeQcalibration(cGlobal *global) {
+void makePowderQcalibration(cGlobal *global) {
 	
 	// allocate arrays
 	global->angularAvgQcal = new double[global->angularAvg_nn];

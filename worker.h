@@ -45,6 +45,8 @@ public:
 	int icePeaks;
 	int background;
 	int backgroundPeaks;
+	int list;
+	int listPeaks;
 };
 
 
