@@ -275,7 +275,7 @@ void *worker(void *threadarg) {
 		calculateAngularAvg(threadInfo, global);
 		int fail = makeQcalibration(threadInfo, global);
 		if (!fail) saveAngularAvg(threadInfo, global);
-		else cout << "Q-calibration failed, angular average not saved for " << threadInfo->eventname << endl;
+		else cout << "Failed to calibrate Q for " << threadInfo->eventname << ", angular average NOT saved." << endl;
 	}
 	
 	
@@ -1530,8 +1530,8 @@ void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
 		sprintf(filename,"%s-angavg.h5",threadInfo->eventname);
 		
 		for(long i=0; i<global->angularAvg_nn; i++) {
-			buffer[i] = (float) threadInfo->angularAvg[i];
-			buffer[global->angularAvg_nn+i] = (float) threadInfo->angularAvgQ[i];
+			buffer[i] = (float) threadInfo->angularAvgQ[i];
+			buffer[global->angularAvg_nn+i] = (float) threadInfo->angularAvg[i];
 		}
 		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
 		
