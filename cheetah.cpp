@@ -728,6 +728,7 @@ void endjob()
 	free(global.powderRaw);
 	free(global.powderAverage);
 	free(global.powderCorrelation);
+	free(global.powderVariance);
 	free(global.iceAssembled);
 	free(global.iceRaw);
 	free(global.iceAverage);
@@ -769,6 +770,7 @@ void endjob()
 	pthread_mutex_destroy(&global.powdersumraw_mutex);
 	pthread_mutex_destroy(&global.powdersumassembled_mutex);
 	pthread_mutex_destroy(&global.powdersumcorrelation_mutex);
+	pthread_mutex_destroy(&global.powdersumvariance_mutex);
 	pthread_mutex_destroy(&global.icesumraw_mutex);
 	pthread_mutex_destroy(&global.icesumassembled_mutex);
 	pthread_mutex_destroy(&global.icesumcorrelation_mutex);

@@ -236,12 +236,6 @@ void *worker(void *threadarg) {
 	
 	
 	/*
-	 *	Calculate Q calibration
-	 */
-	
-	
-	
-	/*
 	 *	Calculate polarization correction
 	 */
 	if (global->usePolarizationCorrection && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
@@ -264,6 +258,7 @@ void *worker(void *threadarg) {
      *  Calculate intensity average
      */
 	calculateIntensityAvg(threadInfo, global);
+	
 	
 	/*
      *  Calculate angular averages
@@ -293,10 +288,10 @@ void *worker(void *threadarg) {
 	/*
 	 *	Assemble quadrants into a 'realistic' 2D image
 	 */
-	if (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
-						 || (hit.water && global->waterfinder.savehits) 
-						 || (hit.ice && global->icefinder.savehits) 
-						 || (!hit.background && global->backgroundfinder.savehits) ) {
+	if (global->hdf5dump || global->generateDarkcal || (hit.standard && global->hitfinder.savehits) 
+													|| (hit.water && global->waterfinder.savehits) 
+													|| (hit.ice && global->icefinder.savehits) 
+													|| (!hit.background && global->backgroundfinder.savehits) ) {
 		assemble2Dimage(threadInfo, global);
 	}
 	
@@ -552,14 +547,19 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 			global->powderRaw[i] += threadInfo->corrected_data[i];
 		pthread_mutex_unlock(&global->powdersumraw_mutex);
         
-        
 		// Sum assembled data
 		pthread_mutex_lock(&global->powdersumassembled_mutex);
 		for(long i=0; i<global->image_nn; i++)
             global->powderAssembled[i] += threadInfo->image[i];
 		pthread_mutex_unlock(&global->powdersumassembled_mutex);
+		
+		// Sum variance data
+		pthread_mutex_lock(&global->powdersumvariance_mutex);
+		for(long i=0; i<global->pix_nn; i++)
+			global->powderVariance[i] += ((double) threadInfo->corrected_data[i]*threadInfo->corrected_data[i]);
+		pthread_mutex_unlock(&global->powdersumvariance_mutex);
 	}
-
+	
     //standard hit
 	if (hit->standard || global->listfinder.use){
 		// Sum raw format data
@@ -580,7 +580,7 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 			pthread_mutex_unlock(&global->powdersumassembled_mutex);
 		}
 	}
-
+	
 	//ice hit
 	if (hit->ice){
 		// Sum raw format data 	: ice
@@ -1171,22 +1171,50 @@ void flushHDF5() {
 void saveRunningSums(cGlobal *global) {
 	char	filename[1024];
 
-	/*
-	 *	Compute and save darkcal
-	 */
 	if(global->generateDarkcal) {
+		/*
+		 *	Compute and save darkcal
+		 */
 		printf("Processing darkcal\n");
 		sprintf(filename,"r%04u-darkcal.h5",global->runNumber);
 		int16_t *buffer3 = (int16_t*) calloc(global->pix_nn, sizeof(int16_t));
 		pthread_mutex_lock(&global->powdersumraw_mutex);
 		for(long i=0; i<global->pix_nn; i++)
-			buffer3[i] = (int16_t) (global->powderRaw[i]/(float)global->npowder);
+			buffer3[i] = (int16_t) (global->powderRaw[i]/global->npowder);
 		pthread_mutex_unlock(&global->powdersumraw_mutex);
 		//for(long i=0; i<global->pix_nn; i++)
 		//	if (buffer3[i] < 0) buffer3[i] = 0;
 		printf("Saving darkcal to file\n");
 		writeSimpleHDF5(filename, buffer3, (int)global->pix_nx, (int)global->pix_ny, H5T_STD_I16LE);	
 		free(buffer3);
+		
+		/*
+		 *	Save assembled darkcal
+		 */
+		printf("Saving assembled darkcal image to file\n");
+		sprintf(filename,"r%04u-AssembledSum.h5",global->runNumber);
+		float *buffer11 = (float*) calloc(global->image_nn, sizeof(float));
+		pthread_mutex_lock(&global->powdersumassembled_mutex);
+		for(long i=0; i<global->image_nn; i++){
+			buffer11[i] = (float) (global->powderAssembled[i]/global->npowder);
+		}
+		pthread_mutex_unlock(&global->powdersumassembled_mutex);
+		writeSimpleHDF5(filename, buffer11, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
+		free(buffer11);
+		
+		/*
+		 *	Compute and save variance of darkcal
+		 */
+		printf("Saving variance of darkcal to file\n");
+		sprintf(filename,"r%04u-darkcal_variance.h5",global->runNumber);
+		float *buffer12 = (float*) calloc(global->pix_nn, sizeof(float));
+		pthread_mutex_lock(&global->powdersumvariance_mutex);
+		for(long i=0; i<global->pix_nn; i++)
+			buffer12[i] = (float) (global->powderVariance[i]/global->npowder - global->powderRaw[i]*global->powderRaw[i]/(global->npowder*global->npowder));
+		pthread_mutex_unlock(&global->powdersumvariance_mutex);
+		writeSimpleHDF5(filename, buffer12, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
+		free(buffer12);
+		
 	}
 
 	else {
@@ -1201,7 +1229,7 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer2 = (float*) calloc(global->image_nn, sizeof(float));
 				pthread_mutex_lock(&global->powdersumassembled_mutex);
 				for(long i=0; i<global->image_nn; i++){
-					buffer2[i] = (float) global->powderAssembled[i]/global->npowder;
+					buffer2[i] = (float) (global->powderAssembled[i]/global->npowder);
 				}
 				pthread_mutex_unlock(&global->powdersumassembled_mutex);
 				writeSimpleHDF5(filename, buffer2, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
@@ -1219,7 +1247,7 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer1 = (float*) calloc(global->pix_nn, sizeof(float));
 				pthread_mutex_lock(&global->powdersumraw_mutex);
 				for(long i=0; i<global->pix_nn; i++)
-					buffer1[i] = (float) global->powderRaw[i]/global->npowder;
+					buffer1[i] = (float) (global->powderRaw[i]/global->npowder);
 				pthread_mutex_unlock(&global->powdersumraw_mutex);
 				writeSimpleHDF5(filename, buffer1, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 				free(buffer1);
@@ -1236,7 +1264,7 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer8 = (float*) calloc(global->correlation_nn, sizeof(float));
 				pthread_mutex_lock(&global->powdersumcorrelation_mutex);
 				for(long i=0; i<global->correlation_nn; i++)
-					buffer8[i] = (float) global->powderCorrelation[i]/global->npowder;
+					buffer8[i] = (float) (global->powderCorrelation[i]/global->npowder);
 				pthread_mutex_unlock(&global->powdersumcorrelation_mutex);
 				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				else writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);
@@ -1259,7 +1287,7 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer4 = (float*) calloc(global->image_nn, sizeof(float));
 				pthread_mutex_lock(&global->icesumassembled_mutex);
 				for(long i=0; i<global->image_nn; i++){
-					buffer4[i] = (float) global->iceAssembled[i]/global->nice;
+					buffer4[i] = (float) (global->iceAssembled[i]/global->nice);
 				}
 				pthread_mutex_unlock(&global->icesumassembled_mutex);
 				writeSimpleHDF5(filename, buffer4, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
@@ -1277,7 +1305,7 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer5 = (float*) calloc(global->pix_nn, sizeof(float));
 				pthread_mutex_lock(&global->icesumraw_mutex);
 				for(long i=0; i<global->pix_nn; i++)
-					buffer5[i] = (float) global->iceRaw[i]/global->nice;
+					buffer5[i] = (float) (global->iceRaw[i]/global->nice);
 				pthread_mutex_unlock(&global->icesumraw_mutex);
 				writeSimpleHDF5(filename, buffer5, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 				free(buffer5);
@@ -1294,7 +1322,7 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer9 = (float*) calloc(global->correlation_nn, sizeof(float));
 				pthread_mutex_lock(&global->icesumcorrelation_mutex);
 				for(long i=0; i<global->correlation_nn; i++)
-					buffer9[i] = (float) global->iceCorrelation[i]/global->nice;
+					buffer9[i] = (float) (global->iceCorrelation[i]/global->nice);
 				pthread_mutex_unlock(&global->icesumcorrelation_mutex);
 				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				else writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);
@@ -1316,7 +1344,7 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer6 = (float*) calloc(global->image_nn, sizeof(float));
 				pthread_mutex_lock(&global->watersumassembled_mutex);
 				for(long i=0; i<global->image_nn; i++){
-					buffer6[i] = (float) global->waterAssembled[i]/global->nwater;
+					buffer6[i] = (float) (global->waterAssembled[i]/global->nwater);
 				}
 				pthread_mutex_unlock(&global->watersumassembled_mutex);
 				writeSimpleHDF5(filename, buffer6, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
@@ -1334,7 +1362,7 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer7 = (float*) calloc(global->pix_nn, sizeof(float));
 				pthread_mutex_lock(&global->watersumraw_mutex);
 				for(long i=0; i<global->pix_nn; i++)
-					buffer7[i] = (float) global->waterRaw[i]/global->nwater;
+					buffer7[i] = (float) (global->waterRaw[i]/global->nwater);
 				pthread_mutex_unlock(&global->watersumraw_mutex);
 				writeSimpleHDF5(filename, buffer7, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 				free(buffer7);				
@@ -1351,7 +1379,7 @@ void saveRunningSums(cGlobal *global) {
 				float *buffer10 = (float*) calloc(global->correlation_nn, sizeof(float));
 				pthread_mutex_lock(&global->watersumcorrelation_mutex);
 				for(long i=0; i<global->correlation_nn; i++)
-					buffer10[i] = (float) global->waterCorrelation[i]/global->nwater;
+					buffer10[i] = (float) (global->waterCorrelation[i]/global->nwater);
 				pthread_mutex_unlock(&global->watersumcorrelation_mutex);
 				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
 				else writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);

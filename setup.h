@@ -213,6 +213,7 @@ public:
 	pthread_mutex_t	powdersumraw_mutex;
 	pthread_mutex_t	powdersumassembled_mutex;
 	pthread_mutex_t	powdersumcorrelation_mutex;
+	pthread_mutex_t	powdersumvariance_mutex;
 	pthread_mutex_t	watersumassembled_mutex;
 	pthread_mutex_t	watersumraw_mutex;
 	pthread_mutex_t	watersumcorrelation_mutex;
@@ -298,6 +299,7 @@ public:
 	double			*powderAssembled;	// stores the assembled powder pattern
 	double			*powderAverage;		// stores angular average of powder pattern
 	double			*powderCorrelation;	// stores correlation sum of regular hits
+	double			*powderVariance;	// stores the variance of the powder pattern
 	double			*waterRaw;		// stores powder pattern of water hits in raw format
 	double			*waterAssembled;	// stores the assembled powder pattern of water hits
 	double			*waterAverage;		// stores angular average of powder pattern of water hits

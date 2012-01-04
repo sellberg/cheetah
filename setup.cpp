@@ -273,6 +273,7 @@ void cGlobal::setup() {
 	iceCorrelation = NULL;
 	waterCorrelation = NULL;
 	correlationLUT = NULL;
+	powderVariance = NULL;
 	
 	
 	/*
@@ -282,8 +283,10 @@ void cGlobal::setup() {
 		cmModule = 0;
 		cmSubModule = 0;
 		useDarkcalSubtraction = 0;
+		useGaincal = 0;
 		useSubtractPersistentBackground = 0;
 		useBadPixelMask = 0;
+		useAutoHotpixel = 0;
 		hitfinder.use = 0;
 		waterfinder.use = 0;
 		icefinder.use = 0;
@@ -296,7 +299,6 @@ void cGlobal::setup() {
 		listfinder.savehits = 0;
 		hdf5dump = 0;
 		saveRaw = 0;
-		useAutoHotpixel = 0;
 		startFrames = 0;
 		powdersum = 0;
 		powderthresh = 0;
@@ -311,6 +313,7 @@ void cGlobal::setup() {
 		useCorrelation = 0;
 		powderRaw = (double*) calloc(pix_nn, sizeof(double));
 		powderAssembled = (double*) calloc(image_nn, sizeof(double));
+		powderVariance = (double*) calloc(pix_nn, sizeof(double));
 	}
 	
 	
@@ -397,6 +400,7 @@ void cGlobal::setup() {
 	pthread_mutex_init(&powdersumraw_mutex, NULL);
 	pthread_mutex_init(&powdersumassembled_mutex, NULL);
 	pthread_mutex_init(&powdersumcorrelation_mutex, NULL);
+	pthread_mutex_init(&powdersumvariance_mutex, NULL);
 	pthread_mutex_init(&icesumraw_mutex, NULL);
 	pthread_mutex_init(&icesumassembled_mutex, NULL);
 	pthread_mutex_init(&icesumcorrelation_mutex, NULL);
