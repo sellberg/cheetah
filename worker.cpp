@@ -43,6 +43,9 @@ using std::string;
 #include "background.h"
 #include "correlation.h"
 #include "arrayclasses.h"
+#include "arraydataIO.h"
+#include "util.h"
+
 
 /*
  *	Worker thread function for processing each cspad data frame
@@ -288,10 +291,10 @@ void *worker(void *threadarg) {
 	/*
 	 *	Assemble quadrants into a 'realistic' 2D image
 	 */
-	if (global->hdf5dump || global->generateDarkcal || (hit.standard && global->hitfinder.savehits) 
-													|| (hit.water && global->waterfinder.savehits) 
-													|| (hit.ice && global->icefinder.savehits) 
-													|| (!hit.background && global->backgroundfinder.savehits) ) {
+	if (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
+						 || (hit.water && global->waterfinder.savehits) 
+						 || (hit.ice && global->icefinder.savehits) 
+						 || (!hit.background && global->backgroundfinder.savehits) ) {
 		assemble2Dimage(threadInfo, global);
 	}
 	
@@ -387,8 +390,6 @@ void *worker(void *threadarg) {
 			printf("; nat/npeaks=%i", hit.listPeaks);
 		}
 		printf(")\n");
-	} else if ((threadInfo->threadNum % 100) == 0) {
-		printf("r%04u:%i (%3.1f Hz): Processed %ld events\n", (int)threadInfo->runNumber, (int)threadInfo->threadNum, global->datarate, global->nprocessedframes);
 	}
 	
 	/*
@@ -547,12 +548,6 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 			global->powderRaw[i] += threadInfo->corrected_data[i];
 		pthread_mutex_unlock(&global->powdersumraw_mutex);
         
-		// Sum assembled data
-		pthread_mutex_lock(&global->powdersumassembled_mutex);
-		for(long i=0; i<global->image_nn; i++)
-            global->powderAssembled[i] += threadInfo->image[i];
-		pthread_mutex_unlock(&global->powdersumassembled_mutex);
-		
 		// Sum variance data
 		pthread_mutex_lock(&global->powdersumvariance_mutex);
 		for(long i=0; i<global->pix_nn; i++)
@@ -1186,21 +1181,6 @@ void saveRunningSums(cGlobal *global) {
 		//	if (buffer3[i] < 0) buffer3[i] = 0;
 		printf("Saving darkcal to file\n");
 		writeSimpleHDF5(filename, buffer3, (int)global->pix_nx, (int)global->pix_ny, H5T_STD_I16LE);	
-		free(buffer3);
-		
-		/*
-		 *	Save assembled darkcal
-		 */
-		printf("Saving assembled darkcal image to file\n");
-		sprintf(filename,"r%04u-AssembledSum.h5",global->runNumber);
-		float *buffer11 = (float*) calloc(global->image_nn, sizeof(float));
-		pthread_mutex_lock(&global->powdersumassembled_mutex);
-		for(long i=0; i<global->image_nn; i++){
-			buffer11[i] = (float) (global->powderAssembled[i]/global->npowder);
-		}
-		pthread_mutex_unlock(&global->powdersumassembled_mutex);
-		writeSimpleHDF5(filename, buffer11, (int)global->image_nx, (int)global->image_nx, H5T_NATIVE_FLOAT);	
-		free(buffer11);
 		
 		/*
 		 *	Compute and save variance of darkcal
@@ -1213,6 +1193,41 @@ void saveRunningSums(cGlobal *global) {
 			buffer12[i] = (float) (global->powderVariance[i]/global->npowder - global->powderRaw[i]*global->powderRaw[i]/(global->npowder*global->npowder));
 		pthread_mutex_unlock(&global->powdersumvariance_mutex);
 		writeSimpleHDF5(filename, buffer12, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
+		
+		DEBUGL1_ONLY {
+			// VERIFY OUTPUT
+			array1D *oneX = new array1D(global->pix_x, global->pix_nn);
+			array1D *oneY = new array1D(global->pix_y, global->pix_nn);
+			array1D *oneDark = new array1D(buffer3, global->pix_nn);		
+			array1D *oneDarkVariance = new array1D(buffer12, global->pix_nn);		
+			arraydataIO *io = new arraydataIO();
+			array2D *two = 0;
+			
+			/*
+			 *	Save assembled darkcal
+			 */			
+			printf("Saving assembled darkcal image to file\n");
+			sprintf(filename,"r%04u-AssembledSum.h5",global->runNumber);
+			ns_cspad_util::createAssembledImageCSPAD( oneDark, oneX, oneY, two );		
+			io->writeToFile( filename, two );
+			
+			/*
+			 *	Save assembled variance of darkcal
+			 */
+			printf("Saving assembled variance image to file\n");
+			sprintf(filename,"r%04u-darkcal_variance-assembled.h5",global->runNumber);
+			ns_cspad_util::createAssembledImageCSPAD( oneDarkVariance, oneX, oneY, two );
+			io->writeToFile( filename, two );
+			
+			delete oneX;
+			delete oneY;
+			delete oneDark;
+			delete oneDarkVariance;
+			delete two;
+			delete io;
+		}
+		
+		free(buffer3);
 		free(buffer12);
 		
 	}

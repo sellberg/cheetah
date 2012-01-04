@@ -312,7 +312,6 @@ void cGlobal::setup() {
 		useEnergyCalibration = 0;
 		useCorrelation = 0;
 		powderRaw = (double*) calloc(pix_nn, sizeof(double));
-		powderAssembled = (double*) calloc(image_nn, sizeof(double));
 		powderVariance = (double*) calloc(pix_nn, sizeof(double));
 	}
 	
@@ -491,7 +490,6 @@ void cGlobal::setup() {
 		
 		if (debugLevel >= 1) {
 			// VERIFY OUTPUT
-			array1D *one = new array1D(phi, pix_nn);
 			array1D *oneX = new array1D(pix_x, pix_nn);
 			array1D *oneY = new array1D(pix_y, pix_nn);
 			array1D *onePhi = new array1D(phi, pix_nn);		
@@ -520,7 +518,6 @@ void cGlobal::setup() {
 			ns_cspad_util::createAssembledImageCSPAD( onePhi, oneX, oneY, two );
 			io->writeToFile( "pixPHI"+ext, two );
 			
-			delete one;
 			delete oneX;
 			delete oneY;
 			delete onePhi;
