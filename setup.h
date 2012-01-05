@@ -97,7 +97,8 @@ public:
 	// Static dark calibration (static offsets on each pixel to be subtracted)
 	char		darkcalFile[1024];		// File containing dark calibration
 	int			useDarkcalSubtraction;	// Subtract the darkcal
-	int			generateDarkcal;		// Flip this on to generate a darkcal (auto-turns-on appropriate other options)
+	int			generateDarkcal;		// Flip this on to generate a darkcal (auto-turns-off appropriate other options)
+	int			manualDarkcalGenerationControl;			// Flip this on to manually control the other settings when generating a darkcal
 	
 	// Common mode and pedastal subtraction
 	int			cmModule;				// Subtract common mode from each 2x1 Module (2 ASICs), can be done by finding the zero-photon peak (algorithm 1) in the intensity histogram or by using the cmFloor-weighted median (algorithm 2)
@@ -294,7 +295,7 @@ public:
 	std::vector<std::string>	hitlist;	// list of all hits as output string names
 	
 	// Common variables
-	int32_t			*darkcal;		// stores darkcal from the file darkcalFile
+	float			*darkcal;		// stores darkcal from the file darkcalFile in float format
 	double			*powderRaw;		// stores powder pattern in raw format
 	double			*powderAssembled;	// stores the assembled powder pattern
 	double			*powderAverage;		// stores angular average of powder pattern

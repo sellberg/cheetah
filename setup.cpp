@@ -99,6 +99,7 @@ void cGlobal::defaultConfiguration(void) {
 	strcpy(darkcalFile, "darkcal.h5");
 	useDarkcalSubtraction = 0;
 	generateDarkcal = 0;
+	manualDarkcalGenerationControl = 0;
 	
 	// Common mode subtraction from each ASIC
 	cmModule = 0;
@@ -280,39 +281,43 @@ void cGlobal::setup() {
 	 *	Trap specific configurations and mutually incompatible options
 	 */
 	if(generateDarkcal) {
-		cmModule = 0;
-		cmSubModule = 0;
-		useDarkcalSubtraction = 0;
-		useGaincal = 0;
-		useSubtractPersistentBackground = 0;
-		useBadPixelMask = 0;
-		useAutoHotpixel = 0;
-		hitfinder.use = 0;
-		waterfinder.use = 0;
-		icefinder.use = 0;
-		backgroundfinder.use = 0;
-		listfinder.use = 0;
-		hitfinder.savehits = 0;
-		waterfinder.savehits = 0;
-		icefinder.savehits = 0;
-		backgroundfinder.savehits = 0;
-		listfinder.savehits = 0;
-		hdf5dump = 0;
-		saveRaw = 0;
-		startFrames = 0;
-		powdersum = 0;
-		powderthresh = 0;
-		powderAngularAvg = 0;
-		hitAngularAvg = 0;
-		calculateCenterCorrectionPowder = 0;
-		calculateCenterCorrectionHit = 0;
-		refineMetrology = 0;
-		usePolarizationCorrection = 0;
-		useAttenuationCorrection = -1;
-		useEnergyCalibration = 0;
-		useCorrelation = 0;
+		
 		powderRaw = (double*) calloc(pix_nn, sizeof(double));
 		powderVariance = (double*) calloc(pix_nn, sizeof(double));
+		
+		if (!manualDarkcalGenerationControl) {
+			cmModule = 0;
+			cmSubModule = 0;
+			useDarkcalSubtraction = 0;
+			useGaincal = 0;
+			useSubtractPersistentBackground = 0;
+			useBadPixelMask = 0;
+			useAutoHotpixel = 0;
+			hitfinder.use = 0;
+			waterfinder.use = 0;
+			icefinder.use = 0;
+			backgroundfinder.use = 0;
+			listfinder.use = 0;
+			hitfinder.savehits = 0;
+			waterfinder.savehits = 0;
+			icefinder.savehits = 0;
+			backgroundfinder.savehits = 0;
+			listfinder.savehits = 0;
+			hdf5dump = 0;
+			saveRaw = 0;
+			startFrames = 0;
+			powdersum = 0;
+			powderthresh = 0;
+			powderAngularAvg = 0;
+			hitAngularAvg = 0;
+			calculateCenterCorrectionPowder = 0;
+			calculateCenterCorrectionHit = 0;
+			refineMetrology = 0;
+			usePolarizationCorrection = 0;
+			useAttenuationCorrection = -1;
+			useEnergyCalibration = 0;
+			useCorrelation = 0;
+		}
 	}
 	
 	
@@ -805,14 +810,17 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "normalizegain")) {
 		normalizeGain = atoi(value);
 	}
+	else if (!strcmp(tag, "usedarkcalsubtraction")) {
+		useDarkcalSubtraction = atoi(value);
+	}
 	else if (!strcmp(tag, "generatedarkcal")) {
 		generateDarkcal = atoi(value);
 	}
+	else if (!strcmp(tag, "manualdarkcalgenerationcontrol")) {
+		manualDarkcalGenerationControl = atoi(value);
+	}
 	else if (!strcmp(tag, "usebadpixelmask")) {
 		useBadPixelMask = atoi(value);
-	}
-	else if (!strcmp(tag, "usedarkcalsubtraction")) {
-		useDarkcalSubtraction = atoi(value);
 	}
 	else if (!strcmp(tag, "hitfinder")) {
 		hitfinder.use = atoi(value);
@@ -1382,10 +1390,8 @@ void cGlobal::readDarkcal(char *filename){
 	printf("\t%s\n",filename);
 	
 	
-	// Create memory space and pad with zeros
-	darkcal = (int32_t*) calloc(pix_nn, sizeof(int32_t));
-	memset(darkcal,0, pix_nn*sizeof(int32_t));
-	
+	// Create memory space and with all zeros
+	darkcal = (float*) calloc(pix_nn, sizeof(float));
 	
 	
 	// Check whether pixel map file exists!
@@ -1405,14 +1411,14 @@ void cGlobal::readDarkcal(char *filename){
 	
 	// Correct geometry?
 	if(temp2d.nx != pix_nx || temp2d.ny != pix_ny) {
-		printf("\tGeometry mismatch: %ix%x != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
+		printf("\tGeometry mismatch: %ix%i != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
 		printf("\tDefaulting to all-zero darkcal\n");
 		return;
-	} 
+	}
 	
 	// Copy into darkcal array
 	for(long i=0;i<pix_nn;i++)
-		darkcal[i] = (int32_t) temp2d.data[i];
+		darkcal[i] = (float) temp2d.data[i];
 	
 }
 
@@ -1443,14 +1449,14 @@ void cGlobal::readGaincal(char *filename){
 	}
 	
 	
-	// Read darkcal data from file
+	// Read gaincal data from file
 	cData2d		temp2d;
 	temp2d.readHDF5(filename);
 	
 
 	// Correct geometry?
 	if(temp2d.nx != pix_nx || temp2d.ny != pix_ny) {
-		printf("\tGeometry mismatch: %ix%x != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
+		printf("\tGeometry mismatch: %ix%i != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
 		printf("\tDefaulting to uniform gaincal\n");
 		return;
 	}
@@ -1560,14 +1566,14 @@ void cGlobal::readBadpixelMask(char *filename){
 	}
 	
 	
-	// Read darkcal data from file
+	// Read pixel mask data from file
 	cData2d		temp2d;
 	temp2d.readHDF5(filename);
 	
 	
 	// Correct geometry?
 	if(temp2d.nx != pix_nx || temp2d.ny != pix_ny) {
-		printf("\tGeometry mismatch: %ix%x != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
+		printf("\tGeometry mismatch: %ix%i != %ix%i\n",(int)temp2d.nx, (int)temp2d.ny, (int)pix_nx, (int)pix_ny);
 		printf("\tDefaulting to uniform peak search mask\n");
 		return;
 	} 

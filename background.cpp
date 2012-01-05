@@ -81,13 +81,13 @@ void subtractPersistentBackground(tThreadInfo *threadInfo, cGlobal *global){
 	
 	
 	// Do the weighted subtraction
-	// Watch out for integer wraparound!
-	int32_t diff;
+	// Watch out for integer wraparound! Not a problem anymore since corrected_data is float
+	float diff;
 	for(long i=0;i<global->pix_nn;i++) {
-		diff = (int32_t) threadInfo->corrected_data[i] - (int32_t)(factor*global->selfdark[i]);	
-		if(diff < -32766) diff = -32767;
-		if(diff > 32766) diff = 32767;
-		threadInfo->corrected_data[i] = (int16_t) diff;
+		diff = threadInfo->corrected_data[i] - (factor*global->selfdark[i]);	
+		//if(diff < -32766) diff = -32767;
+		//if(diff > 32766) diff = 32767;
+		threadInfo->corrected_data[i] = diff;
 	}	
 }
 
