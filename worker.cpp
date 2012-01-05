@@ -1172,15 +1172,15 @@ void saveRunningSums(cGlobal *global) {
 		 */
 		printf("Processing darkcal\n");
 		sprintf(filename,"r%04u-darkcal.h5",global->runNumber);
-		int16_t *buffer3 = (int16_t*) calloc(global->pix_nn, sizeof(int16_t));
+		float *buffer3 = (float*) calloc(global->pix_nn, sizeof(float));
 		pthread_mutex_lock(&global->powdersumraw_mutex);
 		for(long i=0; i<global->pix_nn; i++)
-			buffer3[i] = (int16_t) (global->powderRaw[i]/global->npowder);
+			buffer3[i] = (float) (global->powderRaw[i]/global->npowder);
 		pthread_mutex_unlock(&global->powdersumraw_mutex);
 		//for(long i=0; i<global->pix_nn; i++)
 		//	if (buffer3[i] < 0) buffer3[i] = 0;
 		printf("Saving darkcal to file\n");
-		writeSimpleHDF5(filename, buffer3, (int)global->pix_nx, (int)global->pix_ny, H5T_STD_I16LE);	
+		writeSimpleHDF5(filename, buffer3, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 		
 		/*
 		 *	Compute and save variance of darkcal
@@ -1195,7 +1195,7 @@ void saveRunningSums(cGlobal *global) {
 		writeSimpleHDF5(filename, buffer12, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
 		
 		DEBUGL1_ONLY {
-			// VERIFY OUTPUT
+			// VERIFY OUTPUT IN ASSEMBLED FORMAT
 			array1D *oneX = new array1D(global->pix_x, global->pix_nn);
 			array1D *oneY = new array1D(global->pix_y, global->pix_nn);
 			array1D *oneDark = new array1D(buffer3, global->pix_nn);		
@@ -1215,7 +1215,7 @@ void saveRunningSums(cGlobal *global) {
 			 *	Save assembled variance of darkcal
 			 */
 			printf("Saving assembled variance image to file\n");
-			sprintf(filename,"r%04u-darkcal_variance-assembled.h5",global->runNumber);
+			sprintf(filename,"r%04u-AssembledVariance.h5",global->runNumber);
 			ns_cspad_util::createAssembledImageCSPAD( oneDarkVariance, oneX, oneY, two );
 			io->writeToFile( filename, two );
 			
