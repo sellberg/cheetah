@@ -330,7 +330,7 @@ void cGlobal::setup() {
 		hotpixelmask = (float*) calloc(pix_nn, sizeof(float));
 	
 	if (powdersum) {
-		if (hitfinder.use) 
+		if (hitfinder.use || listfinder.use) 
 			powderAssembled = (double*) calloc(image_nn, sizeof(double));
 		if (icefinder.use) 
 			iceAssembled = (double*) calloc(image_nn, sizeof(double));
@@ -338,7 +338,7 @@ void cGlobal::setup() {
 			waterAssembled = (double*) calloc(image_nn, sizeof(double));
 	
 		if (saveRaw) {
-			if (hitfinder.use) 
+			if (hitfinder.use || listfinder.use) 
 				powderRaw = (double*) calloc(pix_nn, sizeof(double));
 			if (icefinder.use) 
 				iceRaw = (double*) calloc(pix_nn, sizeof(double));
@@ -347,7 +347,7 @@ void cGlobal::setup() {
 		}
 		
 		if (powderAngularAvg || refineMetrology) {
-			if (hitfinder.use) 
+			if (hitfinder.use || listfinder.use) 
 				powderAverage = (double*) calloc(angularAvg_nn, sizeof(double));
 			if (icefinder.use) 
 				iceAverage = (double*) calloc(angularAvg_nn, sizeof(double));
@@ -384,7 +384,7 @@ void cGlobal::setup() {
 			correlation_nn = correlationNumQ*correlationNumQ*correlationNumDelta;
 		}
 		if (sumCorrelation) {
-			if (hitfinder.use) 
+			if (hitfinder.use || listfinder.use) 
 				powderCorrelation = (double*) calloc(correlation_nn, sizeof(double));
 			if (icefinder.use) 
 				iceCorrelation = (double*) calloc(correlation_nn, sizeof(double));
