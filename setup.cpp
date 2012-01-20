@@ -495,11 +495,11 @@ void cGlobal::setup() {
 		
 		if (debugLevel >= 1) {
 			// VERIFY OUTPUT
-			array1D *oneX = new array1D(pix_x, pix_nn);
-			array1D *oneY = new array1D(pix_y, pix_nn);
-			array1D *onePhi = new array1D(phi, pix_nn);		
+			array1D<double> *oneX = new array1D<double>(pix_x, pix_nn);
+			array1D<double> *oneY = new array1D<double>(pix_y, pix_nn);
+			array1D<double> *onePhi = new array1D<double>(phi, pix_nn);		
 			arraydataIO *io = new arraydataIO();
-			array2D *two = 0;
+			array2D<double> *two = 0;
 			
 			//raw images
 			char	filename[1024];

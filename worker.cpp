@@ -1196,12 +1196,12 @@ void saveRunningSums(cGlobal *global) {
 		
 		DEBUGL1_ONLY {
 			// VERIFY OUTPUT IN ASSEMBLED FORMAT
-			array1D *oneX = new array1D(global->pix_x, global->pix_nn);
-			array1D *oneY = new array1D(global->pix_y, global->pix_nn);
-			array1D *oneDark = new array1D(buffer3, global->pix_nn);		
-			array1D *oneDarkVariance = new array1D(buffer12, global->pix_nn);		
+			array1D<double> *oneX = new array1D<double>(global->pix_x, global->pix_nn);
+			array1D<double> *oneY = new array1D<double>(global->pix_y, global->pix_nn);
+			array1D<double> *oneDark = new array1D<double>(buffer3, global->pix_nn);		
+			array1D<double> *oneDarkVariance = new array1D<double>(buffer12, global->pix_nn);		
 			arraydataIO *io = new arraydataIO();
-			array2D *two = 0;
+			array2D<double> *two = 0;
 			
 			/*
 			 *	Save assembled darkcal
@@ -1717,7 +1717,7 @@ void calculateCenterCorrection(cGlobal *global, double *intensities, double norm
 	DEBUGL2_ONLY cout << "nR: " << nR << ", nC: " << nC << endl;
 	
 	// allocate hough array as 3D array (in doubles) initialized to zero
-	array3D *hough = new array3D(nR, nC, nC);
+	array3D<double> *hough = new array3D<double>(nR, nC, nC);
 	
 	// calculate hough array
 	for (int n=0; n<global->pix_nn; n++) {
@@ -1777,7 +1777,7 @@ void calculateCenterCorrection(tThreadInfo *info, cGlobal *global, float *intens
 	int nC = (int) ceil((2*global->centerCorrectionMaxC)/global->centerCorrectionDeltaC) + 1;
 	
 	// allocate hough array as 3D array (in doubles) initialized to zero
-	array3D *hough = new array3D(nR, nC, nC);
+	array3D<double> *hough = new array3D<double>(nR, nC, nC);
 	
 	// calculate hough array
 	for (int n=0; n<global->pix_nn; n++) {
