@@ -1674,17 +1674,19 @@ void makePowderQcalibration(cGlobal *global) {
 	for (int i=0; i<global->angularAvg_nn; i++) {
 		global->angularAvgQcal[i] = 4*M_PI*sin(atan(global->pixelSize*global->angularAvgQ[i]*1000/global->detectorZ)/2)/global->Lmean;
 	}
-	// write data to buffer
-	char	filename[1024];
-	printf("Saving Q-calibration to file\n");
-	sprintf(filename,"r%04u-angavg_Q.h5",global->runNumber);
-	for(int i=0; i<global->angularAvg_nn; i++) {
-		buffer[i] = (float) global->angularAvgQcal[i];
-	}	
-	// write buffer to HDF5
-	writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 1, H5T_NATIVE_FLOAT);
-	// free local arrays
-	free(buffer);
+	if (!global->powdersum || !global->powderAngularAvg) {
+		// write data to buffer only if it is not saved to powder angular average
+		char	filename[1024];
+		printf("Saving Q-calibration to file\n");
+		sprintf(filename,"r%04u-angavg_Q.h5",global->runNumber);
+		for(int i=0; i<global->angularAvg_nn; i++) {
+			buffer[i] = (float) global->angularAvgQcal[i];
+		}	
+		// write buffer to HDF5
+		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 1, H5T_NATIVE_FLOAT);
+		// free local arrays
+		free(buffer);
+	}
 	
 }
 
