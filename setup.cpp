@@ -132,6 +132,9 @@ void cGlobal::defaultConfiguration(void) {
 	usePolarizationCorrection = 0;
 	horizontalPolarization = 1;
 	
+	// Solid angle correction
+	useSolidAngleCorrection = 0;
+	
 	// Attenuation correction
 	useAttenuationCorrection = 0;
 	strcpy(attenuationFile, "attenuations.dat");
@@ -314,6 +317,7 @@ void cGlobal::setup() {
 			calculateCenterCorrectionHit = 0;
 			refineMetrology = 0;
 			usePolarizationCorrection = 0;
+			useSolidAngleCorrection = 0;
 			useAttenuationCorrection = -1;
 			useEnergyCalibration = 0;
 			useCorrelation = 0;
@@ -908,6 +912,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "horizontalpolarization")) {
 		horizontalPolarization = atof(value);
+	}
+	else if (!strcmp(tag, "usesolidanglecorrection")) {
+		useSolidAngleCorrection = atoi(value);
 	}
 	else if (!strcmp(tag, "useattenuationcorrection")) {
 		useAttenuationCorrection = atoi(value);

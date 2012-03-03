@@ -100,7 +100,7 @@ typedef struct {
 	double		photonEnergyeV;		// in eV
 	double		wavelengthA;		// in Angstrom
 	
-	double		detectorPosition; 
+	double		detectorPosition;	// in mm
 	
 	double		phaseCavityTime1;
 	double		phaseCavityTime2;
@@ -108,6 +108,7 @@ typedef struct {
 	double		phaseCavityCharge2;
 	
 	double		attenuation;		// 1/transmission taken from last succesful readout of the Si filters
+	double		solidAngle;			// constant term of solid angle correction in srad
 	
 	float		pixelCenterX;
 	float		pixelCenterY;
@@ -154,6 +155,7 @@ void applyGainCorrection(tThreadInfo*, cGlobal*);
 void applyBadPixelMask(tThreadInfo*, cGlobal*);
 void killHotpixels(tThreadInfo*, cGlobal*);
 void calculatePolarizationCorrection(tThreadInfo*, cGlobal*);
+void calculateSolidAngleCorrection(tThreadInfo*, cGlobal*);
 void applyAttenuationCorrection(tThreadInfo*, cGlobal*);
 void addToPowder(tThreadInfo*, cGlobal*, cHit*);
 void addToCorrelation(tThreadInfo *threadInfo, cGlobal *global, cHit *hit);

@@ -471,7 +471,7 @@ void event() {
 	threadInfo->phaseCavityCharge1 = phaseCavityCharge1;
 	threadInfo->phaseCavityCharge1 = phaseCavityCharge2;
 	
-	threadInfo->detectorPosition = global.detectorZ;
+	threadInfo->detectorPosition = global.detectorZ;	// in mm
 	
 	threadInfo->pixelCenterX = global.pixelCenterX;
 	threadInfo->pixelCenterY = global.pixelCenterY;

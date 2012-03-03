@@ -242,10 +242,22 @@ void *worker(void *threadarg) {
 	 *	Calculate polarization correction
 	 */
 	if (global->usePolarizationCorrection && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
-															   || (hit.water && global->waterfinder.savehits) 
-															   || (hit.ice && global->icefinder.savehits) 
-															   || (!hit.background && global->backgroundfinder.savehits) )) {
+											  || (hit.water && global->waterfinder.savehits) 
+											  || (hit.ice && global->icefinder.savehits) 
+											  || (!hit.background && global->backgroundfinder.savehits) )) {
 		calculatePolarizationCorrection(threadInfo, global);
+	}
+	
+	
+	/*
+	 *	Calculate solid angle correction
+	 */
+	threadInfo->solidAngle = global->pixelSize*global->pixelSize/(threadInfo->detectorPosition/1000*threadInfo->detectorPosition/1000);
+	if (global->useSolidAngleCorrection && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
+											  || (hit.water && global->waterfinder.savehits) 
+											  || (hit.ice && global->icefinder.savehits) 
+											  || (!hit.background && global->backgroundfinder.savehits) )) {
+		calculateSolidAngleCorrection(threadInfo, global);
 	}
 	
 	
@@ -521,6 +533,19 @@ void calculatePolarizationCorrection(tThreadInfo *threadInfo, cGlobal *global) {
 	}
 	
 	delete[] theta;
+}
+
+
+/*
+ *	Calculate solid angle correction
+ */
+void calculateSolidAngleCorrection(tThreadInfo *threadInfo, cGlobal *global) {
+	
+	// calculate scattering angle (theta) for each pixel and apply theta-dependent part of solid angle correction to corrected_data (assumes azimuthally symmetrically tiled pixels)
+	for (int i = 0; i < global->pix_nn; i++) {
+		double theta = atan(global->pixelSize*global->pix_r[i]*1000/threadInfo->detectorPosition);
+		threadInfo->corrected_data[i] /= cos(theta)*cos(theta)*cos(theta); // only theta-dependence of correction applied to corrected_data
+	}
 }
 
 
@@ -997,7 +1022,13 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	
 	// Attenuation
 	dataset_id = H5Dcreate1(hdf_fileID, "/LCLS/attenuation", H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT);
-	H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &info->attenuation );	
+	H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &info->attenuation );
+	H5Dclose(dataset_id);
+	
+	
+	// Solid Angle
+	dataset_id = H5Dcreate1(hdf_fileID, "/LCLS/solidAngle", H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT);
+	H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &info->solidAngle );
 	H5Dclose(dataset_id);
 	
 	
@@ -1450,21 +1481,42 @@ void calculatePowderAngularAvg(cGlobal *global) {
 		}
 	}
 	
-	for (int i=0; i<global->angularAvg_nn; i++) {
-		if (global->hitfinder.use || global->listfinder.use) {
-			if (counterp[i]) global->powderAverage[i] /= counterp[i];
+	if (global->useSolidAngleCorrection) {
+		double solidAngle = global->pixelSize*global->pixelSize/(global->detectorZ/1000*global->detectorZ/1000);
+		for (int i=0; i<global->angularAvg_nn; i++) {
+			if (global->hitfinder.use || global->listfinder.use) {
+				if (counterp[i]) global->powderAverage[i] /= counterp[i]*solidAngle;
+			}
+			if (global->icefinder.use) {
+				if (counteri[i]) global->iceAverage[i] /= counteri[i]*solidAngle;
+			}
+			if (global->waterfinder.use) {
+				if (counterw[i]) global->waterAverage[i] /= counterw[i]*solidAngle;
+			}
+			
+			DEBUGL2_ONLY {
+				if (global->hitfinder.use || global->listfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterp[i] << ",\tI(powder): " << global->powderAverage[i] << endl;
+				if (global->icefinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counteri[i] << ",\tI(water): " << global->iceAverage[i] << endl;
+				if (global->waterfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterw[i] << ",\tI(ice): " << global->waterAverage[i] << endl;
+			}
 		}
-		if (global->icefinder.use) {
-			if (counteri[i]) global->iceAverage[i] /= counteri[i];
-		}
-		if (global->waterfinder.use) {
-			if (counterw[i]) global->waterAverage[i] /= counterw[i];
-		}
-		
-		DEBUGL2_ONLY {
-			if (global->hitfinder.use || global->listfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterp[i] << ",\tI(powder): " << global->powderAverage[i] << endl;
-			if (global->icefinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counteri[i] << ",\tI(water): " << global->iceAverage[i] << endl;
-			if (global->waterfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterw[i] << ",\tI(ice): " << global->waterAverage[i] << endl;
+	} else {
+		for (int i=0; i<global->angularAvg_nn; i++) {
+			if (global->hitfinder.use || global->listfinder.use) {
+				if (counterp[i]) global->powderAverage[i] /= counterp[i];
+			}
+			if (global->icefinder.use) {
+				if (counteri[i]) global->iceAverage[i] /= counteri[i];
+			}
+			if (global->waterfinder.use) {
+				if (counterw[i]) global->waterAverage[i] /= counterw[i];
+			}
+			
+			DEBUGL2_ONLY {
+				if (global->hitfinder.use || global->listfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterp[i] << ",\tI(powder): " << global->powderAverage[i] << endl;
+				if (global->icefinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counteri[i] << ",\tI(water): " << global->iceAverage[i] << endl;
+				if (global->waterfinder.use) cout << "Q: " << global->angularAvgQ[i] << ",   \t# pixels: " << counterw[i] << ",\tI(ice): " << global->waterAverage[i] << endl;
+			}
 		}
 	}
 	
@@ -1553,8 +1605,14 @@ void calculateAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
 		}
 	}
 	
-	for (int i=0; i<global->angularAvg_nn; i++) {
-		if (counter[i]) threadInfo->angularAvg[i] /= counter[i];
+	if (global->useSolidAngleCorrection) {
+		for (int i=0; i<global->angularAvg_nn; i++) {
+			if (counter[i]) threadInfo->angularAvg[i] /= counter[i]*threadInfo->solidAngle;
+		}
+	} else {
+		for (int i=0; i<global->angularAvg_nn; i++) {
+			if (counter[i]) threadInfo->angularAvg[i] /= counter[i];
+		}
 	}
 	
 	// free memory of local variables

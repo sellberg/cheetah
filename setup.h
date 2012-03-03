@@ -130,6 +130,9 @@ public:
 	int			usePolarizationCorrection;	// set to nonzero to calculate and apply polarization correction to each hit (or saved event)
 	double		horizontalPolarization;		// determines the ratio of horizontal polarization versus vertical polarization of the FEL beam, valid values are [0,1]
 	
+	// Solid angle correction
+	int			useSolidAngleCorrection;	// set to nonzero to calculate and apply solid angle correction to each hit (or saved event), only the theta-dependent part of the correction is applied to the 2D scattering pattern
+	
 	// Attenuation correction
 	int			useAttenuationCorrection;		// Whether to correct each event's intensity with the calculated attenuation
 	char		attenuationFile[1024];			// Name of the file containing the attenuation list
