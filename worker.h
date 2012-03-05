@@ -60,7 +60,7 @@ typedef struct {
 	int			busy;
 	long		threadNum;
 	
-	// cspad data
+	// CSPAD data
 	int			cspad_fail;
 	float		quad_temperature[4];
 	uint16_t	*quad_data[4];
@@ -109,9 +109,13 @@ typedef struct {
 	double		attenuation;		// 1/transmission taken from last succesful readout of the Si filters
 	double		solidAngle;			// constant term of solid angle correction in srad
 	
+	// Metrology data
 	float		pixelCenterX;
 	float		pixelCenterY;
-		
+	double		*theta;
+	double		*pix_qx;
+	double		*pix_qy;
+	
 	
 } tThreadInfo;
 
@@ -153,6 +157,7 @@ void subtractDarkcal(tThreadInfo*, cGlobal*);
 void applyGainCorrection(tThreadInfo*, cGlobal*);
 void applyBadPixelMask(tThreadInfo*, cGlobal*);
 void killHotpixels(tThreadInfo*, cGlobal*);
+void calculateScatteringAngle(tThreadInfo*, cGlobal*);
 void calculatePolarizationCorrection(tThreadInfo*, cGlobal*);
 void calculateSolidAngleCorrection(tThreadInfo*, cGlobal*);
 void applyAttenuationCorrection(tThreadInfo*, cGlobal*);

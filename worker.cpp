@@ -86,6 +86,9 @@ void *worker(void *threadarg) {
 	threadInfo->angularAvgQ = NULL;
 	threadInfo->correlation = NULL;
 	threadInfo->image = NULL;
+	threadInfo->theta = NULL;
+	threadInfo->pix_qx = NULL;
+	threadInfo->pix_qy = NULL;
 	
 	
 	/*
@@ -236,12 +239,24 @@ void *worker(void *threadarg) {
 	
 	
 	/*
+	 *	Calculate scattering angle (theta)
+	 */
+	if ((global->usePolarizationCorrection || global->useSolidAngleCorrection || global->useCorrelation) && (global->hdf5dump 
+																			  || (hit.standard && global->hitfinder.savehits) 
+																		      || (hit.water && global->waterfinder.savehits) 
+																			  || (hit.ice && global->icefinder.savehits) 
+																			  || (!hit.background && global->backgroundfinder.savehits) )) {
+		calculateScatteringAngle(threadInfo, global);
+	}
+	
+	
+	/*
 	 *	Calculate polarization correction
 	 */
 	if (global->usePolarizationCorrection && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
-											  || (hit.water && global->waterfinder.savehits) 
-											  || (hit.ice && global->icefinder.savehits) 
-											  || (!hit.background && global->backgroundfinder.savehits) )) {
+															   || (hit.water && global->waterfinder.savehits) 
+															   || (hit.ice && global->icefinder.savehits) 
+															   || (!hit.background && global->backgroundfinder.savehits) )) {
 		calculatePolarizationCorrection(threadInfo, global);
 	}
 	
@@ -251,9 +266,9 @@ void *worker(void *threadarg) {
 	 */
 	threadInfo->solidAngle = global->pixelSize*global->pixelSize/(threadInfo->detectorPosition/1000*threadInfo->detectorPosition/1000);
 	if (global->useSolidAngleCorrection && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
-											  || (hit.water && global->waterfinder.savehits) 
-											  || (hit.ice && global->icefinder.savehits) 
-											  || (!hit.background && global->backgroundfinder.savehits) )) {
+															 || (hit.water && global->waterfinder.savehits) 
+															 || (hit.ice && global->icefinder.savehits) 
+															 || (!hit.background && global->backgroundfinder.savehits) )) {
 		calculateSolidAngleCorrection(threadInfo, global);
 	}
 	
@@ -439,6 +454,9 @@ void *worker(void *threadarg) {
 	free(threadInfo->angularAvg);
 	free(threadInfo->angularAvgQ);
 	free(threadInfo->correlation);
+	free(threadInfo->theta);
+	free(threadInfo->pix_qx);
+	free(threadInfo->pix_qy);
 	free(threadInfo);
 	
 	// Exit thread
@@ -511,24 +529,32 @@ void killHotpixels(tThreadInfo *threadInfo, cGlobal *global){
 
 
 /*
+ *	Calculate array of scattering angle (theta)
+ */
+void calculateScatteringAngle(tThreadInfo *threadInfo, cGlobal *global) {
+	
+	// allocate scattering angle array
+	if (threadInfo->theta) {
+		delete[] threadInfo->theta;
+	}
+	threadInfo->theta = new double[global->pix_nn];
+	
+	// calculate scattering angle (theta) for each pixel
+	for (int i = 0; i < global->pix_nn; i++) {
+		threadInfo->theta[i] = atan(global->pixelSize*global->pix_r[i]*1000/threadInfo->detectorPosition);
+	}
+}
+
+
+/*
  *	Calculate polarization correction
  */
 void calculatePolarizationCorrection(tThreadInfo *threadInfo, cGlobal *global) {
 	
-	// initialize local angle arrays
-	double *theta = new double[global->pix_nn];
-	
-	// calculate scattering angle (theta) for each pixel
-	for (int i = 0; i < global->pix_nn; i++) {
-		theta[i] = atan(global->pixelSize*global->pix_r[i]*1000/threadInfo->detectorPosition);
-	}
-	
 	// calculate and apply polarization correction to corrected_data (from Hura et al JCP 2000)
 	for (int i = 0; i < global->pix_nn; i++) {
-		threadInfo->corrected_data[i] /= global->horizontalPolarization*(1 - sin(global->phi[i])*sin(global->phi[i])*sin(theta[i])*sin(theta[i])) + (1 - global->horizontalPolarization)*(1 - cos(global->phi[i])*cos(global->phi[i])*sin(theta[i])*sin(theta[i]));
+		threadInfo->corrected_data[i] /= global->horizontalPolarization*(1 - sin(global->phi[i])*sin(global->phi[i])*sin(threadInfo->theta[i])*sin(threadInfo->theta[i])) + (1 - global->horizontalPolarization)*(1 - cos(global->phi[i])*cos(global->phi[i])*sin(threadInfo->theta[i])*sin(threadInfo->theta[i]));
 	}
-	
-	delete[] theta;
 }
 
 
@@ -537,10 +563,9 @@ void calculatePolarizationCorrection(tThreadInfo *threadInfo, cGlobal *global) {
  */
 void calculateSolidAngleCorrection(tThreadInfo *threadInfo, cGlobal *global) {
 	
-	// calculate scattering angle (theta) for each pixel and apply theta-dependent part of solid angle correction to corrected_data (assumes azimuthally symmetrically tiled pixels)
+	// calculate and apply theta-dependent part of solid angle correction to corrected_data (assumes azimuthally symmetrically tiled pixels)
 	for (int i = 0; i < global->pix_nn; i++) {
-		double theta = atan(global->pixelSize*global->pix_r[i]*1000/threadInfo->detectorPosition);
-		threadInfo->corrected_data[i] /= cos(theta)*cos(theta)*cos(theta); // only theta-dependence of correction applied to corrected_data
+		threadInfo->corrected_data[i] /= cos(threadInfo->theta[i])*cos(threadInfo->theta[i])*cos(threadInfo->theta[i]);
 	}
 }
 
