@@ -66,6 +66,7 @@ public:
 	// Real-space geometry
 	char		geometryFile[1024];		// File containing pixelmap (X,Y coordinate of each pixel in raw data stream)
 	float		pixelSize;			// in meters
+	double		detectorOffset;		// offset in nominal detector position (mm), follows CXI coordinate system; positive value (+Z) moves detector further downstream
 	int			useCenterCorrection;	// set to nonzero to shift 0 of pixel array to the center of the square hole
 	float		pixelCenterX;		// option to manually override the calculated center of the square hole (if useCenterCorrection is enabled) and set the center to X in pixels if pixelCenterX is nonzero
 	float		pixelCenterY;		// option to manually override the calculated center of the square hole (if useCenterCorrection is enabled) and set the center to Y in pixels if pixelCenterY is nonzero

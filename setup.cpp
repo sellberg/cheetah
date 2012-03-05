@@ -67,6 +67,7 @@ void cGlobal::defaultConfiguration(void) {
 	// Geometry
 	strcpy(geometryFile, "geometry/cspad_pixelmap.h5");
 	pixelSize = 109.92e-6;
+	detectorOffset = 0;
 	useCenterCorrection = 0;
 	pixelCenterX = 0;
 	pixelCenterY = 0;
@@ -938,6 +939,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "pixelsize")) {
 		pixelSize = atof(value);
+	}
+	else if (!strcmp(tag, "detectoroffset")) {
+		detectorOffset = atof(value);
 	}
 	else if (!strcmp(tag, "debuglevel")) {
 		debugLevel = atoi(value);

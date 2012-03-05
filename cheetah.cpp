@@ -379,7 +379,7 @@ void event() {
 		 * 8" flange where the injector is mounted.  The injector itself is
 		 * about 4mm further away from the detector than this. */
 		// printf("New detector pos %e\n", detposnew);
-		global.detectorZ = 500.0 + detposnew + 79.0;
+		global.detectorZ = 500.0 + detposnew + 79.0 + global.detectorOffset;
 	}
 	
 	
