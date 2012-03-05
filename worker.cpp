@@ -67,19 +67,16 @@ void *worker(void *threadarg) {
 	/*
 	 *	Assemble data from all four quadrants into one large array (rawdata format)
 	 */
-	threadInfo->raw_data = (uint16_t*) calloc(RAW_DATA_LENGTH,sizeof(uint16_t));
+	threadInfo->corrected_data = (float*) calloc(RAW_DATA_LENGTH,sizeof(float));
 	for(int quadrant=0; quadrant<4; quadrant++) {
 		long	i,j,ii;
 		for(long k=0; k<2*ROWS*8*COLS; k++) {
 			i = k % (2*ROWS) + quadrant*(2*ROWS);
 			j = k / (2*ROWS);
 			ii  = i+(8*ROWS)*j;
-			threadInfo->raw_data[ii] = threadInfo->quad_data[quadrant][k];
+			threadInfo->corrected_data[ii] = (float) threadInfo->quad_data[quadrant][k];
 		}
 	}
-	threadInfo->corrected_data = (float*) calloc(RAW_DATA_LENGTH,sizeof(float));
-	for(long i=0;i<global->pix_nn;i++)
-		threadInfo->corrected_data[i] = threadInfo->raw_data[i];
 	
 	
 	/*
@@ -437,7 +434,6 @@ void *worker(void *threadarg) {
 	// Free memory
 	for(int quadrant=0; quadrant<4; quadrant++) 
 		free(threadInfo->quad_data[quadrant]);	
-	free(threadInfo->raw_data);
 	free(threadInfo->corrected_data);
 	free(threadInfo->image);
 	free(threadInfo->angularAvg);
