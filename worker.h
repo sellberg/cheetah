@@ -112,9 +112,9 @@ typedef struct {
 	// Metrology data
 	float		pixelCenterX;
 	float		pixelCenterY;
+	float		*pix_qx;
+	float		*pix_qy;
 	double		*theta;
-	double		*pix_qx;
-	double		*pix_qy;
 	
 	
 } tThreadInfo;
@@ -158,6 +158,7 @@ void applyGainCorrection(tThreadInfo*, cGlobal*);
 void applyBadPixelMask(tThreadInfo*, cGlobal*);
 void killHotpixels(tThreadInfo*, cGlobal*);
 void calculateScatteringAngle(tThreadInfo*, cGlobal*);
+int calculatePixelMaps(tThreadInfo*, cGlobal*);
 void calculatePolarizationCorrection(tThreadInfo*, cGlobal*);
 void calculateSolidAngleCorrection(tThreadInfo*, cGlobal*);
 void applyAttenuationCorrection(tThreadInfo*, cGlobal*);

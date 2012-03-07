@@ -467,7 +467,7 @@ void cGlobal::setup() {
 	 *	Setup global polarization correction variables
 	 */
 	phi = NULL;
-	if (usePolarizationCorrection) {
+	if (usePolarizationCorrection || useCorrelation) {
 		phi = new double[pix_nn];
 		// check that horizontal polarization is in range [0,1]
 		if (horizontalPolarization > 1) horizontalPolarization = 1;
@@ -490,7 +490,7 @@ void cGlobal::setup() {
 //				phii += 2*M_PI;
 //			}
 			// NEW ALGORITHM
-			double phii = atan2( pix_x[i], pix_y[i] );
+			double phii = atan2(pix_x[i], pix_y[i]);
 			if (phii < 0) { // make sure the angle is between 0 and 2PI
 				phii += 2*M_PI;
 			}

@@ -59,11 +59,11 @@ using std::string;
 		CrossCorrelator *cc = NULL;
 		if (global->autoCorrelateOnly) {
 			cc = new CrossCorrelator( //auto-correlation 2D case, no mask
-					threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+					threadInfo->corrected_data, threadInfo->pix_qx, threadInfo->pix_qy, RAW_DATA_LENGTH, 
 					global->correlationNumPhi, global->correlationNumQ );
 		} else {
 			cc = new CrossCorrelator( //full cross-correlation 3D case
-					threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+					threadInfo->corrected_data, threadInfo->pix_qx, threadInfo->pix_qy, RAW_DATA_LENGTH, 
 					global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );	
 		}
 		
@@ -195,7 +195,12 @@ using std::string;
 		
 		double *buffer;
 		buffer = (double*) calloc(nQ*nQ*nLag, sizeof(double));
-		if (global->sumCorrelation) info->correlation = (double*) calloc(global->correlation_nn, sizeof(double));
+		if (global->sumCorrelation) {
+			if (info->correlation) {
+				delete[] info->correlation;
+			}
+			info->correlation = (double*) calloc(global->correlation_nn, sizeof(double));
+		}
 		
 		if (global->autoCorrelateOnly){
 			sprintf(outfile,"%s-xaca.bin",eventname);

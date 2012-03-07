@@ -92,6 +92,12 @@ void *worker(void *threadarg) {
 	
 	
 	/*
+     *  Initialize fail check for averaging
+     */
+	int fail = 0;
+	
+	
+	/*
 	 *	Create a unique name for this event
 	 */
 	nameEvent(threadInfo, global);
@@ -295,7 +301,7 @@ void *worker(void *threadarg) {
 												   || (hit.ice && global->icefinder.savehits) 
 								  				   || (!hit.background && global->backgroundfinder.savehits) )) {
 		calculateAngularAvg(threadInfo, global);
-		int fail = makeQcalibration(threadInfo, global);
+		fail = makeQcalibration(threadInfo, global);
 		if (!fail) saveAngularAvg(threadInfo, global);
 		else cout << "Failed to calibrate Q for " << threadInfo->eventname << ", angular average NOT saved." << endl;
 	}
@@ -308,7 +314,9 @@ void *worker(void *threadarg) {
 													|| (hit.water && global->waterfinder.savehits) 
 													|| (hit.ice && global->icefinder.savehits) 
 													|| (!hit.background && global->backgroundfinder.savehits) )) {
-		correlate(threadInfo, global);
+		fail = calculatePixelMaps(threadInfo, global);
+		if (!fail) correlate(threadInfo, global);
+		else cout << "Failed to make Q-calibrated pixel maps for " << threadInfo->eventname << ", correlation NOT saved." << endl;
 	}
 	
 	
@@ -326,13 +334,13 @@ void *worker(void *threadarg) {
 	/*
 	 *	Add to powder if it's a hit or if we wish to generateDarkcal(member data of global)
 	 */
-	addToPowder(threadInfo, global, &hit);
+	if (!fail) addToPowder(threadInfo, global, &hit);
 	
 	
 	/*
 	 *	Add to correlation sum if it's a hit and if correlation sum is activated
 	 */
-	addToCorrelation(threadInfo, global, &hit);
+	if (!fail) addToCorrelation(threadInfo, global, &hit);
 	
 	
 	/*
@@ -543,6 +551,35 @@ void calculateScatteringAngle(tThreadInfo *threadInfo, cGlobal *global) {
 	for (int i = 0; i < global->pix_nn; i++) {
 		threadInfo->theta[i] = atan(global->pixelSize*global->pix_r[i]*1000/threadInfo->detectorPosition);
 	}
+}
+
+
+/*
+ *	Calculate Q-calibrated pixel maps
+ */
+int calculatePixelMaps(tThreadInfo *threadInfo, cGlobal *global) {
+	
+	// sanity check
+	if (threadInfo->detectorPosition > 60 && threadInfo->detectorPosition < 600 && threadInfo->wavelengthA == threadInfo->wavelengthA) {
+		// allocate arrays for Q-calibrated pixel maps (needs to be float precision for current CrossCorrelator)
+		if (threadInfo->pix_qx) {
+			delete[] threadInfo->pix_qx;
+		}
+		if (threadInfo->pix_qy) {
+			delete[] threadInfo->pix_qy;
+		}
+		threadInfo->pix_qx = new float[global->pix_nn];
+		threadInfo->pix_qy = new float[global->pix_nn];
+		
+		// calculate the magnitude of the perpendicular q-component and create the qx/qx pixel maps from that
+		for (int i = 0; i < global->pix_nn; i++) {
+			double pix_qperp = 2*M_PI*sin(threadInfo->theta[i])/threadInfo->wavelengthA;
+			threadInfo->pix_qx[i] = (float) pix_qperp*sin(global->phi[i]); // phi=0 is defined in +Y direction
+			threadInfo->pix_qy[i] = (float) pix_qperp*cos(global->phi[i]);
+		}
+		
+		return 0;
+	} else return 1;
 }
 
 
@@ -1747,6 +1784,9 @@ void makeEnergyHistograms(cGlobal *global) {
 void makePowderQcalibration(cGlobal *global) {
 	
 	// allocate arrays
+	if (global->angularAvgQcal) {
+		delete[] global->angularAvgQcal;
+	}
 	global->angularAvgQcal = new double[global->angularAvg_nn];
 	float *buffer = (float*) calloc(global->angularAvg_nn, sizeof(float));
 	// calculate Q-calibration (using the detector position from the last event)
@@ -1775,6 +1815,9 @@ int makeQcalibration(tThreadInfo *threadInfo, cGlobal *global) {
 	// sanity check
 	if (threadInfo->detectorPosition > 60 && threadInfo->detectorPosition < 600 && threadInfo->wavelengthA == threadInfo->wavelengthA) {
 		// allocate arrays
+		if (threadInfo->angularAvgQ) {
+			delete[] threadInfo->angularAvgQ;
+		}
 		threadInfo->angularAvgQ = (double*) calloc(global->angularAvg_nn, sizeof(double));
 		// calculate Q-calibration (using the detector position and energy from the current event)
 		for (int i=0; i<global->angularAvg_nn; i++) {

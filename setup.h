@@ -172,7 +172,7 @@ public:
 	int			sumCorrelation;		// set to nonzero to sum cross-correlation patterns for different hits
 	int			autoCorrelateOnly;		// set to nonzero to only calculate autocorrelation (q1=q2)
     double 		correlationStartQ;		// customize the range of the correlation algorithms
-    double 		correlationStopQ;		// startQ/stopQ are in units of detector pixels
+    double 		correlationStopQ;		// startQ/stopQ are in absolute units of Å-1
     int 		correlationNumQ;		// number of q values between start and stop
     double 		correlationStartPhi;	// start angle in degrees, default: 0
     double 		correlationStopPhi;		// stop angle in degrees, default: 360
