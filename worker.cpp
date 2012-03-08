@@ -600,10 +600,70 @@ void calculatePolarizationCorrection(tThreadInfo *threadInfo, cGlobal *global) {
  */
 void calculateSolidAngleCorrection(tThreadInfo *threadInfo, cGlobal *global) {
 	
-	// calculate and apply theta-dependent part of solid angle correction to corrected_data (assumes azimuthally symmetrically tiled pixels)
+	// Azimuthally symmetrical correction
+//	for (int i = 0; i < global->pix_nn; i++) {
+//		threadInfo->corrected_data[i] /= cos(threadInfo->theta[i])*cos(threadInfo->theta[i])*cos(threadInfo->theta[i]);
+//	}
+	
+	// Rigorous correction from solid angle of a plane triangle
 	for (int i = 0; i < global->pix_nn; i++) {
-		threadInfo->corrected_data[i] /= cos(threadInfo->theta[i])*cos(threadInfo->theta[i])*cos(threadInfo->theta[i]);
-	}
+		
+		// allocate local arrays
+		double corner_coordinates[4][3]; // array of vector coordinates of pixel corners, first index starts from upper left corner and goes around clock-wise, second index determines X=0/Y=1/Z=2 coordinate
+		double corner_distances[4]; // array of distances of pixel corners, index starts from upper left corner and goes around clock-wise
+		double determinant;
+		double denominator;
+		double solid_angle[2]; // array of solid angles of the two plane triangles that form the pixel
+		double total_solid_angle;
+		
+		// OBS: current assignment relies on X/Y/Z coordinates from assembled pixel maps, where X is in OPPOSITE direction (positive values away from the hutch door) of the CXI coordinate system
+		// upper left corner
+		corner_coordinates[0][0] = global->pix_x[i]*global->pixelSize - global->pixelSize/2;
+		corner_coordinates[0][1] = global->pix_y[i]*global->pixelSize + global->pixelSize/2;
+		// upper right corner
+		corner_coordinates[1][0] = global->pix_x[i]*global->pixelSize + global->pixelSize/2;
+		corner_coordinates[1][1] = global->pix_y[i]*global->pixelSize + global->pixelSize/2;
+		// lower right corner
+		corner_coordinates[2][0] = global->pix_x[i]*global->pixelSize + global->pixelSize/2;
+		corner_coordinates[2][1] = global->pix_y[i]*global->pixelSize - global->pixelSize/2;
+		// lower left corner
+		corner_coordinates[3][0] = global->pix_x[i]*global->pixelSize - global->pixelSize/2;
+		corner_coordinates[3][1] = global->pix_y[i]*global->pixelSize - global->pixelSize/2;
+		// assign Z coordinate as detector distance and calculate length of the vectors to the pixel coordinates
+		for (int j = 0; j < 4; j++) {
+			corner_coordinates[j][2] = threadInfo->detectorPosition/1000;
+			corner_distances[j] = sqrt(corner_coordinates[j][0]*corner_coordinates[j][0] + corner_coordinates[j][1]*corner_coordinates[j][1] + corner_coordinates[j][2]*corner_coordinates[j][2]);
+		}
+		
+		// first triangle made up of upper left, upper right, and lower right corner
+		// nominator in expression for solid angle of a plane triangle - magnitude of triple product of first 3 corners
+		determinant = fabs( corner_coordinates[0][0]*(corner_coordinates[1][1]*corner_coordinates[2][2] - corner_coordinates[1][2]*corner_coordinates[2][1])
+						  - corner_coordinates[0][1]*(corner_coordinates[1][0]*corner_coordinates[2][2] - corner_coordinates[1][2]*corner_coordinates[2][0])
+						  + corner_coordinates[0][2]*(corner_coordinates[1][0]*corner_coordinates[2][1] - corner_coordinates[1][1]*corner_coordinates[2][0]) );
+		denominator = corner_distances[0]*corner_distances[1]*corner_distances[2] + corner_distances[2]*(corner_coordinates[0][0]*corner_coordinates[1][0] + corner_coordinates[0][1]*corner_coordinates[1][1] + corner_coordinates[0][2]*corner_coordinates[1][2])
+																				  + corner_distances[1]*(corner_coordinates[0][0]*corner_coordinates[2][0] + corner_coordinates[0][1]*corner_coordinates[2][1] + corner_coordinates[0][2]*corner_coordinates[2][2])
+																				  + corner_distances[0]*(corner_coordinates[1][0]*corner_coordinates[2][0] + corner_coordinates[1][1]*corner_coordinates[2][1] + corner_coordinates[1][2]*corner_coordinates[2][2]);
+		solid_angle[0] = atan2(determinant, denominator);
+		if (solid_angle[0] < 0)
+			solid_angle[0] += M_PI; // If det > 0 and denom < 0 arctan2 returns < 0, so add PI
+		
+		// second triangle made up of lower right, lower left, and upper left corner
+		// nominator in expression for solid angle of a plane triangle - magnitude of triple product of last 3 corners
+		determinant = fabs( corner_coordinates[0][0]*(corner_coordinates[3][1]*corner_coordinates[2][2] - corner_coordinates[3][2]*corner_coordinates[2][1])
+						   - corner_coordinates[0][1]*(corner_coordinates[3][0]*corner_coordinates[2][2] - corner_coordinates[3][2]*corner_coordinates[2][0])
+						   + corner_coordinates[0][2]*(corner_coordinates[3][0]*corner_coordinates[2][1] - corner_coordinates[3][1]*corner_coordinates[2][0]) );
+		denominator = corner_distances[2]*corner_distances[3]*corner_distances[0] + corner_distances[2]*(corner_coordinates[0][0]*corner_coordinates[3][0] + corner_coordinates[0][1]*corner_coordinates[3][1] + corner_coordinates[0][2]*corner_coordinates[3][2])
+																				  + corner_distances[3]*(corner_coordinates[0][0]*corner_coordinates[2][0] + corner_coordinates[0][1]*corner_coordinates[2][1] + corner_coordinates[0][2]*corner_coordinates[2][2])
+																				  + corner_distances[0]*(corner_coordinates[3][0]*corner_coordinates[2][0] + corner_coordinates[3][1]*corner_coordinates[2][1] + corner_coordinates[3][2]*corner_coordinates[2][2]);
+		solid_angle[1] = atan2(determinant, denominator);
+		if (solid_angle[1] < 0)
+			solid_angle[1] += M_PI; // If det > 0 and denom < 0 arctan2 returns < 0, so add PI
+		
+		total_solid_angle = 2*(solid_angle[0] + solid_angle[1]);
+		
+		threadInfo->corrected_data[i] /= total_solid_angle/threadInfo->solidAngle; // remove constant term to only get theta/phi dependent part of solid angle correction for 2D pattern
+	}	
+	
 }
 
 
