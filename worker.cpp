@@ -462,9 +462,9 @@ void *worker(void *threadarg) {
 	free(threadInfo->angularAvg);
 	free(threadInfo->angularAvgQ);
 	free(threadInfo->correlation);
-	free(threadInfo->theta);
-	free(threadInfo->pix_qx);
-	free(threadInfo->pix_qy);
+	delete[] threadInfo->theta;
+	delete[] threadInfo->pix_qx;
+	delete[] threadInfo->pix_qy;
 	free(threadInfo);
 	
 	// Exit thread
@@ -1713,6 +1713,9 @@ void calculateAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
 	
 	// allocate local & threadInfo arrays
 	unsigned *counter = (unsigned*) calloc(global->angularAvg_nn, sizeof(unsigned));
+	if (threadInfo->angularAvg) {
+		free(threadInfo->angularAvg);
+	}
 	threadInfo->angularAvg = (double*) calloc(global->angularAvg_nn, sizeof(double));
 	
 	// angular average for each |q|
@@ -1876,7 +1879,7 @@ int makeQcalibration(tThreadInfo *threadInfo, cGlobal *global) {
 	if (threadInfo->detectorPosition > 60 && threadInfo->detectorPosition < 600 && threadInfo->wavelengthA == threadInfo->wavelengthA) {
 		// allocate arrays
 		if (threadInfo->angularAvgQ) {
-			delete[] threadInfo->angularAvgQ;
+			free(threadInfo->angularAvgQ);
 		}
 		threadInfo->angularAvgQ = (double*) calloc(global->angularAvg_nn, sizeof(double));
 		// calculate Q-calibration (using the detector position and energy from the current event)
