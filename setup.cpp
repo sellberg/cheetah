@@ -436,6 +436,7 @@ void cGlobal::setup() {
 	gettimeofday(&lasttime, NULL);
 	datarate = 1;
 	detectorZ = 0;
+	detposold = 0;
 	runNumber = getRunNumber();
 	time(&tstart);
 	avgGMD = 0;

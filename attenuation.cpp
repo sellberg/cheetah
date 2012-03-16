@@ -73,7 +73,7 @@ int getSiThickness(unsigned & totalThickness, unsigned nFilters, unsigned filter
 			// cout << "filterPosition: " << filterPositions[i] << endl;
 			if (filterPositions[i] > 20 && filterPositions[i] < 30) totalThickness += filterThicknesses[i];
 			else if (filterPositions[i] < -2.5 || filterPositions[i] > 2.5) {
-				cout << "Silicon Filter " << filterNumber << " with thickness " << filterThicknesses[i] << " is out of position: " << filterPositions[i] << endl;
+				cout << "Silicon Filter " << filterNumber << " with thickness " << filterThicknesses[i] << " um is out of position: " << filterPositions[i] << " mm" << endl;
 				totalFail++;
 			}
 		} else {

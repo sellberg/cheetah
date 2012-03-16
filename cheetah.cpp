@@ -51,6 +51,7 @@ using std::string;
 #include <pthread.h>
 #include <stdlib.h>
 #include <limits>
+#include <cmath>
 
 #include "setup.h"
 #include "worker.h"
@@ -374,12 +375,23 @@ void event() {
 	 */
 	float detposnew;
 	if ( getPvFloat("CXI:DS1:MMS:06", detposnew) == 0 ) {
+		// sanity check of detector readout, corrects artificial 'jumps' in the detector position if detector change is larger than 1 mm between events, corresponding to a speed larger than 120 mm/s
+		if (fabs(detposnew - global.detposold) > 102.5 && nevents != 0) { // 102.5 corresponds to 100 mm/s, which is far above the upper limit of the detector speed
+			printf("Old detector position = %2.2f mm\n", global.detposold);
+			printf("New detector position = %2.2f mm\n", detposnew);
+			cout << "Detector change of " << fabs(detposnew - global.detposold)*120/123 << " mm/s" << endl;
+			cout << "\tArtificial detector jump detected! Keeping the old detector position." << endl;
+			detposnew = global.detposold;
+		} else {
+			global.detposold = detposnew;
+		}
 		/* When encoder reads -500mm, detector is at its closest possible
 		 * position to the specimen, and is 79mm from the centre of the 
 		 * 8" flange where the injector is mounted.  The injector itself is
 		 * about 4mm further away from the detector than this. */
-		// printf("New detector pos %e\n", detposnew);
 		global.detectorZ = 500.0 + detposnew + 79.0 + global.detectorOffset;
+	} else if ((nevents-global.attenuationOffset) % 123 == 0) {
+		cout << "Failed to retrieve detector position for EVENT #" << nevents+1 << endl;
 	}
 	
 	

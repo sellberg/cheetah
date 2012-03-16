@@ -325,6 +325,7 @@ public:
 	long			nhits;			// number of hits that have been found
 	long			correlation_nn;	// length of global cross-correlation arrays
 	double			detectorZ;		// position (mm) of the detector along the beam direction
+	float			detposold;		// the detector position of the second last event, this makes sure the detector doesn't artificially 'jump' between events due to bug in PV readout
 	
 	clock_t			lastclock;		// variables for keeping track of time the program has been running
 	timeval			lasttime;	

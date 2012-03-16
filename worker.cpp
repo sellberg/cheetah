@@ -577,7 +577,7 @@ int calculatePixelMaps(tThreadInfo *threadInfo, cGlobal *global) {
 			threadInfo->pix_qx[i] = (float) pix_qperp*sin(global->phi[i]); // phi=0 is defined in +Y direction
 			threadInfo->pix_qy[i] = (float) pix_qperp*cos(global->phi[i]);
 		}
-		
+				
 		return 0;
 	} else return 1;
 }
@@ -1425,13 +1425,13 @@ void saveRunningSums(cGlobal *global) {
 				 */
 				printf("Saving correlation sum data to file\n");
 				sprintf(filename,"r%04u-CorrelationSum.h5",global->runNumber);
-				float *buffer8 = (float*) calloc(global->correlation_nn, sizeof(float));
+				double *buffer8 = (double*) calloc(global->correlation_nn, sizeof(double));
 				pthread_mutex_lock(&global->powdersumcorrelation_mutex);
 				for(long i=0; i<global->correlation_nn; i++)
-					buffer8[i] = (float) (global->powderCorrelation[i]/global->npowder);
+					buffer8[i] = global->powderCorrelation[i]/global->npowder;
 				pthread_mutex_unlock(&global->powdersumcorrelation_mutex);
-				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
-				else writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);
+				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_DOUBLE);
+				else writeSimpleHDF5(filename, buffer8, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_DOUBLE);
 				free(buffer8);
 				
 			}
@@ -1483,13 +1483,13 @@ void saveRunningSums(cGlobal *global) {
 				 */
 				printf("Saving correlation sum data of ice to file\n");
 				sprintf(filename,"r%04u-CorrelationSum_ice.h5",global->runNumber);
-				float *buffer9 = (float*) calloc(global->correlation_nn, sizeof(float));
+				double *buffer9 = (double*) calloc(global->correlation_nn, sizeof(double));
 				pthread_mutex_lock(&global->icesumcorrelation_mutex);
 				for(long i=0; i<global->correlation_nn; i++)
-					buffer9[i] = (float) (global->iceCorrelation[i]/global->nice);
+					buffer9[i] = global->iceCorrelation[i]/global->nice;
 				pthread_mutex_unlock(&global->icesumcorrelation_mutex);
-				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
-				else writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);
+				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_DOUBLE);
+				else writeSimpleHDF5(filename, buffer9, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_DOUBLE);
 				free(buffer9);
 				
 			}
@@ -1540,13 +1540,13 @@ void saveRunningSums(cGlobal *global) {
 				 */
 				printf("Saving correlation sum data of water to file\n");
 				sprintf(filename,"r%04u-CorrelationSum_water.h5",global->runNumber);
-				float *buffer10 = (float*) calloc(global->correlation_nn, sizeof(float));
+				double *buffer10 = (double*) calloc(global->correlation_nn, sizeof(double));
 				pthread_mutex_lock(&global->watersumcorrelation_mutex);
 				for(long i=0; i<global->correlation_nn; i++)
-					buffer10[i] = (float) (global->waterCorrelation[i]/global->nwater);
+					buffer10[i] = global->waterCorrelation[i]/global->nwater;
 				pthread_mutex_unlock(&global->watersumcorrelation_mutex);
-				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_FLOAT);
-				else writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_FLOAT);
+				if (global->autoCorrelateOnly) writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, H5T_NATIVE_DOUBLE);
+				else writeSimpleHDF5(filename, buffer10, global->correlationNumDelta, global->correlationNumQ, global->correlationNumQ, H5T_NATIVE_DOUBLE);
 				free(buffer10);
 				
 			}
@@ -1651,10 +1651,10 @@ void savePowderAngularAvg(cGlobal *global) {
 	if (global->powdersum && global->powderAngularAvg) {
 		
 		char	filename[1024];		
-		float *buffer = (float*) calloc(2*global->angularAvg_nn, sizeof(float));
+		double *buffer = (double*) calloc(2*global->angularAvg_nn, sizeof(double));
 		for (long i=0; i<global->angularAvg_nn; i++) {
-			if (global->useEnergyCalibration) buffer[i] = (float) global->angularAvgQcal[i];
-			else buffer[i] = (float) global->angularAvgQ[i];
+			if (global->useEnergyCalibration) buffer[i] = global->angularAvgQcal[i];
+			else buffer[i] = global->angularAvgQ[i];
 		}
 		
 		/*
@@ -1664,8 +1664,8 @@ void savePowderAngularAvg(cGlobal *global) {
 			printf("Saving angular average of powder data to file\n");
 			sprintf(filename,"r%04u-angavg.h5",global->runNumber);
 			for(long i=0; i<global->angularAvg_nn; i++)
-				buffer[global->angularAvg_nn+i] = (float) global->powderAverage[i]/global->npowder;
-			writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
+				buffer[global->angularAvg_nn+i] = global->powderAverage[i]/global->npowder;
+			writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_DOUBLE);
 		}
 		
 		/*
@@ -1675,8 +1675,8 @@ void savePowderAngularAvg(cGlobal *global) {
 			printf("Saving angular average of powder ice data to file\n");
 			sprintf(filename,"r%04u-angavg_ice.h5",global->runNumber);
 			for(long i=0; i<global->angularAvg_nn; i++)
-				buffer[global->angularAvg_nn+i] = (float) global->iceAverage[i]/global->nice;
-			writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
+				buffer[global->angularAvg_nn+i] = global->iceAverage[i]/global->nice;
+			writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_DOUBLE);
 		}
 		
 		/*
@@ -1686,8 +1686,8 @@ void savePowderAngularAvg(cGlobal *global) {
 			printf("Saving angular average of powder water data to file\n");
 			sprintf(filename,"r%04u-angavg_water.h5",global->runNumber);
 			for(long i=0; i<global->angularAvg_nn; i++)
-				buffer[global->angularAvg_nn+i] = (float) global->waterAverage[i]/global->nwater;
-			writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
+				buffer[global->angularAvg_nn+i] = global->waterAverage[i]/global->nwater;
+			writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_DOUBLE);
 		}
 		
 		free(buffer);
@@ -1748,14 +1748,14 @@ void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
 	if (global->hitAngularAvg) {
 		
 		char	filename[1024];
-		float *buffer = (float*) calloc(2*global->angularAvg_nn, sizeof(float));
+		double *buffer = (double*) calloc(2*global->angularAvg_nn, sizeof(double));
 		sprintf(filename,"%s-angavg.h5",threadInfo->eventname);
 		
 		for(long i=0; i<global->angularAvg_nn; i++) {
-			buffer[i] = (float) threadInfo->angularAvgQ[i];
-			buffer[global->angularAvg_nn+i] = (float) threadInfo->angularAvg[i];
+			buffer[i] = threadInfo->angularAvgQ[i];
+			buffer[global->angularAvg_nn+i] = threadInfo->angularAvg[i];
 		}
-		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
+		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_DOUBLE);
 		
 		free(buffer);
 		
@@ -1851,21 +1851,23 @@ void makePowderQcalibration(cGlobal *global) {
 		delete[] global->angularAvgQcal;
 	}
 	global->angularAvgQcal = new double[global->angularAvg_nn];
-	float *buffer = (float*) calloc(global->angularAvg_nn, sizeof(float));
+	
 	// calculate Q-calibration (using the detector position from the last event)
 	for (int i=0; i<global->angularAvg_nn; i++) {
 		global->angularAvgQcal[i] = 4*M_PI*sin(atan(global->pixelSize*global->angularAvgQ[i]*1000/global->detectorZ)/2)/global->Lmean;
 	}
+	
 	if (!global->powdersum || !global->powderAngularAvg) {
 		// write data to buffer only if it is not saved to powder angular average
+		double *buffer = (double*) calloc(global->angularAvg_nn, sizeof(double));
 		char	filename[1024];
 		printf("Saving Q-calibration to file\n");
 		sprintf(filename,"r%04u-angavg_Q.h5",global->runNumber);
 		for(int i=0; i<global->angularAvg_nn; i++) {
-			buffer[i] = (float) global->angularAvgQcal[i];
+			buffer[i] = global->angularAvgQcal[i];
 		}	
 		// write buffer to HDF5
-		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 1, H5T_NATIVE_FLOAT);
+		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 1, H5T_NATIVE_DOUBLE);
 		// free local arrays
 		free(buffer);
 	}
