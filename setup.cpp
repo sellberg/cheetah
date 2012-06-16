@@ -143,6 +143,10 @@ void cGlobal::defaultConfiguration(void) {
 	// Energy calibration
 	useEnergyCalibration = 0;
 	
+	// Single-pixel statistics
+	usePixelStatistics = 0;
+	strcpy(pixelFile, "pixels.dat");
+	
 	// Hitfinding
 	
 	hitfinder.use = 0;
@@ -321,6 +325,7 @@ void cGlobal::setup() {
 			useSolidAngleCorrection = 0;
 			useAttenuationCorrection = -1;
 			useEnergyCalibration = 0;
+			usePixelStatistics = 0;
 			useCorrelation = 0;
 		}
 	}
@@ -593,10 +598,23 @@ void cGlobal::setup() {
 	Lmean = 0;	// Mean wavelength
 	if (useEnergyCalibration) {
 		energyCapacity = 1000; // Starting capacity of dynamic arrays
-		energies = new double[energyCapacity]; // Dynamics array of all photon energies (eV)
-		wavelengths = new double[energyCapacity]; // Dynamics array of all wavelengths (Å)
+		energies = new double[energyCapacity]; // Dynamic array of all photon energies (eV)
+		wavelengths = new double[energyCapacity]; // Dynamic array of all wavelengths (Å)
 	}
-		
+	
+	/*
+	 *	Setup global single-pixel statistics variables
+	 */
+	pixels = NULL;
+	pixelXYList = NULL;
+	nPixels = 0;
+	pixelCapacity = 0;
+	if (usePixelStatistics) {
+		pixelCapacity = 100; // Starting capacity of dynamic arrays
+		pixels = new unsigned[pixelCapacity]; // Dynamic array of all pixel indices in the raw data format
+		pixelXYList = new double[pixelCapacity*2]; // Dynamic array of all pixel x/y values imported from python scripts in (1480,1552) format
+	}
+	
 	// Make sure to use SLAC timezone!
 	setenv("TZ","US/Pacific",1);
 	
@@ -720,6 +738,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "attenuation")) {
 		strcpy(attenuationFile, value);
+	}
+	else if (!strcmp(tag, "pixels")) {
+		strcpy(pixelFile, value);
 	}
 	
 	// Processing options
@@ -923,6 +944,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "useenergycalibration")) {
 		useEnergyCalibration = atoi(value);
+	}
+	else if (!strcmp(tag, "usepixelstatistics")) {
+		usePixelStatistics = atoi(value);
 	}
 	
 	// Power user settings
@@ -1710,6 +1734,70 @@ void cGlobal::expandEnergyCapacity() {
 	}
 	delete[] oldEnergies;
 	delete[] oldWavelengths;
+}
+
+
+/*
+ *	Read in list of pixels to be analyzed on a single-pixel basis
+ */
+void cGlobal::readPixels(char *filename) {
+	
+	printf("Reading list of pixels:\n");
+	printf("\t%s\n",filename);
+	
+	std::ifstream infile;
+	infile.open(filename);
+	if (infile.fail()) {
+		cout << "\tUnable to open " << filename << endl;
+		infile.clear();
+		printf("\tReading default list of attenuations\n");
+		infile.open("pixels.dat");
+		if (infile.fail()) {
+			cout << "\tUnable to open default file" << endl;
+			infile.clear();
+			printf("\tDisabling atteunation calculation completely\n");
+			usePixelStatistics = 0;
+			return;
+		}
+	}
+	
+	string line;
+	int counter = 0;
+	while (true) {
+		getline(infile, line);
+		if (infile.fail()) break;
+		if (line[0] != '#') {
+			if (!fromString(pixelXYList[counter], line)) {
+				cout << "\tConversion of string to double failed" << endl;
+			}
+			counter++;
+			if (counter/2 >= pixelCapacity) expandPixelCapacity();
+		}
+	}
+	nPixels = counter/2;
+	for (int i=0; i<nPixels; i++) {
+		pixels[i] = (unsigned) (pixelXYList[2*i]*8*ROWS + pixelXYList[2*i+1]);
+	}
+}
+
+
+/*
+ *	Expand capacity of dynamic pixel arrays
+ */
+void cGlobal::expandPixelCapacity() {
+	pixelCapacity *= 2;
+	unsigned *oldPixels = pixels;
+	pixels = new unsigned[pixelCapacity];
+	double *oldPixelXYList = pixelXYList;
+	pixelXYList = new double[pixelCapacity*2];
+	for (int i=0; i<nPixels; i++) {
+		pixels[i] = oldPixels[i];
+	}
+	for (int i=0; i<(nPixels*2); i++) {
+		pixelXYList[i] = oldPixelXYList[i];
+	}
+	delete[] oldPixels;
+	delete[] oldPixelXYList;
 }
 
 

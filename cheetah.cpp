@@ -156,6 +156,7 @@ void beginjob() {
 	global.readWatermask(global.waterfinder.peaksearchFile);
 	global.readBackgroundmask(global.backgroundfinder.peaksearchFile);
 	if (global.useAttenuationCorrection >= 0) global.readAttenuations(global.attenuationFile);
+	if (global.usePixelStatistics) global.readPixels(global.pixelFile);
 	if (global.useCorrelation) global.createLookupTable();	// <-- important that this is done after detector geometry is determined
 }
 
@@ -728,6 +729,15 @@ void endjob()
 	}
 	
 	
+	// Pixel statistics?
+	if (usePixelStatistics) {
+		cout << "Pixel statistics:" << endl;
+		for(int i=0; i<global->nPixels; i++) {
+			cout << "\tPIXEL #" << i << " = " << buffer12[global->pixels[i]] << " ADUs" << endl;
+		}
+	}
+	
+	
 	// Hitrate?
 	printf("%i files processed, %i hits (%2.2f%%)\n",(int)global.nprocessedframes, (int)global.nhits, 100.*( global.nhits / (float) global.nprocessedframes));
 
@@ -771,6 +781,8 @@ void endjob()
 	delete[] global.changedAttenuationEvents;
 	delete[] global.totalThicknesses;
 	delete[] global.energies;
+	delete[] global.pixels;
+	delete[] global.pixelXYList;	
 	delete[] global.wavelengths;
 	delete[] global.phi;
 	delete[] global.angularAvg_i;

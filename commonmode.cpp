@@ -38,7 +38,6 @@ using std::cerr;
 
 /*
  *	Subtract common mode on each 2x1 module
- *	This is done in a very slow way now - speed up later once we know it works!
  */
 void cmModuleSubtract(tThreadInfo *threadInfo, cGlobal *global){
 

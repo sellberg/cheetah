@@ -102,7 +102,7 @@ public:
 	int			manualDarkcalGenerationControl;			// Flip this on to manually control the other settings when generating a darkcal
 	
 	// Common mode and pedastal subtraction
-	int			cmModule;				// Subtract common mode from each 2x1 Module (2 ASICs), can be done by finding the zero-photon peak (algorithm 1) in the intensity histogram or by using the cmFloor-weighted median (algorithm 2)
+	int			cmModule;				// Subtract common mode from each ASIC, can be done by finding the zero-photon peak (algorithm 1) in the intensity histogram or by using the cmFloor-weighted median (algorithm 2)
 	int			cmSubModule;			// Subtract common mode from subsets of each ASIC (only implemented using algorithm 2), the value of cmSubModule defines how many times each dimension of each ASIC will be divided by and should be 1 or a multiple of 2
 	int			cmStart;				// Algorithm 1: intensity (ADU) from which the peakfinding should start in the histogram
 	int			cmStop;					// Algorithm 1: intensity (ADU) at which the peakfinding should stop in the histogram
@@ -140,6 +140,10 @@ public:
 	
 	// Energy calibration
 	int			useEnergyCalibration;		// Save histogram of energies and wavelengths for energy calibration
+	
+	// Single-pixel statitiscs
+	int			usePixelStatistics;		// Save intensities for randomly chosen single pixels (currently 26 pixels with high, medium, and low variance)
+	char		pixelFile[1024];		// Name of the file containing the pixel list
 	
 	// Save and flush settings
 	int			saveInterval;			 // powder pattern and log is repeatedly saved according to this interval
@@ -294,6 +298,13 @@ public:
 	unsigned		*Lhist;	// Histogram of wavelengths
 	
 	
+	// Attenuation variables
+	unsigned		*pixels;		// Pointer to dynamic array of all pixel indices in the raw data format
+	double			*pixelXYList;	// Pointer to dynamic array of all pixel x/y values imported from python scripts in (1480,1552) format
+	unsigned		pixelCapacity;	// Allocated size of dynamic pixel array
+	unsigned		nPixels;		// Number of pixels read in dynamic pixel array
+	
+	
 	// Listfinding variables
 	bool			eventIsHit;				// keeps track of whether the event is a hit contained in the list
 	std::vector<std::string>	hitlist;	// list of all hits as output string names
@@ -350,9 +361,11 @@ public:
 	void readWatermask(char *);
 	void readBackgroundmask(char *);
 	void readHits(char *);
-	void readAttenuations(char *);
+	void readAttenuations(char *);		// read in list of attenuations
 	void expandAttenuationCapacity();
 	void expandEnergyCapacity();
+	void readPixels(char *);			// read in list of pixels to be analyzed on a single-pixel basis
+	void expandPixelCapacity();
 	void createLookupTable();			// create lookup table (LUT) needed for the fast correlation algorithm	
 
 	void writeInitialLog(void);			// functions to write the log file

@@ -1,0 +1,85 @@
+# List of pixels for single-pixel analysis
+# Written by Jonas Sellberg, 2012-06-14
+# X (first) and Y (second) coordinates as well as variance of each pixel are taken from
+# viewDarkcalVariance.py -r 0067
+# LOW VARIANCE PIXELS < 16 ADUs
+# Pixel 1 = 9.07 ADUs
+54
+462
+# Pixel 2 = 12.51 ADUs
+55
+462
+# Pixel 3 = 8.57 ADUs
+55
+463
+# Pixel 4 = 9.91 ADUs
+685
+779
+# Pixel 5 = 9.61 ADUs
+685
+790
+# Pixel 6 = 11.41 ADUs
+135
+874
+# Pixel 7 = 11.28 ADUs
+134
+874
+# Pixel 8 = 14.86 ADUs
+79
+1448
+# Pixel 9 = 13.49 ADUs
+282
+512
+# Pixel 10 = 14.15 ADUs
+282
+513
+# Pixel 11 = 14.13 ADUs
+283
+513
+# MEDIUM VARIANCE PIXELS > 16 ADUs, < 64 ADUs
+# Pixel 12 = 16.01 ADUs
+82
+1515
+# Pixel 13 = 16.67 ADUs
+101
+1360
+# Pixel 14 = 17.74 ADUs
+102
+1360
+# Pixel 15 = 16.31 ADUs
+79
+1449
+# Pixel 16 = 30.79 ADUs
+910
+381
+# Pixel 17 = 27.35 ADUs
+910
+380
+# Pixel 18 = 27.92 ADUs
+909
+380
+# Pixel 19 = 25.40 ADUs
+908
+379
+# Pixel 20 = 27.50 ADUs
+907
+378
+# HIGH VARIANCE PIXELS > 64 ADUs
+# Pixel 21 = 72.59 ADUs
+100
+1360
+# Pixel 22 = 82.64 ADUs
+284
+513
+# Pixel 23 = 139.82 ADUs
+1318
+1050
+# Pixel 24 = 163.83 ADUs
+1318
+1051
+# Pixel 25 = 289.02 ADUs
+82
+1516
+# Pixel 26 = 1471.27 ADUs
+82
+1517

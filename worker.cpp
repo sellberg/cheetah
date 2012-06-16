@@ -248,6 +248,7 @@ void *worker(void *threadarg) {
 	 *	Calculate scattering angle (theta)
 	 */
 	if ((global->usePolarizationCorrection || global->useSolidAngleCorrection || global->useCorrelation) && (global->hdf5dump 
+																			  || global->generateDarkcal
 																			  || (hit.standard && global->hitfinder.savehits) 
 																		      || (hit.water && global->waterfinder.savehits) 
 																			  || (hit.ice && global->icefinder.savehits) 
@@ -259,7 +260,8 @@ void *worker(void *threadarg) {
 	/*
 	 *	Calculate polarization correction
 	 */
-	if (global->usePolarizationCorrection && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
+	if (global->usePolarizationCorrection && (global->hdf5dump || global->generateDarkcal
+															   || (hit.standard && global->hitfinder.savehits) 
 															   || (hit.water && global->waterfinder.savehits) 
 															   || (hit.ice && global->icefinder.savehits) 
 															   || (!hit.background && global->backgroundfinder.savehits) )) {
@@ -271,7 +273,8 @@ void *worker(void *threadarg) {
 	 *	Calculate solid angle correction
 	 */
 	threadInfo->solidAngle = global->pixelSize*global->pixelSize/(threadInfo->detectorPosition/1000*threadInfo->detectorPosition/1000);
-	if (global->useSolidAngleCorrection && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
+	if (global->useSolidAngleCorrection && (global->hdf5dump || global->generateDarkcal
+															 || (hit.standard && global->hitfinder.savehits) 
 															 || (hit.water && global->waterfinder.savehits) 
 															 || (hit.ice && global->icefinder.savehits) 
 															 || (!hit.background && global->backgroundfinder.savehits) )) {
@@ -296,10 +299,11 @@ void *worker(void *threadarg) {
 	/*
      *  Calculate angular averages
      */
-	if (global->hitAngularAvg && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
+	if (global->hitAngularAvg && (global->hdf5dump || global->generateDarkcal
+												   || (hit.standard && global->hitfinder.savehits) 
 												   || (hit.water && global->waterfinder.savehits) 
 												   || (hit.ice && global->icefinder.savehits) 
-								  				   || (!hit.background && global->backgroundfinder.savehits) )) {
+												   || (!hit.background && global->backgroundfinder.savehits) )) {
 		calculateAngularAvg(threadInfo, global);
 		fail = makeQcalibration(threadInfo, global);
 		if (!fail) saveAngularAvg(threadInfo, global);
@@ -310,13 +314,29 @@ void *worker(void *threadarg) {
 	/*
      *  Perform cross-correlation analysis
      */
-	if (global->useCorrelation && (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
+	if (global->useCorrelation && (global->hdf5dump || global->generateDarkcal
+													|| (hit.standard && global->hitfinder.savehits) 
 													|| (hit.water && global->waterfinder.savehits) 
 													|| (hit.ice && global->icefinder.savehits) 
 													|| (!hit.background && global->backgroundfinder.savehits) )) {
 		fail = calculatePixelMaps(threadInfo, global);
 		if (!fail) correlate(threadInfo, global);
 		else cout << "Failed to make Q-calibrated pixel maps for " << threadInfo->eventname << ", correlation NOT saved." << endl;
+	}
+	
+	
+	/*
+     *  Calculate single-pixel statistics
+     */
+	if (global->usePixelStatistics && (global->hdf5dump || global->generateDarkcal
+														|| (hit.standard && global->hitfinder.savehits) 
+														|| (hit.water && global->waterfinder.savehits) 
+														|| (hit.ice && global->icefinder.savehits) 
+														|| (!hit.background && global->backgroundfinder.savehits) )) {
+		//if (!global->useCorrelation) fail = calculatePixelMaps(threadInfo, global);
+		//if (!fail) savePixelIntensities(threadInfo, global);
+		//else cout << "Failed to calibrate Q for " << threadInfo->eventname << ", pixel intensities NOT saved." << endl;
+		savePixelIntensities(threadInfo, global);
 	}
 	
 	
@@ -1744,7 +1764,7 @@ void calculateAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
 
 void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
 	
-	// save angular average of hit without Q-scale (1D array)
+	// save angular average of hit with Q-scale (2D array)
 	if (global->hitAngularAvg) {
 		
 		char	filename[1024];
@@ -1752,6 +1772,7 @@ void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
 		sprintf(filename,"%s-angavg.h5",threadInfo->eventname);
 		
 		for(long i=0; i<global->angularAvg_nn; i++) {
+			//buffer[i] = (float) global->angularAvgQ[i];
 			buffer[i] = threadInfo->angularAvgQ[i];
 			buffer[global->angularAvg_nn+i] = threadInfo->angularAvg[i];
 		}
@@ -1761,22 +1782,26 @@ void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
 		
 	}
 	
-	// save angular average of hit with Q-scale (2D array)
-//	if (global->hitAngularAvg) {
-//		
-//		char	filename[1024];
-//		float *buffer = (float*) calloc(2*global->angularAvg_nn, sizeof(float));
-//		sprintf(filename,"%s-angavg.h5",threadInfo->eventname);
-//
-//		for(long i=0; i<global->angularAvg_nn; i++) {
-//			buffer[i] = (float) global->angularAvgQ[i];
-//			buffer[global->angularAvg_nn+i] = (float) threadInfo->angularAvg[i];
-//		}
-//		writeSimpleHDF5(filename, buffer, global->angularAvg_nn, 2, H5T_NATIVE_FLOAT);
-//		
-//		free(buffer);
-//		
-//	}	
+}
+
+
+void savePixelIntensities(tThreadInfo *threadInfo, cGlobal *global) {
+	
+	// save pixel intensities of hit without Q-scale (1D array)
+	if (global->usePixelStatistics) {
+		
+		char	filename[1024];
+		double *buffer = (double*) calloc(global->nPixels, sizeof(double));
+		sprintf(filename,"%s-pixels.h5",threadInfo->eventname);
+		
+		for(long i=0; i<global->nPixels; i++) {
+			buffer[i] = threadInfo->corrected_data[global->pixels[i]];
+		}
+		writeSimpleHDF5(filename, buffer, global->nPixels, 1, H5T_NATIVE_DOUBLE);
+		
+		free(buffer);
+		
+	}
 	
 }
 

@@ -106,7 +106,7 @@ typedef struct {
 	double		phaseCavityCharge1;
 	double		phaseCavityCharge2;
 	
-	double		attenuation;		// 1/transmission taken from last succesful readout of the Si filters
+	double		attenuation;		// 1/transmission taken from last successful readout of the Si filters
 	double		solidAngle;			// constant term of solid angle correction in srad
 	
 	// Metrology data
@@ -115,7 +115,6 @@ typedef struct {
 	float		*pix_qx;
 	float		*pix_qy;
 	double		*theta;
-	
 	
 } tThreadInfo;
 
@@ -176,6 +175,7 @@ void calculatePowderAngularAvg(cGlobal *global);
 void savePowderAngularAvg(cGlobal *global);
 void calculateAngularAvg(tThreadInfo *threadInfo, cGlobal *global);
 void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global);
+void savePixelIntensities(tThreadInfo *threadInfo, cGlobal *global);
 void calculateIntensityAvg(tThreadInfo *threadInfo, cGlobal *global);
 void saveEnergies(cGlobal *global);
 void makeEnergyHistograms(cGlobal *global);
