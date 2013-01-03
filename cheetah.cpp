@@ -729,15 +729,6 @@ void endjob()
 	}
 	
 	
-	// Pixel statistics?
-	if (usePixelStatistics) {
-		cout << "Pixel statistics:" << endl;
-		for(int i=0; i<global->nPixels; i++) {
-			cout << "\tPIXEL #" << i << " = " << buffer12[global->pixels[i]] << " ADUs" << endl;
-		}
-	}
-	
-	
 	// Hitrate?
 	printf("%i files processed, %i hits (%2.2f%%)\n",(int)global.nprocessedframes, (int)global.nhits, 100.*( global.nhits / (float) global.nprocessedframes));
 

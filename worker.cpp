@@ -1170,6 +1170,12 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	H5Dclose(dataset_id);
 	
 	
+	// IntensityAvg
+	dataset_id = H5Dcreate1(hdf_fileID, "/LCLS/intensityAvg", H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT);
+	H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &info->intensityAvg );
+	H5Dclose(dataset_id);
+	
+	
 	// Finished with scalar dataset ID
 	H5Sclose(dataspace_id);
 	
@@ -1361,9 +1367,14 @@ void saveRunningSums(cGlobal *global) {
 		for(long i=0; i<global->pix_nn; i++)
 			buffer12[i] = (float) (global->powderVariance[i]/global->npowder - global->powderRaw[i]*global->powderRaw[i]/(global->npowder*global->npowder));
 		pthread_mutex_unlock(&global->powdersumvariance_mutex);
-		writeSimpleHDF5(filename, buffer12, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);	
+		writeSimpleHDF5(filename, buffer12, (int)global->pix_nx, (int)global->pix_ny, H5T_NATIVE_FLOAT);		
 		
 		DEBUGL1_ONLY {
+			cout << "Pixel statistics:" << endl;
+			for(int i=0; i<global->nPixels; i++) {
+				cout << "\tPIXEL #" << i << " = " << buffer12[global->pixels[i]] << " ADUs" << endl;
+			}
+			
 			// VERIFY OUTPUT IN ASSEMBLED FORMAT
 			array1D<double> *oneX = new array1D<double>(global->pix_x, global->pix_nn);
 			array1D<double> *oneY = new array1D<double>(global->pix_y, global->pix_nn);
@@ -1795,7 +1806,7 @@ void savePixelIntensities(tThreadInfo *threadInfo, cGlobal *global) {
 		sprintf(filename,"%s-pixels.h5",threadInfo->eventname);
 		
 		for(long i=0; i<global->nPixels; i++) {
-			buffer[i] = threadInfo->corrected_data[global->pixels[i]];
+			buffer[i] = (double) threadInfo->corrected_data[global->pixels[i]];
 		}
 		writeSimpleHDF5(filename, buffer, global->nPixels, 1, H5T_NATIVE_DOUBLE);
 		

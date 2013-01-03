@@ -122,7 +122,7 @@ using std::string;
 		//HDF5 output
 		if (h5_out){
 			if (global->autoCorrelateOnly){
-				io->writeToHDF5( osst.str()+"-xaca.h5", cc->autoCorr(), 0 );
+				io->writeToHDF5( osst.str()+"-xaca.h5", cc->autoCorr(), 0 );				// 0: supposed to be double, but it seems to currently save in float (32-bit) precision
 			}else{
 				cerr << "WARNING. No HDF5 output for 3D cross-correlation case implemented, yet!" << endl;
 			}
