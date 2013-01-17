@@ -12,14 +12,14 @@ namespace Index
 #pragma pack(1)
 
 /**
- *  Layout of Index File strcture V1
+ *  Layout of Index File strcture V2
  *
  *  Overview
  *  ========
  *
  *  +----------------------------------------+
  *  |  Header                                |
- *  |    Type: IndexFileHeaderV1             |
+ *  |    Type: IndexFileHeaderV2             |
  *  +----------------------------------------+
  *  |   (Largest part of the file)           |
  *  |  List of L1Accept Infomation           |
@@ -41,20 +41,20 @@ namespace Index
  *
  *  Header
  *  ======
- *    Type: IndexFileHeaderV1
+ *    Type: IndexFileHeaderV2
  *    Content:
  *      Xtc       xtcIndex;                       // Regular xtc struture
  *      char      sXtcFilename[iMaxFilenameLen];  // Filename of the corresponding xtc file
- *      int16_t   iNumCalib;                      // Number of BeginCalibCycles 
- *      int8_t    iNumEvrEvents;                  // Number of different Evr event codes
- *      int8_t    iNumDetector;                   // Number of detectors (segment level programs)
+ *      int32_t   iNumCalib;                      // Number of BeginCalibCycles 
+ *      int16_t   iNumEvrEvents;                  // Number of different Evr event codes
+ *      int16_t   iNumDetector;                   // Number of detectors (segment level programs)
  *      int32_t   iNumIndex;                      // Number of L1Accept events 
+ *      int32_t   iNumOutOrder;                   // Number of out-of-order events
+ *      int32_t   iNumOverlapPrev;                // Number of overlapping events with the previous chunk
+ *      int32_t   iNumOverlapNext;                // Number of overlapping events with the next chunk (not used yet) 
  *    Note:
- *      - xtcIndex is a regular xtc object, whose typeid == Id_Index,
- *        and extent == size of the index file
- *      - iHeaderSize counts the size from "Header" to "List of Segment Information", and
- *          padded to 4-bytes memory boundary, so the "List of L1Accept Information" is
- *          guaranteed to align with 4-bytes boundaries
+ *      - This file structure is padded to 4-bytes memory boundary, so the 
+ *        "List of L1Accept Information" is guaranteed to align with 4-bytes boundaries
  *
  *  List of BeginCalibCycle Infomration
  *  ===================================
@@ -145,6 +145,26 @@ struct IndexFileHeaderV1
   IndexFileHeaderV1(const IndexList& list);
 };
 
+struct IndexFileHeaderV2
+{
+  static const int iXtcIndexVersion = 2;
+  static const int iMaxFilenameLen  = 32;  
+  
+  TypeId    typeId;                         // Type Id. Format: (TypeId::Id_Index, iXtcIndexVersion) 
+  char      sXtcFilename[iMaxFilenameLen];  // Filename of the corresponding xtc file
+  int32_t   iNumCalib;                      // Number of BeginCalibCycles 
+  int16_t   iNumEvrEvents;                  // Number of different Evr event codes
+  int16_t   iNumDetector;                   // Number of detectors (segment level programs)
+  int32_t   iNumIndex;                      // Number of L1Accept events   
+  int32_t   iNumOutOrder;                   // Number of out-of-order events
+  int32_t   iNumOverlapPrev;                // Number of overlapping events with the previous chunk
+  int32_t   iNumOverlapNext;                // Number of overlapping events with the next chunk (not used yet)
+  
+  IndexFileHeaderV2() {}
+  IndexFileHeaderV2(const IndexList& list);
+  IndexFileHeaderV2(const IndexFileHeaderV1& headerV1);
+};
+
 class L1AcceptNode; //forward declaration
 
 struct IndexFileL1NodeV1
@@ -174,7 +194,8 @@ struct CalibNode
     i64Offset(i64Offset1), iL1Index(iL1Index1), uSeconds(uSeconds1), uNanoseconds(uNanoseconds1) {}
 };
 
-typedef IndexFileHeaderV1 IndexFileHeaderType;
+//typedef IndexFileHeaderV1 IndexFileHeaderType;
+typedef IndexFileHeaderV2 IndexFileHeaderType;
 typedef IndexFileL1NodeV1 IndexFileL1NodeType;
 
 int convertTimeStringToSeconds(const char* sTime, uint32_t& uSeconds, uint32_t& uNanoseconds);

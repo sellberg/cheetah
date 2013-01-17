@@ -66,7 +66,9 @@
 #include "pdsdata/cspad/ConfigV1.hh"
 #include "pdsdata/cspad/ConfigV2.hh"
 #include "pdsdata/cspad/ConfigV3.hh"
+#include "pdsdata/cspad/ConfigV4.hh"
 #include "pdsdata/cspad/ElementIterator.hh"
+#include "pdsdata/cspad/ElementHeader.hh"
 
 #include "main.hh"
 #include "myana.hh"
@@ -606,6 +608,17 @@ int getCspadConfig (DetInfo::Detector det, CsPad::ConfigV3& cfg)
 }
 
 
+int getCspadConfig (DetInfo::Detector det, CsPad::ConfigV4& cfg)
+{
+	const Xtc* xtc = _estore->lookup_cfg( DetInfo(0,det,0,DetInfo::Cspad,0), 
+										 TypeId(TypeId::Id_CspadConfig,4) );
+	if (xtc && xtc->damage.value()==0) {
+		cfg = *reinterpret_cast<const CsPad::ConfigV4*>(xtc->payload());
+	}
+	return xtc ? xtc->damage.value() : 2;
+}
+
+
 int getEpicsPvNumber()
 {
   return _estore->epics().size();
@@ -961,6 +974,16 @@ int getCspadData  (DetInfo::Detector det, CsPad::ElementIterator& iter)
 										   TypeId(TypeId::Id_CspadConfig,3) );
 		if (cfg && cfg->damage.value()==0) {
 			iter = CsPad::ElementIterator(*reinterpret_cast<CsPad::ConfigV3*>(cfg->payload()),
+										  *xtc);
+			return 0;
+		}
+	}
+	
+	
+	{ const Xtc* cfg = _estore->lookup_cfg( DetInfo(0,det,0,DetInfo::Cspad,0),
+										   TypeId(TypeId::Id_CspadConfig,4) );
+		if (cfg && cfg->damage.value()==0) {
+			iter = CsPad::ElementIterator(*reinterpret_cast<CsPad::ConfigV4*>(cfg->payload()),
 										  *xtc);
 			return 0;
 		}

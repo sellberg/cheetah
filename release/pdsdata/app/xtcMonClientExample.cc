@@ -151,6 +151,11 @@ public:
     bldData.print();
     printf( "\n" );    
   }  
+  void process(const DetInfo&, const BldDataGMD& bldData) {
+    printf("*** Processing Bld GMD object\n");
+    bldData.print();
+    printf( "\n" );    
+  }  
   void process(const DetInfo&, const EvrData::ConfigV1&) {
     printf("*** Processing EVR config V1 object\n");
   }
@@ -345,6 +350,11 @@ public:
       process(info, *(const BldDataPhaseCavity*) xtc->payload() );
       break;        
     }
+    case (TypeId::Id_GMD) :
+    {
+      process(info, *(const BldDataGMD*) xtc->payload() );
+      break;        
+    }
     case (TypeId::Id_PrincetonConfig) :
     {
       process(info, *(const Princeton::ConfigV1*)(xtc->payload()));
@@ -392,7 +402,7 @@ int main(int argc, char* argv[]) {
   unsigned client=0;
   bool serialized=false;
   const char* partitionTag = 0;
-  XtcMonitorClient myClient;
+  MyXtcMonitorClient myClient;
   char* endPtr;
 
   while ((c = getopt(argc, argv, "?ht:c:s")) != -1) {

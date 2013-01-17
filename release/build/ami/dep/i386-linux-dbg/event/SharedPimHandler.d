@@ -1,0 +1,29 @@
+/reg/g/pcds/package/ana/release/build/ami/obj/i386-linux-dbg/event/SharedPimHandler.o /reg/g/pcds/package/ana/release/build/ami/dep/i386-linux-dbg/event/SharedPimHandler.d: SharedPimHandler.cc SharedPimHandler.hh \
+  /reg/g/pcds/package/ana/release/ami/event/TM6740Handler.hh \
+  /reg/g/pcds/package/ana/release/ami/event/FrameHandler.hh \
+  /reg/g/pcds/package/ana/release/ami/event/EventHandler.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/Src.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/Level.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/TypeId.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/XtcIterator.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/DetInfo.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/Src.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/pulnix/TM6740ConfigV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/lusi/PimImageConfigV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/BldInfo.hh \
+  /reg/g/pcds/package/ana/release/ami/data/Entry.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/bld/bldData.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/ipimb/ConfigV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/TypeId.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/ipimb/DataV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/ipimb/ConfigV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/ipimb/ConfigV2.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/ipimb/DataV2.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/ipimb/ConfigV2.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/lusi/IpmFexV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/lusi/PimImageConfigV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/pulnix/TM6740ConfigV2.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/camera/FrameV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/DetInfo.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/camera/FrameFexConfigV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/camera/FrameCoord.hh

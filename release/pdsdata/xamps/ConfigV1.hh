@@ -16,7 +16,7 @@ namespace Pds
     {
       public:
         static const int Version               = 1;
-        ConfigV1() {};
+        ConfigV1();
         ~ConfigV1() {};
 
         enum {
@@ -25,15 +25,15 @@ namespace Pds
 
         enum Registers {
           // NB if these are to be included they should be uncommented ConfigV1.cc/hh and XampsConfigurator.cc
-//          SC_T0,
-//          SC_T1,
-//          SC_T2,
-//          ROWCLK_T0,
-//          TRANS_GATE_T0,
-//          MCLK_T0,
-//          EXPOSURE_TIME,
-////        RESERVED,
-//          NUM_ROWS,
+          SC_T0,
+          SC_T1,
+          SC_T2,
+          ROWCLK_T0,
+          TRANS_GATE_T0,
+          MCLK_T0,
+          EXPOSURE_TIME,
+//        RESERVED,
+          NUM_ROWS,
           TESTMODE,
           HV_SETPOINT,
           DET_READOUT_DLY,
@@ -51,19 +51,18 @@ namespace Pds
         const uint32_t        FPGAversion() const { return _FPGAversion; }
         uint32_t              FPGAversion()       { return _FPGAversion; }
         void                  FPGAVersion(uint32_t v) { _FPGAversion = v; }
-        const ASIC_V1*           ASICs() const {return _asics; }
-        ASIC_V1*                 ASICs() { return _asics; }
+        const ASIC_V1*        ASICs() const {return _asics; }
+        ASIC_V1*              ASICs() { return _asics; }
 
         static const int      version() { return Version; }
 
         uint32_t              get      (Registers);
         const uint32_t        get      (Registers) const;
         uint32_t              set      (Registers, uint32_t);
-        static char*          name     (Registers);
+        static char*          name     (Registers, bool init=false);
         static uint32_t       rangeHigh(Registers);
         static uint32_t       rangeLow (Registers);
         static uint32_t       defaultValue(Registers);
-
 
       private:
         uint32_t          _regs[NumberOfRegisters];

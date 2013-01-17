@@ -30,17 +30,11 @@ struct L1AcceptNode
   uint32_t            uMaskDetDmgs;
   uint32_t            uMaskDetData;
   uint32_t            uMaskEvrEvents;
-  
-  bool                bEpics;
-  bool                bPrinceton;
-  
-  // Previous/Next node has the same fiducial as this node
-  bool                bLnkNext;
-  bool                bLnkPrev;
-    
-        L1AcceptNode(uint32_t uSeconds1, uint32_t uNanoseconds1, uint32_t uFiducial1, int64_t i64Offset1);
-        L1AcceptNode(IndexFileL1NodeType& fileNode);
-  bool  laterThan(const L1AcceptNode& node);
+      
+  L1AcceptNode();
+  L1AcceptNode(uint32_t uSeconds1, uint32_t uNanoseconds1, uint32_t uFiducial1, int64_t i64Offset1);
+  L1AcceptNode(IndexFileL1NodeType& fileNode);
+  int laterThan(const L1AcceptNode& node);
     
   static const uint32_t uInvalidFiducial  = 0x1ffff;
   static const uint32_t uSegDmgNotPresent = 0x100000;
@@ -91,7 +85,7 @@ public:
    */
   int   addCalibCycle (int64_t i64Offset, uint32_t uSeconds, uint32_t uNanoseconds);
 
-  int   reset         ();    
+  int   reset         (bool bClearL1NodeLast = false);    
   int   setXtcFilename(const char* sXtcFilename);
   int   finishList    ();  
   void  printList     (int iVerbose) const;  
@@ -123,6 +117,12 @@ private:
   
   int                       _iCurSerial;
   
+  int                       _iNumOutOrder;
+  bool                      _bOverlapChecked;
+  L1AcceptNode              _l1NodeLast;
+  int                       _iNumOverlapPrev;
+  int                       _iNumOverlapNext;
+  
   int           finishPrevSegmentId();
   L1AcceptNode& checkInNode( L1AcceptNode& nodeNew );  
   
@@ -136,7 +136,8 @@ private:
   int           readFileL1AcceptList  (int fdFile, int iNumIndex);
   int           readFileSupplement    (int fdFile, const IndexFileHeaderType& fileHeader);
   
-  friend class IndexFileHeaderV1;
+  friend class IndexFileHeaderV1;  
+  friend class IndexFileHeaderV2;
 }; // class IndexList
 
 #pragma pack()

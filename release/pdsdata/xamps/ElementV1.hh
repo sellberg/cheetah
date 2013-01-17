@@ -23,6 +23,7 @@ namespace Pds {
 
     public:
       uint32_t       pixels[RowsPerImage][ColumnsPerElement];
+      uint32_t       theLastWord;
     };
   };
 };

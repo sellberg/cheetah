@@ -51,7 +51,16 @@ namespace Pds {
       CxiDsu        = 34,
       CxiSc1        = 35,
       CxiDsd        = 36,
-      NumDetector   = 37
+      XcsBeamline   = 37,
+      CxiSc2        = 38,
+      MecXuvSpectrometer = 39,
+      MecXrtsForw   = 40,
+      MecXrtsBack   = 41,
+      MecFdi        = 42,
+      MecTimeTool   = 43,
+      MecTargetChamber = 44,
+      FeeHxSpectrometer = 45,
+      NumDetector   = 46
     };
 
     enum Device {
@@ -68,7 +77,21 @@ namespace Pds {
       Cspad     = 10,
       AcqTDC    = 11,
       Xamps     = 12,
-      NumDevice = 13
+      Cspad2x2  = 13,
+      Fexamp    = 14,
+      Gsc16ai   = 15,
+      Phasics   = 16,
+      Timepix   = 17,
+      Opal2000  = 18,
+      Opal4000  = 19,
+      OceanOptics = 20,
+      Opal1600  = 21,
+      Opal8000  = 22,
+      Fli       = 23,
+      Quartz4A150 = 24,
+      Andor     = 25,
+      USDUSB    = 26,
+      NumDevice = 27
     };
 
     DetInfo() {}

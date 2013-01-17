@@ -56,6 +56,13 @@ LIBRARIES       = -lacqdata \
                   -lencoderdata \
                   -llusidata \
                   -lcspaddata \
+                  -lindexdata \
+                  -lanadata \
+                  -lcspad2x2data \
+                  -lphasicsdata \
+                  -ltimepixdata \
+                  -loceanopticsdata \
+                  -lflidata \
                   -lhdf5 \
                   -ltiff \
                   -lpthread \
@@ -207,7 +214,7 @@ cheetah: cheetah.o \
 
 
 clean:
-	rm -f *.o *.gch $(TARGET)
+	rm -f *.o *.gch myana/*.o $(TARGET)
 
 remake: clean all
 

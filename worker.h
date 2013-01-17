@@ -25,6 +25,7 @@
 #include "release/pdsdata/cspad/ConfigV1.hh"
 #include "release/pdsdata/cspad/ConfigV2.hh"
 #include "release/pdsdata/cspad/ConfigV3.hh"
+#include "release/pdsdata/cspad/ConfigV4.hh"
 
 #include <stdio.h>
 #include <pthread.h>
@@ -129,6 +130,7 @@ static CspadCorrector*      corrector;
 static Pds::CsPad::ConfigV1 configV1;
 static Pds::CsPad::ConfigV2 configV2;
 static Pds::CsPad::ConfigV3 configV3;
+static Pds::CsPad::ConfigV4 configV4;
 static unsigned             configVsn;
 static unsigned             quadMask;
 static unsigned             asicMask;

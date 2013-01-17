@@ -23,6 +23,7 @@
 #include "pdsdata/evr/ConfigV2.hh"
 #include "pdsdata/evr/ConfigV3.hh"
 #include "pdsdata/evr/ConfigV4.hh"
+#include "pdsdata/evr/ConfigV7.hh"
 #include "pdsdata/control/ConfigV1.hh"
 #include "pdsdata/control/PVControl.hh"
 #include "pdsdata/control/PVMonitor.hh"
@@ -30,6 +31,7 @@
 #include "pdsdata/epics/EpicsXtcSettings.hh"
 #include "pdsdata/bld/bldData.hh"
 #include "pdsdata/princeton/ConfigV1.hh"
+#include "pdsdata/cspad/ConfigV4.hh"
 
 using namespace Pds;
 
@@ -56,8 +58,8 @@ public:
   void process(const DetInfo&, const Camera::FrameFexConfigV1& c) {
     printf("*** Processing frame feature extraction config object\n");
     printf("roiBegin (%d,%d)  roiEnd(%d,%d)\n",
-	   c.roiBegin().column, c.roiBegin().row,
-	   c.roiEnd().column, c.roiEnd().row);
+     c.roiBegin().column, c.roiBegin().row,
+     c.roiEnd().column, c.roiEnd().row);
   }
   void process(const DetInfo&, const Camera::FrameFccdConfigV1&) {
     printf("*** Processing FCCD Frame ConfigV1 object\n");
@@ -139,6 +141,11 @@ public:
     bldData.print();
     printf( "\n" );    
   }  
+  void process(const DetInfo&, const BldDataEBeamV1& bldData) {
+    printf("*** Processing EBeamV1 object\n");
+    bldData.print();
+    printf( "\n" );    
+  }  
   void process(const DetInfo&, const BldDataEBeam& bldData) {
     printf("*** Processing EBeam object\n");
     bldData.print();
@@ -149,11 +156,30 @@ public:
     bldData.print();
     printf( "\n" );    
   }
-  void process(const DetInfo&, const BldDataIpimb& bldData) {
-    printf("*** Processing Bld-Ipimb object\n");
+  void process(const DetInfo&, const BldDataIpimbV0& bldData) {
+    printf("*** Processing Bld-Ipimb V0 object\n");
     bldData.print();
     printf( "\n" );    
-  }    
+  } 
+
+  void process(const DetInfo&, const BldDataIpimb& bldData) {
+    printf("*** Processing Bld-Ipimb V1 object\n");
+    bldData.print();
+    printf( "\n" );    
+  } 
+
+  void process(const DetInfo&, const BldDataGMDV0& bldData) {
+    printf("*** Processing Bld-GMD V0 object\n");
+    bldData.print();
+    printf( "\n" );    
+  }   
+
+  void process(const DetInfo&, const BldDataGMDV1& bldData) {
+    printf("*** Processing Bld-GMD V1 object\n");
+    bldData.print();
+    printf( "\n" );
+  }
+  
   void process(const DetInfo&, const EvrData::IOConfigV1&) {
     printf("*** Processing EVR IOconfig V1 object\n");
   }
@@ -169,14 +195,26 @@ public:
   void process(const DetInfo&, const EvrData::ConfigV4&) {
     printf("*** Processing EVR config V4 object\n");
   }
+  void process(const DetInfo&, const EvrData::ConfigV7& c) {
+    printf("*** Processing EVR config V4 object\n");
+    c.print();
+    const EvrData::ConfigV7::SeqConfigType& s = c.seq_config();
+    printf(" seq src %d/%d : len %d : cycles %d\n",
+           s.sync_source(), s.beam_source(), s.length(), s.cycles());
+  }
   void process(const DetInfo&, const Princeton::ConfigV1&) {
     printf("*** Processing Princeton ConfigV1 object\n");
+  }
+  void process(const DetInfo&, const CsPad::ConfigV4& c) {
+    printf("*** Processing Cspad ConfigV4 object\n");
+    printf("  runDelay %x  intTime %x\n",
+           c.runDelay(), c.quads()[0].intTime());
   }
   int process(Xtc* xtc) {
     unsigned      i         =_depth; while (i--) printf("  ");
     Level::Type   level     = xtc->src.level();
     printf("%s level, payload size %d contains: %s: ",
-	   Level::name(level), xtc->sizeofPayload(), TypeId::name(xtc->contains.id()));
+     Level::name(level), xtc->sizeofPayload(), TypeId::name(xtc->contains.id()));
      
     const DetInfo& info = *(DetInfo*)(&xtc->src);
     if (level==Level::Source) {
@@ -279,6 +317,9 @@ public:
       case 4:
         process(info, *(const EvrData::ConfigV4*)(xtc->payload()));
         break;
+      case 7:
+        process(info, *(const EvrData::ConfigV7*)(xtc->payload()));
+        break;
       default:
         printf("Unsupported evr configuration version %d\n",version);
         break;
@@ -314,6 +355,9 @@ public:
         process(info, *(const BldDataEBeamV0*) xtc->payload() );
         break; 
       case 1:
+        process(info, *(const BldDataEBeamV1*) xtc->payload() );
+        break; 
+      case 2:
         process(info, *(const BldDataEBeam*) xtc->payload() );
         break; 
       default:
@@ -325,14 +369,45 @@ public:
       process(info, *(const BldDataPhaseCavity*) xtc->payload() );
       break;        
     }
+    case (TypeId::Id_GMD) :
+    {
+      switch(xtc->contains.version()) {
+        case 0:
+          process(info, *(const BldDataGMDV0*) xtc->payload() );
+          break;
+        case 1:
+          process(info, *(const BldDataGMDV1*) xtc->payload() );
+          break;
+        default:
+          break;
+      }
+      break;
+      break;
+    }
     case (TypeId::Id_SharedIpimb) :
     {
-      process(info, *(const BldDataIpimb*) xtc->payload() );
-      break;        
+
+     switch(xtc->contains.version()) {
+      case 0:
+        process(info, *(const BldDataIpimbV0*) xtc->payload() );
+        break; 
+      case 1:
+        process(info, *(const BldDataIpimb*) xtc->payload() );
+        break; 
+      default:
+        break;
+      }   
+      break; 
+       
     }
     case (TypeId::Id_PrincetonConfig) :
     {
       process(info, *(const Princeton::ConfigV1*)(xtc->payload()));
+      break;
+    }
+    case (TypeId::Id_CspadConfig) :
+    {
+      process(info, *(const CsPad::ConfigV4*)(xtc->payload()));
       break;
     }
     default :
@@ -385,11 +460,16 @@ int main(int argc, char* argv[]) {
   }
 
   XtcFileIterator iter(fd,0x900000);
-  Dgram* dg = iter.next();
-  printf("%s transition: time 0x%x/0x%x, payloadSize %d\n",TransitionId::name(dg->seq.service()),
-	 dg->seq.stamp().fiducials(),dg->seq.stamp().ticks(), dg->xtc.sizeofPayload());
-  myLevelIter liter(&(dg->xtc),0);
-  liter.iterate();
+  Dgram* dg;
+  while( dg = iter.next() ) {
+    if (dg->seq.service()==TransitionId::Configure ||
+        dg->seq.service()==TransitionId::BeginCalibCycle) {
+      printf("%s transition: time 0x%x/0x%x, payloadSize %d\n",TransitionId::name(dg->seq.service()),
+             dg->seq.stamp().fiducials(),dg->seq.stamp().ticks(), dg->xtc.sizeofPayload());
+      myLevelIter liter(&(dg->xtc),0);
+      liter.iterate();
+    }
+  }
   ::close(fd);
   return 0;
 }

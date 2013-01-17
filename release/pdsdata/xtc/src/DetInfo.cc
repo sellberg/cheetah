@@ -29,7 +29,10 @@ const char* DetInfo::name(Detector det){
     "SxrBeamline", "SxrEndstation",
     "XppSb1Ipm", "XppSb1Pim", "XppMonPim", "XppSb2Ipm", "XppSb3Ipm", "XppSb3Pim", "XppSb4Pim", "XppGon", "XppLas", "XppEndstation",
     "AmoEndstation", "CxiEndstation", "XcsEndstation", "MecEndstation",
-    "CxiDg1", "CxiDg2", "CxiDg3", "CxiDg4", "CxiKb1", "CxiDs1", "CxiDs2", "CxiDsu", "CxiSc1", "CxiDsd"
+    "CxiDg1", "CxiDg2", "CxiDg3", "CxiDg4", "CxiKb1", "CxiDs1", "CxiDs2", "CxiDsu", "CxiSc1", "CxiDsd",
+    "XcsBeamline", "CxiSc2",
+    "MecXuvSpectrometer","MecXrtsForw","MecXrtsBack","MecFdi","MecTimeTool","MecTargetChamber",
+    "FeeHxSpectrometer",
   };
   return (det < NumDetector ? _detNames[det] : "-Invalid-");
 }
@@ -48,7 +51,21 @@ const char* DetInfo::name(Device dev) {
     "Encoder",
     "Cspad",
     "AcqTDC",
-    "Xamps"
+    "Xamps",
+    "Cspad2x2",
+    "Fexamp",
+    "Gsc16ai",
+    "Phasics",
+    "Timepix",
+    "Opal2000",
+    "Opal4000",
+    "OceanOptics",
+    "Opal1600",
+    "Opal8000",
+    "Fli",
+    "Quartz4A150",
+    "Andor",
+    "USDUSB",
   };
   return (dev < NumDevice ? _devNames[dev] : "-Invalid-");
 }

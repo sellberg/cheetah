@@ -1,0 +1,34 @@
+/reg/g/pcds/package/ana/release/build/pdsdata/obj/i386-linux-opt/app/xtccompress.o /reg/g/pcds/package/ana/release/build/pdsdata/dep/i386-linux-opt/app/xtccompress.d: xtccompress.cc \
+  /reg/g/pcds/package/ana/release/pdsdata/camera/FrameV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/compress/Camera_FrameV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/camera/FrameV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/compress/CompressedPayload.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/ConfigV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/Detector.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/ConfigV1QuadReg.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/ConfigV2.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/ConfigV3.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/ConfigV4.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/ConfigV3.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/ConfigV2QuadReg.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/ElementV1.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/ElementHeader.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/ElementV2.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/compress/Cspad_ElementV2.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/ElementHeader.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/ElementIterator.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/cspad/CspadCompressor.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/Dgram.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/Sequence.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/ClockTime.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/TimeStamp.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/TransitionId.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/Env.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/Xtc.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/TypeId.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/Damage.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/Src.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/Level.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/XtcFileIterator.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/Dgram.hh \
+  xtccompress_test.icc

@@ -31,6 +31,9 @@ public:
   
   void      setPulseId(uint16_t u16PulseId) { _u16PulseId = u16PulseId; }
   
+public:
+  void     print    () const;  
+  
 private:
   uint16_t  _u16PulseId;
   uint16_t  _u16Polarity;

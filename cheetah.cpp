@@ -34,6 +34,7 @@
 #include "release/pdsdata/cspad/ConfigV1.hh"
 #include "release/pdsdata/cspad/ConfigV2.hh"
 #include "release/pdsdata/cspad/ConfigV3.hh"
+#include "release/pdsdata/cspad/ConfigV4.hh"
 #include "release/pdsdata/cspad/ElementHeader.hh"
 #include "release/pdsdata/cspad/ElementIterator.hh"
 #include "cspad-gjw/CspadTemp.hh"
@@ -169,26 +170,34 @@ void fetchConfig()
 		configVsn= 1;
 		quadMask = configV1.quadMask();
 		asicMask = configV1.asicMask();
-		printf("CSPAD configuration: quadMask %x  asicMask %x  runDelay %d\n", quadMask,asicMask,configV1.runDelay());
+		printf("CSPAD configuration: quadMask %x  asicMask %x  runDelay %d\n", quadMask, asicMask, configV1.runDelay());
 		printf("\tintTime %d/%d/%d/%d\n", configV1.quads()[0].intTime(), configV1.quads()[1].intTime(), configV1.quads()[2].intTime(), configV1.quads()[3].intTime());
 	}
 	else if (getCspadConfig( Pds::DetInfo::CxiDs1, configV2 )==0) {
 		configVsn= 2;
 		quadMask = configV2.quadMask();
 		asicMask = configV2.asicMask();
-		printf("CSPAD configuration: quadMask %x  asicMask %x  runDelay %d\n", quadMask,asicMask,configV2.runDelay());
+		printf("CSPAD configuration: quadMask %x  asicMask %x  runDelay %d\n", quadMask, asicMask, configV2.runDelay());
 		printf("\tintTime %d/%d/%d/%d\n", configV2.quads()[0].intTime(), configV2.quads()[1].intTime(), configV2.quads()[2].intTime(), configV2.quads()[3].intTime());
 	}
 	else if (getCspadConfig( Pds::DetInfo::CxiDs1, configV3 )==0) {
 		configVsn= 3;
 		quadMask = configV3.quadMask();
 		asicMask = configV3.asicMask();
-		printf("CSPAD configuration: quadMask %x  asicMask %x  runDelay %d\n", quadMask,asicMask,configV3.runDelay());
+		printf("CSPAD configuration: quadMask %x  asicMask %x  runDelay %d\n", quadMask, asicMask, configV3.runDelay());
 		printf("\tintTime %d/%d/%d/%d\n", configV3.quads()[0].intTime(), configV3.quads()[1].intTime(), configV3.quads()[2].intTime(), configV3.quads()[3].intTime());
 	}
+	else if (getCspadConfig( Pds::DetInfo::CxiDs1, configV4 )==0) {
+		configVsn= 4;
+		quadMask = configV4.quadMask();
+		asicMask = configV4.asicMask();
+		printf("CSPAD configuration: quadMask %x  asicMask %x  runDelay %d\n", quadMask, asicMask, configV4.runDelay());
+		printf("\tintTime %d/%d/%d/%d\n", configV4.quads()[0].intTime(), configV4.quads()[1].intTime(), configV4.quads()[2].intTime(), configV4.quads()[3].intTime());
+		}
 	else {
 		configVsn= 0;
 		printf("Failed to get CspadConfig\n");
+		exit(1);
 	}
 }
 
@@ -297,7 +306,7 @@ void event() {
 	 */
 	bool beam = beamOn();
 	//printf("Beam %s : fiducial %x\n", beam ? "On":"Off", fiducial);
-	if(!beam)
+	if(!beam && !global.generateDarkcal)
 		return;
 	
 	
@@ -376,7 +385,7 @@ void event() {
 	 */
 	float detposnew;
 	if ( getPvFloat("CXI:DS1:MMS:06", detposnew) == 0 ) {
-		// sanity check of detector readout, corrects artificial 'jumps' in the detector position if detector change is larger than 1 mm between events, corresponding to a speed larger than 120 mm/s
+		// sanity check of detector readout, corrects artificial 'jumps' in the detector position if detector change is larger than 0.83 mm between events, corresponding to a speed larger than 100 mm/s
 		if (fabs(detposnew - global.detposold) > 102.5 && nevents != 0) { // 102.5 corresponds to 100 mm/s, which is far above the upper limit of the detector speed
 			printf("Old detector position = %2.2f mm\n", global.detposold);
 			printf("New detector position = %2.2f mm\n", detposnew);

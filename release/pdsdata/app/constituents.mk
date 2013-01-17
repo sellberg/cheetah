@@ -1,8 +1,9 @@
-libnames := appdata
+libnames := appdata xtcrunset
 libsrcs_appdata := XtcMonitorServer.cc XtcMonitorClient.cc XtcMonitorMsg.cc
+libsrcs_xtcrunset := XtcRunSet.cc
 
 #tgtnames = xtcreader xtcmonserver xtcmonclient xtcmonclientexample acqconfig agatfile
-tgtnames = cfgreader xtcreader livextcreader xtcmonserver xtcmonclient xtcmonclientexample xtcEpicsReaderTest dmgreader bldreader xtcmodify
+tgtnames = cfgreader xtcreader livextcreader xtcmonserver xtcmonclient xtcmonclientexample xtcEpicsReaderTest dmgreader bldreader xtcmodify xtcmonwriter oldmonserver xtccompress
 
 #CXXFLAGS += -pthread -m32 -I/reg/g/pcds/package/root/include
 
@@ -13,7 +14,7 @@ tgtlibs_xtcreader := pdsdata/xtcdata pdsdata/acqdata pdsdata/epics pdsdata/pnccd
 tgtslib_xtcreader := $(USRLIBDIR)/rt
 
 tgtsrcs_cfgreader := cfgreader.cc
-tgtlibs_cfgreader := pdsdata/xtcdata pdsdata/acqdata pdsdata/epics pdsdata/pnccddata pdsdata/bld pdsdata/controldata pdsdata/evrdata pdsdata/camdata pdsdata/ipimbdata
+tgtlibs_cfgreader := pdsdata/xtcdata pdsdata/acqdata pdsdata/epics pdsdata/pnccddata pdsdata/bld pdsdata/controldata pdsdata/evrdata pdsdata/camdata pdsdata/ipimbdata pdsdata/compressdata pdsdata/cspaddata pdsdata/cspad2x2data pdsdata/timepixdata
 tgtslib_cfgreader := $(USRLIBDIR)/rt
 
 tgtsrcs_xtcmodify := xtcmodify.cc
@@ -40,8 +41,12 @@ tgtsrcs_acqconfig := acqconfig.cc
 tgtlibs_acqconfig := pdsdata/xtcdata pdsdata/acqdata
 
 tgtsrcs_xtcmonserver := xtcmonserver.cc
-tgtlibs_xtcmonserver := pdsdata/xtcdata pdsdata/acqdata pdsdata/appdata 
+tgtlibs_xtcmonserver := pdsdata/xtcdata pdsdata/acqdata pdsdata/appdata pdsdata/xtcrunset pdsdata/anadata pdsdata/indexdata pdsdata/evrdata
 tgtslib_xtcmonserver := $(USRLIBDIR)/rt
+
+tgtsrcs_oldmonserver := oldmonserver.cc
+tgtlibs_oldmonserver := pdsdata/xtcdata pdsdata/acqdata pdsdata/appdata
+tgtslib_oldmonserver := $(USRLIBDIR)/rt
 
 tgtsrcs_xtcmonclient := xtcmonclient.cc 
 tgtlibs_xtcmonclient := pdsdata/xtcdata pdsdata/acqdata pdsdata/appdata 
@@ -59,3 +64,12 @@ tgtsrcs_xtcEpicsReaderTest := xtcEpicsReaderTest.cc XtcEpicsFileReader.cc XtcEpi
 tgtincs_xtcEpicsReaderTest := 
 tgtlibs_xtcEpicsReaderTest := pdsdata/xtcdata pdsdata/epics
 tgtslib_xtcEpicsReaderTest := 
+
+tgtsrcs_xtcmonwriter := xtcmonwriter.cc 
+tgtlibs_xtcmonwriter := pdsdata/xtcdata pdsdata/appdata 
+tgtslib_xtcmonwriter := $(USRLIBDIR)/rt
+
+tgtsrcs_xtccompress := xtccompress.cc
+tgtlibs_xtccompress := pdsdata/xtcdata pdsdata/camdata pdsdata/cspaddata pdsdata/cspad2x2data pdsdata/timepixdata pdsdata/compressdata
+tgtslib_xtccompress := $(USRLIBDIR)/rt
+

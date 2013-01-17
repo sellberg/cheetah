@@ -22,6 +22,10 @@
 #include "pdsdata/camera/FrameFexConfigV1.hh"
 #include "pdsdata/fccd/FccdConfigV1.hh"
 #include "pdsdata/fccd/FccdConfigV2.hh"
+#include "pdsdata/timepix/ConfigV1.hh"
+#include "pdsdata/timepix/ConfigV2.hh"
+#include "pdsdata/timepix/DataV1.hh"
+#include "pdsdata/timepix/DataV2.hh"
 #include "pdsdata/camera/TwoDGaussianV1.hh"
 #include "pdsdata/opal1k/ConfigV1.hh"
 #include "pdsdata/pulnix/TM6740ConfigV1.hh"
@@ -36,14 +40,17 @@
 #include "pdsdata/evr/ConfigV5.hh"
 #include "pdsdata/evr/DataV3.hh"
 #include "pdsdata/control/ConfigV1.hh"
+#include "pdsdata/control/ConfigV2.hh"
 #include "pdsdata/control/PVControl.hh"
 #include "pdsdata/control/PVMonitor.hh"
+#include "pdsdata/control/PVLabel.hh"
 #include "pdsdata/epics/EpicsPvData.hh"
 #include "pdsdata/epics/EpicsXtcSettings.hh"
 #include "pdsdata/bld/bldData.hh"
 #include "pdsdata/princeton/ConfigV1.hh"
 #include "pdsdata/princeton/FrameV1.hh"
 #include "pdsdata/princeton/InfoV1.hh"
+#include "pdsdata/cspad/MiniElementV1.hh"
 #include "pdsdata/cspad/ElementV1.hh"
 #include "pdsdata/cspad/ConfigV1.hh"
 #include "pdsdata/lusi/IpmFexConfigV1.hh"
@@ -147,6 +154,18 @@ public:
   void process(const DetInfo&, const FCCD::FccdConfigV2&) {
     printf("*** Processing FCCD ConfigV2 object\n");
   }
+  void process(const DetInfo&, const Timepix::ConfigV1&) {
+    printf("*** Processing Timepix ConfigV1 object\n");
+  }
+  void process(const DetInfo&, const Timepix::ConfigV2&) {
+    printf("*** Processing Timepix ConfigV2 object\n");
+  }
+  void process(const DetInfo&, const Timepix::DataV1&) {
+    printf("*** Processing Timepix DataV1 object\n");
+  }
+  void process(const DetInfo&, const Timepix::DataV2&) {
+    printf("*** Processing Timepix DataV2 object\n");
+  }
   void process(const DetInfo&, const Camera::TwoDGaussianV1& o) {
     printf("*** Processing 2DGauss object\n");
   }
@@ -222,6 +241,34 @@ public:
     }
           
   }  
+  void process(const DetInfo&, const ControlData::ConfigV2& config) {
+    printf("*** Processing Control config object\n");    
+    
+    printf( "Control PV Number = %d, Monitor PV Number = %d, Label PV Number = %d\n", config.npvControls(), config.npvMonitors(), config.npvLabels() );
+    for(unsigned int iPvControl=0; iPvControl < config.npvControls(); iPvControl++) {      
+      const Pds::ControlData::PVControl& pvControlCur = config.pvControl(iPvControl);
+      if (pvControlCur.array())
+        printf( "%s[%d] = ", pvControlCur.name(), pvControlCur.index() );
+      else
+        printf( "%s = ", pvControlCur.name() );
+      printf( "%lf\n", pvControlCur.value() );
+    }
+    
+    for(unsigned int iPvMonitor=0; iPvMonitor < config.npvMonitors(); iPvMonitor++) {      
+      const Pds::ControlData::PVMonitor& pvMonitorCur = config.pvMonitor(iPvMonitor);
+      if (pvMonitorCur.array())
+        printf( "%s[%d]  ", pvMonitorCur.name(), pvMonitorCur.index() );
+      else
+        printf( "%s  ", pvMonitorCur.name() );
+      printf( "Low %lf  High %lf\n", pvMonitorCur.loValue(), pvMonitorCur.hiValue() );
+    }
+          
+    for(unsigned int iPvLabel=0; iPvLabel < config.npvLabels(); iPvLabel++) {      
+      const Pds::ControlData::PVLabel& pvLabelCur = config.pvLabel(iPvLabel);
+      printf( "%s = %s\n", pvLabelCur.name(), pvLabelCur.value() );
+    }
+          
+  }  
   void process(const DetInfo&, const EpicsPvHeader& epicsPv)
   {    
     printf("*** Processing Epics object\n");
@@ -238,6 +285,11 @@ public:
     bldData.print();
     printf( "\n" );    
   }  
+  void process(const DetInfo&, const BldDataEBeamV1& bldData) {
+    printf("*** Processing EBeamV1 object\n");
+    bldData.print();
+    printf( "\n" );    
+  }  
   void process(const DetInfo&, const BldDataEBeam& bldData) {
     printf("*** Processing EBeam object\n");
     bldData.print();
@@ -248,11 +300,30 @@ public:
     bldData.print();
     printf( "\n" );    
   } 
-  void process(const DetInfo&, const BldDataIpimb& bldData) {
-    printf("*** Processing Bld-Ipimb object\n");
+  void process(const DetInfo&, const BldDataIpimbV0& bldData) {
+    printf("*** Processing Bld-Ipimb V0 object\n");
     bldData.print();
     printf( "\n" );    
-  }   
+  } 
+
+  void process(const DetInfo&, const BldDataIpimb& bldData) {
+    printf("*** Processing Bld-Ipimb V1 object\n");
+    bldData.print();
+    printf( "\n" );    
+  } 
+  
+  void process(const DetInfo&, const BldDataGMDV0& bldData) {
+    printf("*** Processing Bld-GMD V0 object\n");
+    bldData.print();
+    printf( "\n" );    
+  } 
+
+  void process(const DetInfo&, const BldDataGMDV1& bldData) {
+    printf("*** Processing Bld-GMD V1 object\n");
+    bldData.print();
+    printf( "\n" );
+  }
+  
   void process(const DetInfo&, const EvrData::IOConfigV1&) {
     printf("*** Processing EVR IOconfig V1 object\n");
   }
@@ -293,6 +364,9 @@ public:
   }
   void process(const DetInfo&, const Princeton::InfoV1&) {
     printf("*** Processing Princeton InfoV1 object\n");
+  }
+  void process(const DetInfo&, const CsPad::MiniElementV1&) {
+    printf("*** Processing CsPad MiniElementV1 object\n");
   }
   void process(const DetInfo&, const CsPad::ElementV1&) {
     printf("*** Processing CsPad ElementV1 object\n");
@@ -509,7 +583,17 @@ public:
       break;        
     }
     case (TypeId::Id_ControlConfig) :
-      process(info, *(const ControlData::ConfigV1*)(xtc->payload()));
+      switch(xtc->contains.version()) {
+      case 1:
+	process(info, *(const ControlData::ConfigV1*)(xtc->payload()));
+	break;
+      case 2:
+	process(info, *(const ControlData::ConfigV2*)(xtc->payload()));
+	break;
+      default:
+	printf("Unsupported ControlData::Config version %d\n",xtc->contains.version());
+	break;
+      }
       break;
     case (TypeId::Id_Epics) :      
     {
@@ -522,6 +606,38 @@ public:
       process(info, *(const EpicsPvHeader*)(xtc->payload()));
       break;
     }
+    case (TypeId::Id_TimepixConfig) :
+      {
+      switch (xtc->contains.version()) {
+        case 1:
+          process(info, *(const Timepix::ConfigV1*)(xtc->payload()));
+          break;
+        case 2:
+          process(info, *(const Timepix::ConfigV2*)(xtc->payload()));
+          break;
+        default:
+          printf(" *** unsupported TypeId::Id_TimepixConfig version = %u ***\n",
+                 xtc->contains.version());
+          break;
+      }
+      break;
+      }
+    case (TypeId::Id_TimepixData) :
+      {
+      switch (xtc->contains.version()) {
+        case 1:
+          process(info, *(const Timepix::DataV1*)(xtc->payload()));
+          break;
+        case 2:
+          process(info, *(const Timepix::DataV2*)(xtc->payload()));
+          break;
+        default:
+          printf(" *** unsupported TypeId::Id_TimepixData version = %u ***\n",
+                 xtc->contains.version());
+          break;
+      }
+      break;
+      }
     /*
      * BLD data
      */
@@ -537,6 +653,9 @@ public:
         process(info, *(const BldDataEBeamV0*) xtc->payload() );
         break; 
       case 1:
+        process(info, *(const BldDataEBeamV1*) xtc->payload() );
+        break; 
+      case 2:
         process(info, *(const BldDataEBeam*) xtc->payload() );
         break; 
       default:
@@ -549,10 +668,33 @@ public:
       process(info, *(const BldDataPhaseCavity*) xtc->payload() );
       break;        
     }
+    case (TypeId::Id_GMD) :
+    {
+      switch(xtc->contains.version()) {
+        case 0:
+          process(info, *(const BldDataGMDV0*) xtc->payload() );
+          break;
+        case 1:
+          process(info, *(const BldDataGMDV1*) xtc->payload() );
+          break;
+        default:
+          break;
+      }
+      break;        
+    }
     case (TypeId::Id_SharedIpimb) :
     {
-      process(info, *(const BldDataIpimb*) xtc->payload() );
-      break;        
+     switch(xtc->contains.version()) {
+      case 0:
+        process(info, *(const BldDataIpimbV0*) xtc->payload() );
+        break; 
+      case 1:
+        process(info, *(const BldDataIpimb*) xtc->payload() );
+        break; 
+      default:
+        break;
+      }       
+      break;       
     } 
     case (TypeId::Id_PrincetonConfig) :
     {
@@ -567,6 +709,11 @@ public:
     case (TypeId::Id_PrincetonInfo) :
     {
       process(info, *(const Princeton::InfoV1*)(xtc->payload()));
+      break;
+    }    
+    case (TypeId::Id_Cspad2x2Element) :
+    {
+      process(info, *(const CsPad::MiniElementV1*)(xtc->payload()));
       break;
     }    
     case (TypeId::Id_CspadElement) :

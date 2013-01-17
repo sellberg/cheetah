@@ -25,10 +25,10 @@ int XtcIterL1Accept::process(Xtc * xtc)
   }  
   else if (level == Level::Source)
   {
-    if ( _depth != 1 )
-      printf( "XtcIterL1Accept::process(): *** Error depth: Expect 1, but get %d, level %s\n", 
+    // Source level normally appear at level 1 only, except for Fccd (which shows at level 2)
+    if ( _depth != 1 && _depth != 2 )
+      printf( "XtcIterL1Accept::process(): *** Error depth: Expect level 1 or 2, but get %d, level %s\n", 
         _depth, Level::name(level) );
-     
     
     _pIndexList->updateSource( *xtc, bStopUpdate );    
   }  

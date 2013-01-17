@@ -25,6 +25,7 @@
 #include "release/pdsdata/cspad/ConfigV1.hh"
 #include "release/pdsdata/cspad/ConfigV2.hh"
 #include "release/pdsdata/cspad/ConfigV3.hh"
+#include "release/pdsdata/cspad/ConfigV4.hh"
 #include "release/pdsdata/cspad/ElementHeader.hh"
 #include "release/pdsdata/cspad/ElementIterator.hh"
 #include "cspad-gjw/CspadTemp.hh"

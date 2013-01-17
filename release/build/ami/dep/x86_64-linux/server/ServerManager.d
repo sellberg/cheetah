@@ -1,0 +1,29 @@
+/reg/g/pcds/package/ana/release/build/ami/obj/x86_64-linux/server/ServerManager.o /reg/g/pcds/package/ana/release/build/ami/dep/x86_64-linux/server/ServerManager.d: ServerManager.cc ServerManager.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Fd.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Poll.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Routine.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Queue.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Lock.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Semaphore.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Semaphore.hh \
+  /reg/g/pcds/package/ana/release/ami/data/Message.hh \
+  /reg/g/pcds/package/ana/release/ami/server/Server.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Fd.hh \
+  /reg/g/pcds/package/ana/release/ami/data/Cds.hh \
+  /reg/g/pcds/package/ana/release/ami/data/Desc.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Port.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Semaphore.hh \
+  /reg/g/pcds/package/ana/release/ami/data/Message.hh \
+  /reg/g/pcds/package/ana/release/ami/server/VServerSocket.hh \
+  /reg/g/pcds/package/ana/release/ami/service/VSocket.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Socket.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Exception.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Ins.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Sockaddr.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Ins.hh \
+  /reg/g/pcds/package/ana/release/ami/service/TSocket.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Exception.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Exception.hh \
+  /reg/g/pcds/package/ana/release/ami/client/VClientSocket.hh \
+  /reg/g/pcds/package/ana/release/ami/service/VSocket.hh \
+  /reg/g/pcds/package/ana/release/ami/service/Sockaddr.hh

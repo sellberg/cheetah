@@ -1,168 +1,178 @@
 #include "pdsdata/ana/XtcPool.hh"
 #include "pdsdata/xtc/Dgram.hh"
 
-using std::queue;
+#include <queue>
+#include <semaphore.h>
 
-namespace Pds
-{  
-namespace Ana
-{
-  
-XtcPool::XtcPool(unsigned nevents, unsigned eventsize) :
-  _eventsize(eventsize), _bStop(false)
-{
-  sem_init(&_pend_sem, 0, 0);
-  sem_init(&_free_sem, 0, nevents);
-  while(nevents--) {
-    char* b = new char[eventsize];
-    _free.push(b);
-  }
-}
+namespace Pds {
+  namespace Ana {
 
-XtcPool::~XtcPool()
-{
-  sem_destroy(&_pend_sem);
-  sem_destroy(&_free_sem);
-  while(!_pend.empty()) {
-    char* b = _pend.front();
-    if (b) delete b;
-    _pend.pop();
-  }
-  while(!_free.empty()) {
-    delete _free.front();
-    _free.pop();
-  }
-}
+    // Copied from pds/service/SafeQueue.hh and specialized as <char *, true>
+    class SafeBufferQueue {
+    private:
+      const char* _name;
+      bool _stop;
+      std::queue<char*> _queue;
+      pthread_cond_t _condition;
+      pthread_mutex_t _mutex;
 
-//
-//  Read a complete event into the pool from file descriptor 'fd'.
-//  Upon failure, insert 0 into the pool and return false
-//  For 'live' file read, always return true.
-//
-bool XtcPool::push(int fd)
-{
-  while (sem_wait(&_free_sem)); // keep running sem_wait(), if it is interrupted by signal
-  if (_bStop)
-    return false;
-    
-  char* b = _free.front();
-  _free.pop();
-  
-  //off64_t i64Offset = ::lseek64(fd,0,SEEK_CUR); //!!debug
-  
-  unsigned sz = sizeof(Pds::Dgram);
-  ssize_t rsz = ::read(fd, b, sz);
-  
-  if (rsz == ssize_t(sz)) {
-    Pds::Dgram* dg = reinterpret_cast<Pds::Dgram*>(b);
-    sz = dg->xtc.sizeofPayload();
-    
-    //{//!!debug
-    //  char sTimeBuff[128], sDateTimeBuff[128];
-    //  time_t t = dg->seq.clock().seconds();
-    //  strftime(sTimeBuff,128,"%T",localtime(&t));
-    //  strftime(sDateTimeBuff,128,"%Z %a %F %T",localtime(&t));
-    //  
-    //  printf( "\npush(): dg(%p) %s ctl 0x%x vec %d fid 0x%x %s.%03u "
-    //   "offset 0x%Lx env 0x%x damage 0x%x extent 0x%x\n",
-    //   dg,
-    //   Pds::TransitionId::name(dg->seq.service()), dg->seq.stamp().control(),
-    //   dg->seq.stamp().vector(), dg->seq.stamp().fiducials(), 
-    //   sDateTimeBuff, (int) (dg->seq.clock().nanoseconds() / 1e6),
-    //   i64Offset, dg->env.value(), dg->xtc.damage.value(), dg->xtc.extent);           
-    //}
-    
-#ifdef DUMP_DMGOFF
-    if (dg->xtc.damage.value()&(1<<Pds::Damage::DroppedContribution)) {
-      off64_t pos = ::lseek64(fd,0,SEEK_CUR);
-      char buff[128];
-      time_t t = dg->seq.clock().seconds();
-      strftime(buff,128,"%H:%M:%S",localtime(&t));
-      printf("%s.%09u dmg %08x @ %llu\n",
-             buff,dg->seq.clock().nanoseconds(),dg->xtc.damage.value(),pos);
-    }
-#endif
-    
-    if (sz + sizeof(Pds::Dgram) > _eventsize) {
-      printf("Event size (%d) is greater than pool size(%d)\n",
-             sz, _eventsize);
-      printf("Skipping remainder of file.\n");
-    }
-    else {
-      rsz = ::read(fd, dg->xtc.payload(), sz);
-      if (rsz == ssize_t(sz)) {
-        _pend.push(b);
-        sem_post(&_pend_sem);
-        return true;
+    public:
+      SafeBufferQueue(const char* name) :
+        _name(name),
+        _stop(false) {
+        pthread_cond_init(&_condition, NULL);
+        pthread_mutex_init(&_mutex, NULL);
+      }
+
+      ~SafeBufferQueue() {
+        pthread_mutex_lock(&_mutex);
+        _stop = true;
+        while(!_queue.empty()) {
+          char* item = _queue.front();
+          if (item != NULL) {
+            delete[] item;
+          }
+          _queue.pop();
+        }
+        pthread_cond_broadcast(&_condition);
+        pthread_mutex_unlock(&_mutex);
+      }
+
+      void unblock() {
+        pthread_mutex_lock(&_mutex);
+        _stop = true;
+        pthread_cond_broadcast(&_condition);
+        pthread_mutex_unlock(&_mutex);
+      }  
+
+      void push(char* item) {
+        //printf("~~~~ PUSH %s %p\n", _name, item);
+        pthread_mutex_lock(&_mutex);
+        _queue.push(item);
+        pthread_cond_signal(&_condition);
+        pthread_mutex_unlock(&_mutex);
+      }
+
+      char* pop() {
+        pthread_mutex_lock(&_mutex);
+        for (;;) {
+          if (_stop) {
+            pthread_cond_signal(&_condition);
+            pthread_mutex_unlock(&_mutex);
+            return NULL;
+          }
+          if (! _queue.empty()) {
+            break;
+          }
+          pthread_cond_wait(&_condition, &_mutex);
+        }
+        char* item = _queue.front();
+        _queue.pop();
+        pthread_mutex_unlock(&_mutex);
+        //printf("~~~~ POP  %s %p\n", _name, item);
+        return item;
+      }
+    };
+
+    XtcPool::XtcPool(unsigned nevents, unsigned eventsize) :
+      _eventsize(eventsize),
+      _pend(new SafeBufferQueue("pend")),
+      _free(new SafeBufferQueue("free"))
+    {
+      while(nevents--) {
+        char* b = new char[eventsize];
+        _free->push(b);
       }
     }
-  }
 
-  //printf("push failed: read dgram (size %d) returned %d\n", sz, rsz);//!!debug
+    XtcPool::~XtcPool() {
+      delete _pend;
+      delete _free;
+    }
+
+    //
+    //  Read a complete event into the pool from file descriptor 'fd'.
+    //  Upon failure, insert 0 into the pool and return false
+    //  For 'live' file read, always return true.
+    //
+    bool XtcPool::push(int fd) {
+      char* b = _free->pop();
+      if (b == NULL) {
+        return false;
+      }
   
-  _free.push(b);
-  sem_post(&_free_sem);
-  
-  _pend.push(0);
-  sem_post(&_pend_sem);
+      unsigned sz = sizeof(Pds::Dgram);
+      ssize_t rsz = ::read(fd, b, sz);
+      if (rsz != ssize_t(sz) && _live && rsz > 0) {
+        _waitAndFill(fd, b+rsz, sz-rsz);
+        rsz = ssize_t(sz);
+      }
 
-  if (_live) {
-    printf("\rLive read waits...");
-    fflush(stdout);
-    sleep(1);
-    return true;
-  }
-  else
-    return false;
-}
-
-Pds::Dgram* XtcPool::pop(Pds::Dgram* r)
-{    
-  //printf("pop() start r = %p\n", r);//!!debug
-  
-  if (r) {
-    _free.push(reinterpret_cast<char*>(r));
-    sem_post(&_free_sem);
-  }
-
-  while (sem_wait(&_pend_sem)); // keep running sem_wait(), if it is interrupted by signal
-  if (_bStop)
-    return NULL;
+      if (rsz == ssize_t(sz)) {
+        Pds::Dgram* dg = reinterpret_cast<Pds::Dgram*>(b);
+        sz = dg->xtc.sizeofPayload();
     
-  char* b = _pend.front();
-  _pend.pop();
+#ifdef DUMP_DMGOFF
+        if (dg->xtc.damage.value()&(1<<Pds::Damage::DroppedContribution)) {
+          off64_t pos = ::lseek64(fd,0,SEEK_CUR);
+          char buff[128];
+          time_t t = dg->seq.clock().seconds();
+          strftime(buff,128,"%H:%M:%S",localtime(&t));
+          printf("%s.%09u dmg %08x @ %llu\n",
+                 buff,dg->seq.clock().nanoseconds(),dg->xtc.damage.value(),pos);
+        }
+#endif
+        if (sz + sizeof(Pds::Dgram) > _eventsize) {
+          printf("Event size (%d) is greater than pool size(%d); skipping remainder of file\n", sz, _eventsize);
+        } else {
+          rsz = ::read(fd, dg->xtc.payload(), sz);
+          if (rsz == ssize_t(sz)) {
+            _pend->push(b);
+            return true;
+          } else if (_live) {
+            if (rsz==-1) {
+              perror("Error reading file");
+              exit(1);
+            }
+            _waitAndFill(fd, dg->xtc.payload()+rsz, sz-rsz);
+          }
+        }
+      }
 
-  //if ( b != NULL ) //!!debug
-  //{
-  //  Pds::Dgram* dg = reinterpret_cast<Pds::Dgram*>(b);
-  //  char sTimeBuff[128], sDateTimeBuff[128];
-  //  time_t t = dg->seq.clock().seconds();
-  //  strftime(sTimeBuff,128,"%T",localtime(&t));
-  //  strftime(sDateTimeBuff,128,"%Z %a %F %T",localtime(&t));
-  //  
-  //  printf( "\npop(): dg(%p) %s ctl 0x%x vec %d fid 0x%x %s.%03u "
-  //   "env 0x%x damage 0x%x extent 0x%x\n",
-  //   dg,
-  //   Pds::TransitionId::name(dg->seq.service()), dg->seq.stamp().control(),
-  //   dg->seq.stamp().vector(), dg->seq.stamp().fiducials(), 
-  //   sDateTimeBuff, (int) (dg->seq.clock().nanoseconds() / 1e6),
-  //   dg->env.value(), dg->xtc.damage.value(), dg->xtc.extent);           
-  //}
-  
-  return reinterpret_cast<Pds::Dgram*>(b);
+      _free->push(b);
+      _pend->push(0);
+
+      if (_live) {
+        printf("\rLive read waits...");
+        fflush(stdout);
+        sleep(1);
+        return true;
+      }
+
+      return false;
+    }
+
+    Pds::Dgram* XtcPool::pop(Pds::Dgram* r) {
+      if (r != NULL) {
+        _free->push(reinterpret_cast<char*>(r));
+      }
+      return reinterpret_cast<Pds::Dgram*>(_pend->pop());
+    }
+
+    void XtcPool::unblock() {
+      _free->unblock();
+      _pend->unblock();
+    }  
+
+    void XtcPool::_waitAndFill(int fd, char* p, unsigned sz) {
+      do {
+        printf("\rLive read waits... (%07d)",sz);
+        fflush(stdout);
+        sleep(1);
+        ssize_t rsz = ::read(fd, p, sz);
+        p  += rsz;
+        sz -= rsz;
+      } while (sz);
+    }
+  }
 }
-
-/*
- * release the semeaphore to unblock all waiting threads
- */
-void XtcPool::unblock()
-{
-  _bStop = true;
-  sem_post(&_free_sem);
-  sem_post(&_pend_sem);    
-}  
-
-  
-} // namespace Ana
-} // namespace Pds
-

@@ -11,11 +11,45 @@ namespace Pds {
   class BldInfo : public Src {
   public:
 
-    enum Type { EBeam, PhaseCavity, FEEGasDetEnergy, Nh2Sb1Ipm01,  NumberOf };
+    enum Type { EBeam            = 0,   // Global
+                PhaseCavity      = 1, 
+                FEEGasDetEnergy  = 2,
+                Nh2Sb1Ipm01      = 3,   // XPP + downstream
+                HxxUm6Imb01      = 4,   // XRT
+                HxxUm6Imb02      = 5,
+                HfxDg2Imb01      = 6, 
+                HfxDg2Imb02      = 7,
+                XcsDg3Imb03      = 8, 
+                XcsDg3Imb04      = 9,
+                HfxDg3Imb01      = 10, 
+                HfxDg3Imb02      = 11,
+                HxxDg1Cam        = 12,   
+                HfxDg2Cam        = 13,
+                HfxDg3Cam        = 14,   
+                XcsDg3Cam        = 15,
+                HfxMonCam        = 16,
+                HfxMonImb01      = 17, 
+                HfxMonImb02      = 18,
+                HfxMonImb03      = 19,
+                MecLasEm01       = 20,  // MEC Local
+                MecTctrPip01     = 21,
+                MecTcTrDio01     = 22,
+                MecXt2Ipm02      = 23, 
+                MecXt2Ipm03      = 24, 
+                MecHxmIpm01      = 25,
+                GMD              = 26,  // SXR Local
+                CxiDg1Imb01      = 27,  // CXI Local
+                CxiDg2Imb01      = 28,
+                CxiDg2Imb02      = 29,
+                CxiDg4Imb01      = 30,
+                CxiDg1Pim        = 31,
+                CxiDg2Pim        = 32,
+                CxiDg4Pim        = 33,
+                NumberOf };
 
     BldInfo() {}
     BldInfo(uint32_t processId,
-        Type     type);
+            Type     type);
 
     uint32_t processId() const;
     Type     type()  const;

@@ -1,10 +1,3 @@
-/*
- * InfoV1.hh
- *
- *  Created on: Nov 6, 2009
- *      Author: jackp
- */
-
 #ifndef PRINCETON_INFO_V1_HH
 #define PRINCETON_INFO_V1_HH
 

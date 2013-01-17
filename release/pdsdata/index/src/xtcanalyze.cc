@@ -13,6 +13,7 @@
 #include "pdsdata/xtc/XtcIterator.hh"
 #include "pdsdata/xtc/XtcFileIterator.hh"
 #include "pdsdata/evr/DataV3.hh"
+#include "pdsdata/acqiris/DataDescV1.hh"
 #include "pdsdata/index/IndexFileReader.hh"
 #include "pdsdata/index/IndexChunkReader.hh"
 #include "pdsdata/ana/XtcRun.hh"
@@ -63,17 +64,21 @@ public:
 void usage(char *progname)
 {
   printf( 
-    "Usage:  %s  [-f <xtc filename>] [-i <index>] [-b <begin L1 event#>] "
-    "[-n <output L1 event#>] [-c <begin calib cycle#>] [-o <offset>] [-t <time>] [-h]\n"
+    "Usage:  %s  [-f <xtc filename>] [-i <index>] "
+    "[-n <output L1 event#>] [-o <offset>] "
+    "[-j <begin L1 event#>] [-y <begin calib cycle#>] [-t <time>]\n"
+    "[-u <fiducial>[,<event>]] [-m <from_event>] [-h]\n"
     "  Options:\n"
     "    -h                       Show usage.\n"
     "    -f <xtc filename>        Set xtc filename\n"
     "    -i <index filename>      Set index filename\n"
-    "    -b <begin L1 event#>     Set begin L1 event#\n"
-    "    -n <output L1 event#>    Set L1 event# for ouput\n"
-    "    -c <begin calib cycle#>  Set begin calib cycle#\n"
     "    -o <offset>              Start analysis from offset\n"
-    "    -t <time>                Go to the event at <time>\n",    
+    "    -n <output L1 event#>    Set L1 event# for ouput\n"
+    "    -j <begin L1 event#>     Set begin L1 event#\n"
+    "    -y <begin calib cycle#>  Set begin calib cycle#\n"
+    "    -t <time>                Go to the event at <time>\n"
+    "    -u <fiducial>[,<event>]  Go to the event with fiducial <fiducial>, searching from <event>\n"
+    ,    
     progname
   );
 }
@@ -84,7 +89,7 @@ int genListFromBasename(const char* sXtcFilename, vector<string>& lRunFilename);
 
 int xtcAnalyze( const char* sXtcFilename, const char* sIndexFilename, 
   int iBeginL1Event, int iNumL1Event, int iBeginCalib, 
-  int64_t i64OffsetStart, char* sTime );
+  int64_t i64OffsetStart, char* sTime, uint32_t uFiducialSearch, int iFidFromEvent );
 
 int main(int argc, char *argv[])
 {
@@ -95,9 +100,11 @@ int main(int argc, char *argv[])
   int           iBeginCalib     = 0;
   int64_t       i64OffsetStart  = 0;
   char*         sTime           = NULL;
+  uint32_t      uFiducialSearch = (uint32_t) -1;
+  int           iFidFromEvent   = 1;
 
   int c;
-  while ((c = getopt(argc, argv, "hf:i:b:n:c:o:t:")) != -1)
+  while ((c = getopt(argc, argv, "hf:i:n:o:j:y:t:u:")) != -1)
   {
     switch (c)
     {
@@ -110,20 +117,28 @@ int main(int argc, char *argv[])
     case 'i':
       sIndexFilename= optarg;
       break;
-    case 'b':
-      iBeginL1Event = strtol(optarg, NULL, 0);
-      break;
     case 'n':
       iNumL1Event   = strtol(optarg, NULL, 0);
-      break;
-    case 'c':
-      iBeginCalib   = strtol(optarg, NULL, 0);
       break;
     case 'o':
       i64OffsetStart= strtoll(optarg, NULL, 0);
       break;
+    case 'j':
+      iBeginL1Event = strtol(optarg, NULL, 0);
+      break;
+    case 'y':
+      iBeginCalib   = strtol(optarg, NULL, 0);
+      break;
     case 't':
       sTime         = optarg;
+      break;
+    case 'u':
+      uFiducialSearch = strtoul(optarg, NULL, 0);
+      {
+      char* sNextParam = strchr(optarg,',');
+      if (sNextParam != NULL)
+        iFidFromEvent = strtoul(sNextParam+1, NULL, 0);
+      }            
       break;
     default:
       printf( "Unknown option: -%c", c );
@@ -142,7 +157,8 @@ int main(int argc, char *argv[])
     return 0;
   }
     
-  return xtcAnalyze( sXtcFilename, sIndexFilename, iBeginL1Event, iNumL1Event, iBeginCalib, i64OffsetStart, sTime );
+  return xtcAnalyze( sXtcFilename, sIndexFilename, iBeginL1Event, iNumL1Event, iBeginCalib, 
+    i64OffsetStart, sTime, uFiducialSearch, iFidFromEvent );
 }
 
 int printIndexSummary(const Index::IndexFileReader& indexFileReader)
@@ -162,7 +178,7 @@ int printIndexSummary(const Index::IndexFileReader& indexFileReader)
     time_t t = calibNode.uSeconds;
     strftime(sTimeBuff,128,"%Z %a %F %T",localtime(&t));  
         
-    printf( "Calib %d Off 0x%Lx L1 %d %s.%03u\n", iCalib, calibNode.i64Offset, calibNode.iL1Index,
+    printf( "Calib %d Off 0x%Lx L1 %d %s.%03u\n", iCalib, (long long) calibNode.i64Offset, calibNode.iL1Index,
       sTimeBuff, (int)(calibNode.uNanoseconds/1e6));
   }          
   
@@ -268,7 +284,7 @@ int updateEvr(const Xtc& xtc)
   
   if ( xtc.contains.version() != 3 )
   {
-    printf( "UnExtorted Evr Data Ver %d\n", xtc.contains.version() );
+    printf( "Unsupported Evr Data Ver %d\n", xtc.contains.version() );
     return 1;
   }
   
@@ -285,9 +301,26 @@ int updateEvr(const Xtc& xtc)
   return 0;
 }
 
+int updateAcqWaveform(const Xtc& xtc)
+{
+  // assume xtc.contains.id() == TypeId::Id_EvrData
+  
+  if ( xtc.contains.version() != 1 )
+  {
+    printf( "Unsupported AcqWaveform Data Ver %d\n", xtc.contains.version() );
+    return 1;
+  }
+  
+  const Acqiris::DataDescV1& acqData = * reinterpret_cast<const Acqiris::DataDescV1*>(xtc.payload());
+  
+  printf("nbrSamplesInSeg %d  nbrSegments %d ", acqData.nbrSamplesInSeg(), acqData.nbrSegments());
+  
+  return 0;
+}
+
 int xtcAnalyze( const char* sXtcFilename, const char* sIndexFilename, 
   int iBeginL1Event, int iNumL1Event, int iBeginCalib, 
-  int64_t i64OffsetStart, char* sTime )
+  int64_t i64OffsetStart, char* sTime, uint32_t uFiducialSearch, int iFidFromEvent )
 {      
   XtcRun run;  
   int iError = openXtcRun(sXtcFilename, run);
@@ -319,10 +352,26 @@ int xtcAnalyze( const char* sXtcFilename, const char* sIndexFilename,
     {      
       iBeginCalib   = iCalib;
       iBeginL1Event = iEvent;
-      printf("Going to event with time %s%s Calib# %d Event# %d\n",
+      printf("Going to event with time %s%s : Calib# %d Event# %d\n",
         sTime, (bExactMatch? " [exact]":""),
         iBeginCalib, iBeginL1Event );
     }
+  }
+  else if (uFiducialSearch != (uint32_t) -1)
+  {
+    int   iCalib = -1, iEvent = -1;
+    int   iError      = run.findNextFiducial(uFiducialSearch, iFidFromEvent, iCalib, iEvent);
+    
+    if (iError != 0)
+      printf("Cannot find event with the fiducial 0x%x , after global event# %d\n", uFiducialSearch, iFidFromEvent);
+    else
+    {      
+      iBeginCalib   = iCalib;
+      iBeginL1Event = iEvent;
+      printf("Going to event with fiducial 0x%x after global event# %d : Calib# %d Event# %d\n",
+        uFiducialSearch, iFidFromEvent,
+        iBeginCalib, iBeginL1Event );
+    }    
   }
   
   //if ( iBeginCalib < 1 && iBeginL1Event < 1 && bLoadNextEvent )
@@ -365,12 +414,12 @@ int xtcAnalyze( const char* sXtcFilename, const char* sIndexFilename,
       time_t t = dg->seq.clock().seconds();
       strftime(sTimeBuff,128,"%H:%M:%S",localtime(&t));   
       
-      printf( "\n<%d> %s #%d ctl 0x%x vec %d fid 0x%x %s.%03u "
+      printf( "\n<%d> %s #%d ctl 0x%x vec %d fid 0x%x tick 0x%x %s.%03u "
        "offset 0x%Lx env 0x%x damage 0x%x extent 0x%x calib %d event %d\n",
        iSlice, TransitionId::name(dg->seq.service()), uCurEvent, dg->seq.stamp().control(),
-       dg->seq.stamp().vector(), dg->seq.stamp().fiducials(), 
+       dg->seq.stamp().vector(), dg->seq.stamp().fiducials(), dg->seq.stamp().ticks(), 
        sTimeBuff, (int) (dg->seq.clock().nanoseconds() / 1e6),
-       i64Offset, dg->env.value(), dg->xtc.damage.value(), dg->xtc.extent,
+       (long long) i64Offset, dg->env.value(), dg->xtc.damage.value(), dg->xtc.extent,
        uCurCalib, uCurEvent - uEventCalibBase + 1);    
       
       XtcIterL1Accept iterL1Accept(&(dg->xtc), 0, i64Offset + sizeof(*dg) );
@@ -430,7 +479,7 @@ int xtcAnalyze( const char* sXtcFilename, const char* sIndexFilename,
        iSlice, TransitionId::name(dg->seq.service()), dg->seq.stamp().control(),       
        dg->seq.stamp().vector(), dg->seq.stamp().fiducials(), 
        sDateTimeBuff, (int) (dg->seq.clock().nanoseconds() / 1e6),
-       i64Offset, dg->env.value(), dg->xtc.damage.value(), dg->xtc.extent);    
+       (long long) i64Offset, dg->env.value(), dg->xtc.damage.value(), dg->xtc.extent);    
       
       // Go through the config data and create the cfgSegList object
       XtcIterConfig iterConfig(&(dg->xtc), 0, i64Offset + sizeof(*dg) );
@@ -447,7 +496,7 @@ int xtcAnalyze( const char* sXtcFilename, const char* sIndexFilename,
        iSlice, TransitionId::name(dg->seq.service()), dg->seq.stamp().control(),
        dg->seq.stamp().vector(), dg->seq.stamp().fiducials(), 
        sDateTimeBuff, (int) (dg->seq.clock().nanoseconds() / 1e6),
-       i64Offset, dg->env.value(), dg->xtc.damage.value(), dg->xtc.extent);           
+       (long long) i64Offset, dg->env.value(), dg->xtc.damage.value(), dg->xtc.extent);           
        
       XtcIterWithOffset iterDefault(&(dg->xtc), 0, i64Offset + sizeof(*dg) );
       iterDefault.iterate();                   
@@ -514,7 +563,7 @@ int XtcIterWithOffset::process(Xtc * xtc)
     unsigned i = _depth;
     while (i--) printf("  ");
     printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d ",
-     Level::name(level), _i64Offset, 
+     Level::name(level), (long long) _i64Offset, 
      xtc->damage.value(), xtc->extent,
      TypeId::name(xtc->contains.id()), xtc->contains.version()
      );
@@ -529,7 +578,7 @@ int XtcIterWithOffset::process(Xtc * xtc)
     unsigned i = _depth;
     while (i--) printf("  ");
     printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d ",
-     Level::name(level), _i64Offset, 
+     Level::name(level), (long long) _i64Offset, 
      xtc->damage.value(), xtc->extent,
      TypeId::name(xtc->contains.id()), xtc->contains.version()
      );
@@ -537,15 +586,15 @@ int XtcIterWithOffset::process(Xtc * xtc)
      DetInfo::name(info.detector()), info.detId(),
      DetInfo::name(info.device()), info.devId());
      
-    if ( _depth != 1 )
-      printf( "XtcIterWithOffset::process(): *** Error depth: Expect 1, but get %d\n", _depth );
+    if ( _depth != 1 && _depth != 2 )
+      printf( "XtcIterWithOffset::process(): *** Error depth: Expect 1 or 2, but get %d\n", _depth );
   }  
   else if (level == Level::Reporter)
   {
     unsigned i = _depth;
     while (i--) printf("  ");
     printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d ",
-     Level::name(level), _i64Offset, 
+     Level::name(level), (long long) _i64Offset, 
      xtc->damage.value(), xtc->extent,
      TypeId::name(xtc->contains.id()), xtc->contains.version()
      );     
@@ -560,7 +609,7 @@ int XtcIterWithOffset::process(Xtc * xtc)
     unsigned i = _depth;
     while (i--) printf("  ");
     printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d\n",
-     Level::name(level), _i64Offset, 
+     Level::name(level), (long long) _i64Offset, 
      xtc->damage.value(), xtc->extent,
      TypeId::name(xtc->contains.id()), xtc->contains.version()
      );
@@ -574,7 +623,7 @@ int XtcIterWithOffset::process(Xtc * xtc)
     XtcIterWithOffset iter(xtc, _depth + 1, i64OffsetPayload);
     iter.iterate();    
     
-    if ( iter._iNumXtc > 5 )
+    if ( iter._iNumXtc > 1 )
     {
       unsigned i = _depth+1;
       while (i--) printf("  ");
@@ -584,6 +633,9 @@ int XtcIterWithOffset::process(Xtc * xtc)
     
   return XtcIterWithOffset::Continue;     
 }
+
+/////!!!debug
+//#include <pdsdata/epics/ConfigV1.hh>
 
 int XtcIterConfig::process(Xtc * xtc)
 {
@@ -596,7 +648,7 @@ int XtcIterConfig::process(Xtc * xtc)
     unsigned i = _depth;
     while (i--) printf("  ");
     printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d ",
-     Level::name(level), _i64Offset, 
+     Level::name(level), (long long) _i64Offset, 
      xtc->damage.value(), xtc->extent,
      TypeId::name(xtc->contains.id()), xtc->contains.version()
      );
@@ -608,29 +660,41 @@ int XtcIterConfig::process(Xtc * xtc)
   }  
   else if (level == Level::Source)
   {
-    if ( xtc->contains.id() != TypeId::Id_Epics || _iNumXtc < 1 )
+    if ( xtc->contains.id() != TypeId::Id_Epics || _iNumXtc < 2 )
     {    
       unsigned i = _depth;
       while (i--) printf("  ");
       printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d ",
-       Level::name(level), _i64Offset, 
+       Level::name(level), (long long) _i64Offset, 
        xtc->damage.value(), xtc->extent,
        TypeId::name(xtc->contains.id()), xtc->contains.version()
        );
       printf("src %s,%d %s,%d\n",
        DetInfo::name(info.detector()), info.detId(),
-       DetInfo::name(info.device()), info.devId());   
+       DetInfo::name(info.device()), info.devId()); 
     }
     
-    if ( _depth != 1 )
-      printf( "XtcIterConfig::process(): *** Error depth: Expect 1, but get %d\n", _depth );
+    /////!!!debug
+    //if (xtc->contains.id() == TypeId::Id_EpicsConfig)
+    //{
+    //  Epics::ConfigV1* config = (Epics::ConfigV1*) xtc->payload();
+    //  printf("# PVs: %d\n", config->getNumPv());
+    //  for (int iPv = 0; iPv < config->getNumPv(); ++iPv)
+    //  {
+    //    Epics::PvConfigV1* pvConfig = config->getPvConfig(iPv);
+    //    printf("%d PvId %d Desc %s interval %f\n", iPv, pvConfig->iPvId, pvConfig->sPvDesc, pvConfig->fInterval);
+    //  }
+    //}
+    
+    if ( _depth != 1 && _depth != 2 )
+      printf( "XtcIterConfig::process(): *** Error depth: Expect 1 or 2, but get %d\n", _depth );
   }
   else if (level == Level::Control)
   {
     unsigned i = _depth;
     while (i--) printf("  ");
     printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d\n",
-     Level::name(level), _i64Offset, 
+     Level::name(level), (long long) _i64Offset, 
      xtc->damage.value(), xtc->extent,
      TypeId::name(xtc->contains.id()), xtc->contains.version()
      );
@@ -643,7 +707,7 @@ int XtcIterConfig::process(Xtc * xtc)
     unsigned i = _depth;
     while (i--) printf("  ");
     printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d ",
-     Level::name(level), _i64Offset, 
+     Level::name(level), (long long) _i64Offset, 
      xtc->damage.value(), xtc->extent,
      TypeId::name(xtc->contains.id()), xtc->contains.version()
      );     
@@ -658,7 +722,7 @@ int XtcIterConfig::process(Xtc * xtc)
     unsigned i = _depth;
     while (i--) printf("  ");
     printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d\n",
-     Level::name(level), _i64Offset, 
+     Level::name(level), (long long) _i64Offset, 
      xtc->damage.value(), xtc->extent,
      TypeId::name(xtc->contains.id()), xtc->contains.version()
      );
@@ -674,7 +738,7 @@ int XtcIterConfig::process(Xtc * xtc)
     XtcIterConfig iter(xtc, _depth + 1, i64OffsetPayload);
     iter.iterate();
     
-    if ( iter._iNumXtc > 5 )
+    if ( iter._iNumXtc > 1 )
     {
       unsigned i = _depth+1;
       while (i--) printf("  ");
@@ -696,7 +760,7 @@ int XtcIterL1Accept::process(Xtc * xtc)
     unsigned i = _depth;
     while (i--) printf("  ");
     printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d ",
-     Level::name(level), _i64Offset, 
+     Level::name(level), (long long) _i64Offset, 
      xtc->damage.value(), xtc->extent,
      TypeId::name(xtc->contains.id()), xtc->contains.version()
      );
@@ -713,17 +777,17 @@ int XtcIterL1Accept::process(Xtc * xtc)
       unsigned i = _depth;
       while (i--) printf("  ");
       printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d ",
-       Level::name(level), _i64Offset, 
+       Level::name(level), (long long) _i64Offset, 
        xtc->damage.value(), xtc->extent,
        TypeId::name(xtc->contains.id()), xtc->contains.version()
        );
       printf("src %s,%d %s,%d\n",
        DetInfo::name(info.detector()), info.detId(),
-       DetInfo::name(info.device()), info.devId());
+       DetInfo::name(info.device()), info.devId());            
     }
   
-    if ( _depth != 1 )
-      printf( "XtcIterL1Accept::process(): *** Error depth: Expect 1, but get %d\n", _depth );
+    if ( _depth != 1 && _depth != 2 )
+      printf( "XtcIterL1Accept::process(): *** Error depth: Expect 1 or 2, but get %d\n", _depth );
             
     if ( xtc->contains.id() == TypeId::Id_EvrData )
     {
@@ -733,13 +797,22 @@ int XtcIterL1Accept::process(Xtc * xtc)
       updateEvr(*xtc);
       printf("\n");
     }
+    
+    if ( xtc->contains.id() == TypeId::Id_AcqWaveform )
+    {
+      unsigned i = _depth;
+      while (i--) printf("  ");
+      printf("  Acq Waveform ");
+      updateAcqWaveform(*xtc);
+      printf("\n");
+    }    
   }  
   else if (level == Level::Reporter)
   {
     unsigned i = _depth;
     while (i--) printf("  ");
     printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d ",
-     Level::name(level), _i64Offset, 
+     Level::name(level), (long long) _i64Offset, 
      xtc->damage.value(), xtc->extent,
      TypeId::name(xtc->contains.id()), xtc->contains.version()
      );     
@@ -754,7 +827,7 @@ int XtcIterL1Accept::process(Xtc * xtc)
     unsigned i = _depth;
     while (i--) printf("  ");
     printf("%s level  offset 0x%Lx damage 0x%x extent 0x%x contains %s V%d\n",
-     Level::name(level), _i64Offset, 
+     Level::name(level), (long long) _i64Offset, 
      xtc->damage.value(), xtc->extent,
      TypeId::name(xtc->contains.id()), xtc->contains.version()
      );
@@ -770,7 +843,7 @@ int XtcIterL1Accept::process(Xtc * xtc)
     XtcIterL1Accept iter(xtc, _depth + 1, i64OffsetPayload);
     iter.iterate();        
     
-    if ( iter._iNumXtc > 5 )
+    if ( iter._iNumXtc > 1 )
     {
       unsigned i = _depth+1;
       while (i--) printf("  ");
@@ -801,9 +874,9 @@ int openXtcRun(const char* sXtcFilename, XtcRun& run)
   //}
   if (lRunFilename.size() > 1)
     printf("Found %d files in this run. First: %s Last: %s\n", 
-      lRunFilename.size(), lRunFilename.front().c_str(), lRunFilename.back().c_str());
+      (int) lRunFilename.size(), lRunFilename.front().c_str(), lRunFilename.back().c_str());
   else
-    printf("Only 1 files in this run: %s\n", 
+    printf("Only 1 file in this run: %s\n", 
       lRunFilename.front().c_str());
    
   run.reset(lRunFilename[0]);
@@ -829,7 +902,7 @@ int genListFromBasename(const char* sXtcFilename, vector<string>& lRunFilename)
    */
   string strFnXtc(sXtcFilename);
   
-  unsigned int uPos = strFnXtc.find("-s");
+  size_t uPos = strFnXtc.find("-s");
   if (uPos == string::npos)
   {
     struct ::stat64 statFile;
@@ -843,35 +916,52 @@ int genListFromBasename(const char* sXtcFilename, vector<string>& lRunFilename)
     lRunFilename.push_back(strFnXtc);    
     return 0;
   }
+  
+  string strFnExt = strFnXtc.substr(uPos+9); // Move from "-s00-c00.xtc..." to "xtc..."
     
   string strFnBase = strFnXtc.substr(0, uPos+2);
     
   /*
    * Read index files
    */
-  for (int iSlice = 0;; ++iSlice)
+  const int MAX_SLICES = 6;
+  int iChunk = 0;
+  while (true)
   {
-    bool bChunkFound = false;
-    for (int iChunk = 0;; ++iChunk)
+    bool bSliceFound = false;
+    for (int iSlice = 0; iSlice < MAX_SLICES; ++iSlice)
     {
-      char sFnBuf[64];
-      sprintf(sFnBuf, "%s%02d-c%02d.xtc", strFnBase.c_str(), iSlice, iChunk);
+      char sFnBuf[128];
+      sprintf(sFnBuf, "%s%02d-c%02d.%s", strFnBase.c_str(), iSlice, iChunk, strFnExt.c_str());
       
       struct ::stat64 statFile;
       int iError = ::stat64(sFnBuf, &statFile);
       if ( iError != 0 )
-      {
-        //printf("genListFromBasename::Failed S%d C%d %s error %s\n", iSlice, iChunk, sFnBuf, strerror(errno));//!!debug
-        break;    
-      }            
+        continue;
 
       lRunFilename.push_back(sFnBuf);
-      bChunkFound = true;
+      bSliceFound = true;
     }
     
-    if (!bChunkFound)
+    if (!bSliceFound)
       break;
-  }  
+      
+    ++iChunk;
+  }
+  
+  if (iChunk == 0)
+  {
+    struct ::stat64 statFile;
+    int iError = ::stat64(sXtcFilename, &statFile);
+    if ( iError != 0 )
+    {
+      printf("genListFromBasename(): Input filename %s doesn't exists\n", sXtcFilename);
+      return 0;
+    }
+    
+    lRunFilename.push_back(strFnXtc);    
+    return 0;
+  }   
   
   return 0;
 }

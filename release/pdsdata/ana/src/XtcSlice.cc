@@ -18,7 +18,7 @@ XtcSlice::XtcSlice(std::string fname) :
   _lastdg(0),
   _nextdg(0),
   _fd  (-1),
-  _pool(new XtcPool(4,0x1000000)),
+  _pool(new XtcPool(4,0x4000000)),
   _bclose(false),
   _i64OffsetNext(0)
 {
@@ -27,9 +27,11 @@ XtcSlice::XtcSlice(std::string fname) :
 
 XtcSlice::~XtcSlice() 
 {
-  _close();
+  _close(true);
   
   _index.close();      
+
+  delete _pool;
 }
 
 bool XtcSlice::add_file(std::string fname) 
@@ -88,7 +90,7 @@ bool XtcSlice::_open(int64_t i64Offset)
     if (i64OffsetSeek != i64Offset)
     {
       printf( "XtcSlice::_open(): seek failed (expected 0x%Lx, get 0x%Lx), error = %s\n",
-        i64Offset, i64OffsetSeek, strerror(errno) );
+        (long long) i64Offset, (long long) i64OffsetSeek, strerror(errno) );
       return false;
     }        
   }
@@ -114,11 +116,11 @@ void XtcSlice::_close(bool bForceWait)
     
     pthread_join(_threadID,NULL);
     
-    delete _lastdg; _lastdg = NULL;    
+    delete[] _lastdg; _lastdg = NULL;    
     delete _nextdg; _nextdg = NULL;
     
     delete _pool;
-    _pool = new XtcPool(4,0x1000000);
+    _pool = new XtcPool(4,0x4000000);
     _bclose =false;
   }
   if (_fd != -1)
@@ -137,7 +139,7 @@ Result XtcSlice::_openChunk(int iChunk, uint64_t i64Offset)
     itChunk != _chunks.end();
     ++itChunk)
   {
-    unsigned int uFind = itChunk->find(sChunk);
+    size_t uFind = itChunk->find(sChunk);
     if (uFind == std::string::npos)
       continue;
       
@@ -147,6 +149,18 @@ Result XtcSlice::_openChunk(int iChunk, uint64_t i64Offset)
     return ( _open(i64Offset) ? OK : Error );
   }      
     
+  /*
+   * Special case: The xtc filename doesn't follow the "eXX-rXXXX-sXX-cXX.xtc" format, 
+       such as "1.xtc", "test1.xtc", etc. In this case we only have ONE xtc file
+       in this slice.
+   */
+  if (iChunk == 0 && _chunks.size() == 1)
+  {
+    _close(true);      
+    _current = _chunks.begin();
+    return ( _open(i64Offset) ? OK : Error );    
+  }
+  
   printf("XtcSlice::_openChunk(): Cannot find chunk %d\n", iChunk);
   return Error;
 }
@@ -175,8 +189,12 @@ Result XtcSlice::_next()
           std::string fname = _current->substr(0,chunkPosition) + std::string(chunkBuff) +
             _current->substr(chunkPosition+2);
 
-          struct stat _stat;
-          if (stat(fname.c_str(),&_stat)==0) {
+          //  Can't use stat here since it fails on files > 2GB
+          //struct stat _stat;
+          //if (stat(fname.c_str(),&_stat)==0) {
+          int fd = ::open(fname.c_str(),O_LARGEFILE,O_RDONLY);
+          if (fd != -1) {
+            ::close(fd);
             _chunks.push_back(fname);
             _current = _chunks.begin();
             while( *_current != fname )
@@ -215,7 +233,7 @@ Result XtcSlice::_next()
 
 bool XtcSlice::read()
 {
-  return _pool->push(_fd) && !_bclose;
+  return !_bclose && _pool->push(_fd);
 }
 
 Result XtcSlice::_loadIndex()
@@ -228,10 +246,9 @@ Result XtcSlice::_loadIndex()
   if ( iError != 0 )
     return Error;
   
-  _index.open(strIndexFilename.c_str());
-  
+  _index.open(strIndexFilename.c_str());  
   if ( _index.isValid() )
-    return OK;
+    return OK;  
     
   printf( "XtcSlice::_loadIndex(): Error loading index file %s for %s\n", strIndexFilename.c_str(), _current->c_str() );    
   return Error;
@@ -298,6 +315,28 @@ Result XtcSlice::numEventInCalib(int calib, int& iNumEvents)
   return OK;
 }
 
+Result XtcSlice::numTotalEvent(int& iNumTotalEvents)
+{
+  iNumTotalEvents = -1;
+  
+  _loadIndex();
+  if ( !_index.isValid() )
+  {
+    printf( "XtcSlice::numTotalEvent(): No index file found for %s.\n", 
+      _current->c_str() );
+    return Error;
+  }
+  
+  int iError    = _index.numL1Event(iNumTotalEvents);    
+  if ( iError != 0 )
+  {
+    printf( "XtcSlice::numTotalEvent(): Query L1 Event# failed\n" );
+    return Error;
+  }
+  
+  return OK;  
+}
+
 Result XtcSlice::getTime(int calib, int event, uint32_t& uSeconds, uint32_t& uNanoseconds)
 {
   uSeconds      = 0;
@@ -321,6 +360,28 @@ Result XtcSlice::getTime(int calib, int event, uint32_t& uSeconds, uint32_t& uNa
     return Error;
     
   iError = _index.time(iGlobalEvent, uSeconds, uNanoseconds);
+  if ( iError != 0 )
+    return Error;    
+  
+  return OK;
+}
+
+Result XtcSlice::getTimeGlobal(int iSliceEvent, uint32_t& uSeconds, uint32_t& uNanoseconds)
+{
+  uSeconds      = 0;
+  uNanoseconds  = 0;
+  
+  _loadIndex();
+  if ( !_index.isValid() )
+  {
+    printf( "XtcSlice::getTimeGlobal(): No index file found for %s. Cannot do the jump\n", 
+      _current->c_str() );
+    return Error;
+  }
+    
+  // adjust indexes: from 1-based index to 0-based index
+  int iSliceEventAdj = iSliceEvent - 1;    
+  int iError = _index.time(iSliceEventAdj, uSeconds, uNanoseconds);
   if ( iError != 0 )
     return Error;    
   
@@ -416,7 +477,7 @@ Result XtcSlice::findTime(uint32_t uSeconds, uint32_t uNanoseconds, int& iCalib,
   _loadIndex();
   if ( !_index.isValid() )
   {
-    printf( "XtcSlice::jump(): No index file found for %s. Cannot do the jump\n", 
+    printf( "XtcSlice::findTime(): No index file found for %s.\n", 
       _current->c_str() );
     return Error;
   }
@@ -433,6 +494,53 @@ Result XtcSlice::findTime(uint32_t uSeconds, uint32_t uNanoseconds, int& iCalib,
   return OK;
 }
 
+Result XtcSlice::findTimeGlobal(uint32_t uSeconds, uint32_t uNanoseconds, int& iSliceEvent, bool& bExactMatch, bool& bOvertime)
+{
+  iSliceEvent = -1;
+  
+  _loadIndex();
+  if ( !_index.isValid() )
+  {
+    printf( "XtcSlice::findTimeGlobal(): No index file found for %s.\n", 
+      _current->c_str() );
+    return Error;
+  }
+  
+  int iSliceEventAdj = -1;
+  int iError = 
+    _index.eventTimeToGlobal(uSeconds, uNanoseconds, iSliceEventAdj, bExactMatch, bOvertime);
+  if ( iError != 0 )
+    return Error;
+
+  iSliceEvent = iSliceEventAdj + 1;    
+    
+  return OK;
+}
+
+Result XtcSlice::findNextFiducial(uint32_t uFiducial, int iFromEvent, int& iEvent)
+{
+  iEvent = -1;
+  
+  _loadIndex();
+  if ( !_index.isValid() )
+  {
+    printf( "XtcSlice::findNextFiducial(): No index file found for %s. Cannot do the jump\n", 
+      _current->c_str() );
+    return Error;
+  }
+  
+  int iFromEventAdj = iFromEvent - 1;
+  int iEventAdj     = -1;
+  int iError = 
+    _index.eventNextFiducialToGlobal(uFiducial, iFromEventAdj, iEventAdj);
+  if ( iError != 0 )
+    return Error;
+
+  iEvent = iEventAdj + 1;    
+    
+  return OK;
+}
+
 void* readSlice(void* arg)
 {
   XtcSlice* s = (XtcSlice*)arg;
@@ -443,19 +551,29 @@ void* readSlice(void* arg)
 static int genIndexFromXtcFilename( const std::string& strXtcFilename, std::string& strIndexFilename )
 { 
   strIndexFilename.clear();
-  unsigned int iFindPos = strXtcFilename.rfind(".xtc");
+  size_t iFindPos = strXtcFilename.rfind(".xtc");
   
   if (iFindPos == std::string::npos )
     return 1;
     
-  strIndexFilename = strXtcFilename.substr(0, iFindPos) + ".idx";  
-  
-  struct ::stat statFile;
-  int iError = ::stat( strIndexFilename.c_str(), &statFile );
+  strIndexFilename = strXtcFilename.substr(0, iFindPos) + ".xtc.idx";  
+    
+  struct ::stat64 statFile;
+  int iError = ::stat64( strIndexFilename.c_str(), &statFile );
   if ( iError != 0 )
   {
-    strIndexFilename.clear();
-    return 2;
+    size_t iFindDir = strXtcFilename.rfind("/");
+    if (iFindDir == std::string::npos )
+      strIndexFilename = "index/" + strXtcFilename + ".idx";
+    else
+      strIndexFilename = strXtcFilename.substr(0, iFindDir+1) + "index/" + strXtcFilename.substr(iFindDir+1) + ".idx";    
+    
+    iError = ::stat64( strIndexFilename.c_str(), &statFile );    
+    if ( iError != 0 )
+    {
+      strIndexFilename.clear();
+      return 2;
+    }    
   }
   
   //printf( "Using %s as the index file for analyzing %s\n", 

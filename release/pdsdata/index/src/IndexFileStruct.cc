@@ -20,6 +20,37 @@ IndexFileHeaderV1::IndexFileHeaderV1(const IndexList& list) :
 }
 
 /*
+ * class IndexFileHeaderV2
+ */ 
+IndexFileHeaderV2::IndexFileHeaderV2(const IndexList& list) :
+  typeId(TypeId::Id_Index, iXtcIndexVersion)
+{
+  strncpy(sXtcFilename, list._sXtcFilename, iMaxFilenameLen-1);    
+  sXtcFilename[iMaxFilenameLen-1] = 0;  
+  iNumCalib       = list._lCalib.size();
+  iNumEvrEvents   = list._mapEvrToId.size();
+  iNumDetector    = list._iNumSegments;  
+  iNumIndex       = list._lNode.size();
+  iNumOutOrder    = list._iNumOutOrder;
+  iNumOverlapPrev = list._iNumOverlapPrev;
+  iNumOverlapNext = list._iNumOverlapNext;  
+}
+
+IndexFileHeaderV2::IndexFileHeaderV2(const IndexFileHeaderV1& headerV1) :
+  typeId(TypeId::Id_Index, iXtcIndexVersion),
+  iNumCalib       (headerV1.iNumCalib),
+  iNumEvrEvents   (headerV1.iNumEvrEvents),
+  iNumDetector    (headerV1.iNumDetector),
+  iNumIndex       (headerV1.iNumIndex),
+  iNumOutOrder    (0),
+  iNumOverlapPrev (0),
+  iNumOverlapNext (0) 
+{  
+  strncpy( sXtcFilename, headerV1.sXtcFilename, iMaxFilenameLen-1);    
+  sXtcFilename[iMaxFilenameLen-1] = 0;  
+}
+
+/*
  * class IndexFileL1NodeV1
  */ 
 IndexFileL1NodeV1::IndexFileL1NodeV1(const L1AcceptNode& node) :

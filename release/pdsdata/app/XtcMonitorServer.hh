@@ -24,6 +24,7 @@ namespace Pds {
 		     unsigned sizeofBuffers, 
 		     unsigned numberofEvBuffers, 
 		     unsigned numberofClients,
+		     unsigned numberofEvQueues=0, 
 		     unsigned sequenceLength=1);
     virtual ~XtcMonitorServer();
   public:
@@ -51,6 +52,7 @@ namespace Pds {
     unsigned        _sizeOfBuffers;
     unsigned        _numberOfEvBuffers;
     unsigned        _numberOfClients;
+    unsigned        _numberOfEvQueues;
     unsigned        _sizeOfShm;
     char*           _bufferP;   //  pointer to the shared memory area being used
     char*           _myShm;     // the pointer to start of shared memory
