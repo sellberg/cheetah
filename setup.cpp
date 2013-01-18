@@ -21,17 +21,15 @@
 
 #include "myana/myana.hh"
 #include "myana/main.hh"
-#include "myana/XtcRun.hh"
+//#include "myana/XtcRun.hh"
 #include "release/pdsdata/cspad/ConfigV1.hh"
 #include "release/pdsdata/cspad/ConfigV2.hh"
 #include "release/pdsdata/cspad/ConfigV3.hh"
 #include "release/pdsdata/cspad/ConfigV4.hh"
 #include "release/pdsdata/cspad/ElementHeader.hh"
 #include "release/pdsdata/cspad/ElementIterator.hh"
-#include "cspad-gjw/CspadTemp.hh"
-#include "cspad-gjw/CspadCorrector.hh"
-#include "cspad-gjw/CspadGeometry.hh"
-
+//#include "cspad-gjw/CspadTemp.hh"
+//#include "cspad-gjw/CspadGeometry.hh"
 
 #include <string.h>
 #include <sys/time.h>

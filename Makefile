@@ -91,6 +91,8 @@ $(MYANADIR)/main.o: $(MYANADIR)/main.cc $(MYANADIR)/myana.hh $(MYANADIR)/main.hh
 
 $(MYANADIR)/XtcRun.o: $(MYANADIR)/XtcRun.cc $(MYANADIR)/XtcRun.hh $(MYANADIR)/main.hh
 	$(CPP) $(CFLAGS) -o $(MYANADIR)/XtcRun.o $<
+$(MYANADIR)/SplitEventQ.o: $(MYANADIR)/SplitEventQ.cc $(MYANADIR)/SplitEventQ.hh $(MYANADIR)/main.hh
+	$(CPP) $(CFLAGS) -o $(MYANADIR)/SplitEventQ.o $<
 
 
 # csPAD libraries
@@ -200,11 +202,7 @@ cheetah: cheetah.o \
   peakdetect.o \
   pointvector.o \
   point.o \
-  $(MYANADIR)/XtcRun.o \
-  $(MYANADIR)/main.o \
-  $(CSPADDIR)/CspadCorrector.o \
-  $(CSPADDIR)/CspadGeometry.o \
-  $(CSPADDIR)/CspadTemp.o
+  $(MYANADIR)/main.o
 	@echo ""
 	@echo "---Linking the Cheetah---"
     #the order is important: first the objects, then the libraries they need

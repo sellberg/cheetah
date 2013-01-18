@@ -21,7 +21,7 @@
 #ifndef _worker_h
 #define _worker_h
 
-#include "cspad-gjw/CspadCorrector.hh"
+//#include "cspad-gjw/CspadCorrector.hh"
 #include "release/pdsdata/cspad/ConfigV1.hh"
 #include "release/pdsdata/cspad/ConfigV2.hh"
 #include "release/pdsdata/cspad/ConfigV3.hh"
@@ -126,7 +126,7 @@ typedef struct {
  */
 
 // Static variables
-static CspadCorrector*      corrector;
+//static CspadCorrector*      corrector;
 static Pds::CsPad::ConfigV1 configV1;
 static Pds::CsPad::ConfigV2 configV2;
 static Pds::CsPad::ConfigV3 configV3;

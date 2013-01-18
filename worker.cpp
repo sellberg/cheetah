@@ -20,11 +20,11 @@
 
 #include "myana/myana.hh"
 #include "myana/main.hh"
-#include "myana/XtcRun.hh"
+//#include "myana/XtcRun.hh"
 #include "release/pdsdata/cspad/ElementHeader.hh"
 #include "release/pdsdata/cspad/ElementIterator.hh"
-#include "cspad-gjw/CspadTemp.hh"
-#include "cspad-gjw/CspadGeometry.hh"
+//#include "cspad-gjw/CspadTemp.hh"
+//#include "cspad-gjw/CspadGeometry.hh"
 
 #include <string.h>
 #include <cmath>
@@ -343,10 +343,10 @@ void *worker(void *threadarg) {
 	/*
 	 *	Assemble quadrants into a 'realistic' 2D image
 	 */
-	if (global->hdf5dump || (hit.standard && global->hitfinder.savehits) 
-						 || (hit.water && global->waterfinder.savehits) 
-						 || (hit.ice && global->icefinder.savehits) 
-						 || (!hit.background && global->backgroundfinder.savehits) ) {
+	if (global->hdf5dump || (hit.standard && (global->hitfinder.savehits || global->powdersum)) 
+						 || (hit.water && (global->waterfinder.savehits || global->powdersum)) 
+						 || (hit.ice && (global->icefinder.savehits || global->powdersum)) 
+						 || (!hit.background && (global->backgroundfinder.savehits || global->powdersum)) ) {
 		assemble2Dimage(threadInfo, global);
 	}
 	

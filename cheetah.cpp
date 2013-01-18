@@ -30,16 +30,16 @@
 
 #include "myana/myana.hh"
 #include "myana/main.hh"
-#include "myana/XtcRun.hh"
+//#include "myana/XtcRun.hh"
 #include "release/pdsdata/cspad/ConfigV1.hh"
 #include "release/pdsdata/cspad/ConfigV2.hh"
 #include "release/pdsdata/cspad/ConfigV3.hh"
 #include "release/pdsdata/cspad/ConfigV4.hh"
 #include "release/pdsdata/cspad/ElementHeader.hh"
 #include "release/pdsdata/cspad/ElementIterator.hh"
-#include "cspad-gjw/CspadTemp.hh"
-#include "cspad-gjw/CspadCorrector.hh"
-#include "cspad-gjw/CspadGeometry.hh"
+//#include "cspad-gjw/CspadTemp.hh"
+//#include "cspad-gjw/CspadCorrector.hh"
+//#include "cspad-gjw/CspadGeometry.hh"
 
 #include <iostream>
 using std::cout;
@@ -64,6 +64,7 @@ static long			frameNumber;
 
 
 // Quad class definition
+/*
 class MyQuad {
 	public:
 	MyQuad(unsigned q) : _quad(q) {
@@ -94,9 +95,10 @@ class MyQuad {
   		CspadSection _s;
 };
 
-static MyQuad* quads[4];    
-using namespace Pds;
+static MyQuad* quads[4];
+*/
 
+using namespace Pds;
 
 
 /*
@@ -135,12 +137,12 @@ void beginjob() {
 	/*
 	 *	New csPad corrector
 	 */
-	corrector = new CspadCorrector(Pds::DetInfo::CxiDs1,0,CspadCorrector::DarkFrameOffset);
+	//corrector = new CspadCorrector(Pds::DetInfo::CxiDs1,0,CspadCorrector::DarkFrameOffset);
 
-				 
+	/*
 	for(unsigned i=0; i<4; i++)
 		quads[i] = new MyQuad(i);
-	
+	*/
 	
 	/*
 	 *	Stuff for worker thread management
@@ -211,7 +213,7 @@ void beginrun()
 	//printf("beginrun\n");
 	printf("Processing r%04u\n",getRunNumber());
 	fetchConfig();
-	corrector->loadConstants(getRunNumber());
+	//corrector->loadConstants(getRunNumber());
 	global.runNumber = getRunNumber();
 	global.writeInitialLog();	
 	frameNumber = 0;
@@ -583,10 +585,10 @@ void event() {
 				
 				// Get temperature on strong back 
 				//float	temperature = CspadTemp::instance().getTemp(element->sb_temp(2));
-				float	temperature = CspadTemp::instance().getTemp(element->sb_temp((element->quad()%2==0)?3:0));
+				//float	temperature = CspadTemp::instance().getTemp(element->sb_temp((element->quad()%2==0)?3:0));
 				//printf("Temperature on quadrant %i: %3.1fC\n",quadrant, temperature);
 				//printf("Temperature: %3.1fC\n",CspadTemp::instance().getTemp(element->sb_temp((element->quad()%2==0)?3:0)));
-				threadInfo->quad_temperature[quadrant] = temperature;
+				//threadInfo->quad_temperature[quadrant] = temperature;
 				
 				
 				// Read 2x1 "sections" into data array in DAQ format, i.e., 2x8 array of asics (two bytes / pixel)
