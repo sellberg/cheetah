@@ -67,6 +67,8 @@ public:
 	char		geometryFile[1024];		// File containing pixelmap (X,Y coordinate of each pixel in raw data stream)
 	float		pixelSize;			// in meters
 	double		detectorOffset;		// offset in nominal detector position (mm), follows CXI coordinate system; positive value (+Z) moves detector further downstream
+	double		detectorZpos;			// nominal detectorZ position if it fails to read from data stream
+	char		detectorZpvname[1024];	// PV name of detectorZ motor
 	int			useCenterCorrection;	// set to nonzero to shift 0 of pixel array to the center of the square hole
 	float		pixelCenterX;		// option to manually override the calculated center of the square hole (if useCenterCorrection is enabled) and set the center to X in pixels if pixelCenterX is nonzero
 	float		pixelCenterY;		// option to manually override the calculated center of the square hole (if useCenterCorrection is enabled) and set the center to Y in pixels if pixelCenterY is nonzero
@@ -136,6 +138,8 @@ public:
 	
 	// Attenuation correction
 	int			useAttenuationCorrection;		// Whether to correct each event's intensity with the calculated attenuation
+	float		filterPositionIn;				// Nominal position for silicon filters in beam
+	float		filterPositionOut;				// Nominal position for silicon filters out of beam
 	char		attenuationFile[1024];			// Name of the file containing the attenuation list
 	
 	// Energy calibration

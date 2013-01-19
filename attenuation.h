@@ -33,7 +33,7 @@
  *	Function prototypes for calculating attenuation
  */
 
-int getSiThickness(unsigned & totalThickness, unsigned nFilters, unsigned filterThicknesses[]);
+int getSiThickness(unsigned & totalThickness, unsigned nFilters, unsigned filterThicknesses[], float filterPosIn, float filterPosOut);
 double getAttenuation(unsigned totalThickness, unsigned nThicknesses, unsigned possibleThicknesses[], double possibleAttenuations[]);
 int factorial(unsigned n);
 std::string intToString(int n);

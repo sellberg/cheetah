@@ -386,7 +386,7 @@ void event() {
 	 *	CXI detector position (Z)
 	 */
 	float detposnew;
-	if ( getPvFloat("CXI:DS1:MMS:06", detposnew) == 0 ) {
+	if ( getPvFloat(global.detectorZpvname, detposnew) == 0 ) {
 		// sanity check of detector readout, corrects artificial 'jumps' in the detector position if detector change is larger than 0.83 mm between events, corresponding to a speed larger than 100 mm/s
 		if (fabs(detposnew - global.detposold) > 102.5 && nevents != 0) { // 102.5 corresponds to 100 mm/s, which is far above the upper limit of the detector speed
 			printf("Old detector position = %2.2f mm\n", global.detposold);
@@ -404,6 +404,7 @@ void event() {
 		global.detectorZ = 500.0 + detposnew + 79.0 + global.detectorOffset;
 	} else if ((nevents-global.attenuationOffset) % 123 == 0) {
 		cout << "Failed to retrieve detector position for EVENT #" << nevents+1 << endl;
+		if (nevents == 0) global.detectorZ = 500.0 + global.detectorZpos + 79.0 + global.detectorOffset;
 	}
 	
 	
@@ -416,7 +417,7 @@ void event() {
 		 *	Get total thickness for Si filters in XRT
 		 */
 		unsigned totalThickness;
-		fail = getSiThickness(totalThickness, global.nFilters, global.filterThicknesses);
+		fail = getSiThickness(totalThickness, global.nFilters, global.filterThicknesses, global.filterPositionIn, global.filterPositionOut);
 		// cout << "Total thickness: " << totalThickness << endl;
 		if (fail) {
 			cout << "Failed to retrieve attenuation for EVENT #" << nevents+1 << " [failcode " << fail << "]" << endl;

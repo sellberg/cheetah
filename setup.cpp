@@ -67,6 +67,8 @@ void cGlobal::defaultConfiguration(void) {
 	strcpy(geometryFile, "geometry/cspad_pixelmap.h5");
 	pixelSize = 109.92e-6;
 	detectorOffset = 0;
+	detectorZpos = 0;
+	strcpy(detectorZpvname, "CXI:DS1:MMS:06.RBV");
 	useCenterCorrection = 0;
 	pixelCenterX = 0;
 	pixelCenterY = 0;
@@ -138,6 +140,8 @@ void cGlobal::defaultConfiguration(void) {
 	// Attenuation correction
 	useAttenuationCorrection = 0;
 	strcpy(attenuationFile, "attenuations.dat");
+	filterPositionIn = 25; //cxi25410
+	filterPositionOut = 2.5; //cxi25410
 	
 	// Energy calibration
 	useEnergyCalibration = 0;
@@ -941,6 +945,12 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "useattenuationcorrection")) {
 		useAttenuationCorrection = atoi(value);
 	}
+	else if (!strcmp(tag, "filterpositionin")) {
+		filterPositionIn = atof(value);
+	}
+	else if (!strcmp(tag, "filterpositionout")) {
+		filterPositionOut = atof(value);
+	}
 	else if (!strcmp(tag, "useenergycalibration")) {
 		useEnergyCalibration = atoi(value);
 	}
@@ -966,6 +976,12 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "detectoroffset")) {
 		detectorOffset = atof(value);
+	}
+	else if (!strcmp(tag, "detectorzpos")) {
+		detectorZpos = atof(value);
+	}
+	else if (!strcmp(tag, "detectorzpvname")) {
+		strcpy(detectorZpvname, value);
 	}
 	else if (!strcmp(tag, "debuglevel")) {
 		debugLevel = atoi(value);

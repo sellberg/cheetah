@@ -52,7 +52,7 @@ using std::string;
  */
 
 // Function to calculate the Si thickness inside the beam
-int getSiThickness(unsigned & totalThickness, unsigned nFilters, unsigned filterThicknesses[])
+int getSiThickness(unsigned & totalThickness, unsigned nFilters, unsigned filterThicknesses[], float filterPosIn, float filterPosOut)
 {
 	int fail = 0;
 	int totalFail = 0;
@@ -68,8 +68,8 @@ int getSiThickness(unsigned & totalThickness, unsigned nFilters, unsigned filter
 		totalFail += fail;
 		if (fail == 0) {
 			// cout << "filterPosition: " << filterPositions[i] << endl;
-			if (filterPositions[i] > 20 && filterPositions[i] < 30) totalThickness += filterThicknesses[i];
-			else if (filterPositions[i] < -2.5 || filterPositions[i] > 2.5) {
+			if (filterPositions[i] > (filterPosIn - 5) && filterPositions[i] < (filterPosIn + 5)) totalThickness += filterThicknesses[i];
+			else if (filterPositions[i] < (filterPosOut - 7.5) || filterPositions[i] > (filterPosOut + 7.5)) {
 				cout << "Silicon Filter " << filterNumber << " with thickness " << filterThicknesses[i] << " um is out of position: " << filterPositions[i] << " mm" << endl;
 				totalFail++;
 			}
