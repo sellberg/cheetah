@@ -2461,6 +2461,13 @@ void translateQuads(cGlobal *global) {
 					}
 				}
 				
+				// update pixel distances, pixel indices, and recalculate angular average
+				for(int i=0; i<global->pix_nn; i++) {
+					global->pix_r[i] = sqrt(((double) global->pix_x[i])*global->pix_x[i] + ((double) global->pix_y[i])*global->pix_y[i]);
+				}
+				for (int i=0; i<global->pix_nn; i++) {
+					global->angularAvg_i[i] = (int) round( (global->pix_r[i] - global->angularAvgStartQ) / global->angularAvgDeltaQ );
+				}
 				calculatePowderAngularAvg(global);
 				
 				// evaluate maximum intensity
