@@ -168,7 +168,7 @@ void addToCorrelation(tThreadInfo *threadInfo, cGlobal *global, cHit *hit);
 void assemble2Dimage(tThreadInfo*, cGlobal*);
 void nameEvent(tThreadInfo*, cGlobal*);
 bool containsEvent(std::string, cGlobal*);
-void writeHDF5(tThreadInfo*, cGlobal*, char*, FILE*);
+void writeHDF5(tThreadInfo *threadInfo, cGlobal *global, char *eventname);
 void writeSimpleHDF5(const char*, const void*, int, int, int);
 void writeSimpleHDF5(const char *filename, const void *data, int width, int height, int depth, int type);
 void flushHDF5();

@@ -184,7 +184,7 @@ void *worker(void *threadarg) {
 	/*
 	 *	Hitfinding - Background
 	 */
-	hit.background = 0;
+	hit.background = 1;
 	if(global->backgroundfinder.use){
 		hit.background = hitfinder(threadInfo, global, &(global->backgroundfinder));
 		hit.backgroundPeaks = threadInfo->nPeaks;
@@ -247,12 +247,12 @@ void *worker(void *threadarg) {
 	/*
 	 *	Calculate scattering angle (theta)
 	 */
-	if ((global->usePolarizationCorrection || global->useSolidAngleCorrection || global->useCorrelation) && (global->hdf5dump 
+	if ((global->usePolarizationCorrection || global->useSolidAngleCorrection || global->useCorrelation) && (global->hdf5dump
 																			  || global->generateDarkcal
-																			  || (hit.standard && global->hitfinder.savehits) 
-																		      || (hit.water && global->waterfinder.savehits) 
-																			  || (hit.ice && global->icefinder.savehits) 
-																			  || (!hit.background && global->backgroundfinder.savehits) )) {
+																			  || hit.standard
+																		      || hit.water
+																			  || hit.ice
+																			  || !hit.background )) {
 		calculateScatteringAngle(threadInfo, global);
 	}
 	
@@ -261,10 +261,10 @@ void *worker(void *threadarg) {
 	 *	Calculate polarization correction
 	 */
 	if (global->usePolarizationCorrection && (global->hdf5dump || global->generateDarkcal
-															   || (hit.standard && global->hitfinder.savehits) 
-															   || (hit.water && global->waterfinder.savehits) 
-															   || (hit.ice && global->icefinder.savehits) 
-															   || (!hit.background && global->backgroundfinder.savehits) )) {
+															   || hit.standard
+															   || hit.water
+															   || hit.ice
+															   || !hit.background )) {
 		calculatePolarizationCorrection(threadInfo, global);
 	}
 	
@@ -274,10 +274,10 @@ void *worker(void *threadarg) {
 	 */
 	threadInfo->solidAngle = global->pixelSize*global->pixelSize/(threadInfo->detectorPosition/1000*threadInfo->detectorPosition/1000);
 	if (global->useSolidAngleCorrection && (global->hdf5dump || global->generateDarkcal
-															 || (hit.standard && global->hitfinder.savehits) 
-															 || (hit.water && global->waterfinder.savehits) 
-															 || (hit.ice && global->icefinder.savehits) 
-															 || (!hit.background && global->backgroundfinder.savehits) )) {
+															 || hit.standard
+															 || hit.water
+															 || hit.ice
+															 || !hit.background )) {
 		calculateSolidAngleCorrection(threadInfo, global);
 	}
 	
@@ -315,12 +315,12 @@ void *worker(void *threadarg) {
      *  Perform cross-correlation analysis
      */
 	if (global->useCorrelation && (global->hdf5dump || global->generateDarkcal
-													|| (hit.standard && global->hitfinder.savehits) 
-													|| (hit.water && global->waterfinder.savehits) 
-													|| (hit.ice && global->icefinder.savehits) 
-													|| (!hit.background && global->backgroundfinder.savehits) )) {
+													|| hit.standard
+													|| hit.water
+													|| hit.ice
+													|| !hit.background )) {
 		fail = calculatePixelMaps(threadInfo, global);
-		if (!fail) correlate(threadInfo, global);
+		if (!fail) correlate(threadInfo, global, &hit);
 		else cout << "Failed to make Q-calibrated pixel maps for " << threadInfo->eventname << ", correlation NOT saved." << endl;
 	}
 	
@@ -367,40 +367,40 @@ void *worker(void *threadarg) {
 	 *	If this is a hit, write out to our favourite HDF5 format
 	 */
 	if(global->hdf5dump) 
-		writeHDF5(threadInfo, global, threadInfo->eventname, global->hitfinder.cleanedfp);
+		writeHDF5(threadInfo, global, threadInfo->eventname);
 	else {
 		if(hit.standard && global->hitfinder.savehits) {
 			threadInfo->nPeaks = hit.standardPeaks;
-			writeHDF5(threadInfo, global, threadInfo->eventname, global->hitfinder.cleanedfp);
+			writeHDF5(threadInfo, global, threadInfo->eventname);
 		}
 		
 		if(hit.water && global->waterfinder.savehits) {
 			threadInfo->nPeaks = hit.waterPeaks;
-			writeHDF5(threadInfo, global, threadInfo->eventname, global->waterfinder.cleanedfp);
+			writeHDF5(threadInfo, global, threadInfo->eventname);
 		}
 		
 		if(hit.ice && global->icefinder.savehits) {
 			threadInfo->nPeaks = hit.icePeaks;
-			writeHDF5(threadInfo, global, threadInfo->eventname, global->icefinder.cleanedfp);			
+			writeHDF5(threadInfo, global, threadInfo->eventname);			
 		}
 		
 		if(!hit.background && global->backgroundfinder.savehits) {
 			threadInfo->nPeaks = hit.backgroundPeaks;
-			writeHDF5(threadInfo, global, threadInfo->eventname, global->backgroundfinder.cleanedfp);			
+			writeHDF5(threadInfo, global, threadInfo->eventname);			
 		}
 		
 //		char eventname[1024];
 //		if(hit.water && global->waterfinder.savehits) {
 //			sprintf(eventname,"%s_waterhit",threadInfo->eventname);
-//			writeHDF5(threadInfo, global, eventname, global->waterfinder.cleanedfp);
+//			writeHDF5(threadInfo, global, eventname);
 //		}
 //		if(hit.ice && global->icefinder.savehits) {
 //			sprintf(eventname,"%s_icehit",threadInfo->eventname);
-//			writeHDF5(threadInfo, global, eventname, global->icefinder.cleanedfp);
+//			writeHDF5(threadInfo, global, eventname);
 //		}
 //		if(!hit.background && global->backgroundfinder.savehits) {
 //			sprintf(eventname,"%s_background",threadInfo->eventname);
-//			writeHDF5(threadInfo, global, eventname, global->backgroundfinder.cleanedfp);
+//			writeHDF5(threadInfo, global, eventname);
 //		}
 		
 	}
@@ -451,15 +451,23 @@ void *worker(void *threadarg) {
 	fprintf(global->framefp, "%i, %i, %s, %f", (int)threadInfo->threadNum, threadInfo->seconds, threadInfo->eventname, threadInfo->intensityAvg);
 	if (global->hitfinder.use) {
 		fprintf(global->framefp, ", %i", hit.standardPeaks);
+		if (hit.standard) fprintf(global->hitfinder.cleanedfp, "r%04u/%s, %f, %i\n", (int)threadInfo->runNumber, threadInfo->eventname, threadInfo->intensityAvg, hit.standardPeaks);
 	}
 	if (global->icefinder.use) {
 		fprintf(global->framefp, ", %i", hit.icePeaks);
+		if (hit.ice) fprintf(global->icefinder.cleanedfp, "r%04u/%s, %f, %i\n", (int)threadInfo->runNumber, threadInfo->eventname, threadInfo->intensityAvg, hit.icePeaks);
 	}
 	if (global->waterfinder.use) {
 		fprintf(global->framefp, ", %i", hit.waterPeaks);
+		if (hit.water) fprintf(global->waterfinder.cleanedfp, "r%04u/%s, %f, %i\n", (int)threadInfo->runNumber, threadInfo->eventname, threadInfo->intensityAvg, hit.waterPeaks);
 	}
 	if (global->backgroundfinder.use) {
 		fprintf(global->framefp, ", %i", hit.backgroundPeaks);
+		if (hit.background) fprintf(global->backgroundfinder.cleanedfp, "r%04u/%s, %f, %i\n", (int)threadInfo->runNumber, threadInfo->eventname, threadInfo->intensityAvg, hit.backgroundPeaks);
+	}
+	if (global->listfinder.use) {
+		fprintf(global->framefp, ", %i", hit.listPeaks);
+		fprintf(global->hitfinder.cleanedfp, "r%04u/%s, %f, %i\n", (int)threadInfo->runNumber, threadInfo->eventname, threadInfo->intensityAvg, hit.listPeaks);
 	}
 	fprintf(global->framefp, "\n");
 	pthread_mutex_unlock(&global->framefp_mutex);
@@ -939,7 +947,7 @@ bool containsEvent(string event, cGlobal *global) {
 /*
  *	Write out processed data to our 'standard' HDF5 format
  */
-void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp){
+void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname){
 	/*
 	 *	Create filename based on date, time and fiducial for this image
 	 */
@@ -958,10 +966,6 @@ void writeHDF5(tThreadInfo *info, cGlobal *global, char *eventname, FILE* hitfp)
 	sprintf(outfile,"%s.h5",eventname);
 	//strcpy(outfile, info->eventname);
 	DEBUGL1_ONLY printf("r%04u:%i (%2.1f Hz): Writing data to: %s\n", (int)info->runNumber, (int)info->threadNum, global->datarate, outfile);
-
-	pthread_mutex_lock(&global->framefp_mutex);
-	fprintf(hitfp, "r%04u/%s, %f, %i\n", (int)info->runNumber, info->eventname, info->intensityAvg, info->nPeaks);
-	pthread_mutex_unlock(&global->framefp_mutex);
 	
 	
 	/* 

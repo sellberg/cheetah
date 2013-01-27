@@ -43,6 +43,7 @@
 
 #include <iostream>
 using std::cout;
+using std::cerr;
 using std::endl;
 using std::string;
 
@@ -404,7 +405,10 @@ void event() {
 		global.detectorZ = 500.0 + detposnew + 79.0 + global.detectorOffset;
 	} else if ((nevents-global.attenuationOffset) % 123 == 0) {
 		cout << "Failed to retrieve detector position for EVENT #" << nevents+1 << endl;
-		if (nevents == 0) global.detectorZ = 500.0 + global.detectorZpos + 79.0 + global.detectorOffset;
+		if (nevents == 0) {
+			global.detectorZ = 500.0 + global.detectorZpos + 79.0 + global.detectorOffset;
+			cerr << "WARNING: using pre-set detector position = " << global.detectorZpos << " mm" << endl;
+		}
 	}
 	
 	

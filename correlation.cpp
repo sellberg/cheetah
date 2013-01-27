@@ -40,7 +40,7 @@ using std::string;
 	//----------------------------------------------------------correlate
 	// apply angular cross correlation
 	//-------------------------------------------------------------------
-	void correlate(tThreadInfo *threadInfo, cGlobal *global) {
+	void correlate(tThreadInfo *threadInfo, cGlobal *global, cHit *hit) {
 		
 		DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 
@@ -97,38 +97,72 @@ using std::string;
 			io->writeToTiff( eventname_str+"-polar.tif", cc->polar(), 1 );		// 0: unscaled, 1: scaled
 
 		} else {
-			cerr << "Error in correlate()! Correlation algorithm " << global->useCorrelation << " not known." << endl;
+			cerr << "ERROR in correlate: correlation algorithm " << global->useCorrelation << " not known." << endl;
+		}
+		
+		
+		//--------------------------------------------------------------------------------------------save to sum
+		//add to threadInfo->correlation
+		//pthread_mutex_lock(&global->correlation_mutex);
+		if (global->useCorrelation && global->sumCorrelation) {
+			
+			if (threadInfo->correlation) {
+				free(threadInfo->correlation);
+			}
+			threadInfo->correlation = (double*) calloc(global->correlation_nn, sizeof(double));
+			
+			if (global->autoCorrelateOnly) {
+				// autocorrelation only (q1=q2)
+				for (int i=0; i < cc->nQ(); i++) {
+					for (int k=0; k < cc->nLag(); k++) {
+						threadInfo->correlation[i*cc->nLag() + k] = cc->autoCorr()->get(i,k);
+					}
+				}				
+			} else {
+				// cross-correlation
+				for (int i=0; i < cc->nQ(); i++) {
+					for (int j=0; j < cc->nQ(); j++) {
+						for (int k=0; k < cc->nLag(); k++) {
+							threadInfo->correlation[i*cc->nQ()*cc->nLag() + j*cc->nLag() + k] = cc->crossCorr()->get(i,j,k);
+						}
+					}
+				}
+			}
+			
 		}
 		
 		
 		//--------------------------------------------------------------------------------------------output for this shot
-		// by JF: not sure if the mutex is really necessary... maybe not
-		pthread_mutex_lock(&global->correlation_mutex);
-		
-		//bin output
-		if (bin_out){
-			// OBS: this function corrently holds the funtionality of adding to crossCorrelationSum
-			writeXCCA(threadInfo, global, cc, threadInfo->eventname); 			// writes XCCA+SAXS to binary
-		}
-		//TIFF image output
-		if (tif_out){
-			if (global->autoCorrelateOnly){
-				io->writeToTiff( eventname_str+"-xaca.tif", cc->autoCorr(), 1 );			// 0: unscaled, 1: scaled
-			}else{
-				cerr << "WARNING. No tiff output for 3D cross-correlation case implemented, yet!" << endl;
-				//one possibility would be to write a stack of tiffs, one for each of the outer q values
+		// check if hits should be saved to disk
+		if (global->useCorrelation && (global->hdf5dump || global->generateDarkcal
+														|| (hit->standard && global->hitfinder.savehits) 
+														|| (hit->water && global->waterfinder.savehits) 
+														|| (hit->ice && global->icefinder.savehits) 
+														|| (!hit->background && global->backgroundfinder.savehits) )) {
+			//HDF5 output
+			if (global->correlationOutput % 2){
+				if (global->autoCorrelateOnly){
+					io->writeToHDF5( osst.str()+"-xaca.h5", cc->autoCorr(), 0 );				// 0: supposed to be double, but it seems to currently save in float (32-bit) precision
+				}else{
+					cerr << "WARNING in correlate: no HDF5 output for 3D cross-correlation case implemented, yet!" << endl;
+				}
+			}
+			//bin output
+			if (global->correlationOutput % 4 > 1){
+				//writeSAXS(threadInfo, global, cc, threadInfo->eventname);			// writes SAXS to binary
+				writeXCCA(threadInfo, global, cc, threadInfo->eventname); 			// writes XCCA+SAXS to binary
+			}
+			//TIFF image output
+			if (global->correlationOutput > 3){
+				if (global->autoCorrelateOnly){
+					io->writeToTiff( eventname_str+"-xaca.tif", cc->autoCorr(), 1 );			// 0: unscaled, 1: scaled
+				}else{
+					cerr << "WARNING in correlate: no tiff output for 3D cross-correlation case implemented, yet!" << endl;
+					//one possibility would be to write a stack of tiffs, one for each of the outer q values
+				}
 			}
 		}
-		//HDF5 output
-		if (h5_out){
-			if (global->autoCorrelateOnly){
-				io->writeToHDF5( osst.str()+"-xaca.h5", cc->autoCorr(), 0 );				// 0: supposed to be double, but it seems to currently save in float (32-bit) precision
-			}else{
-				cerr << "WARNING. No HDF5 output for 3D cross-correlation case implemented, yet!" << endl;
-			}
-		}
-		
-		pthread_mutex_unlock(&global->correlation_mutex);
+		//pthread_mutex_unlock(&global->correlation_mutex);
 		
 		delete io;
 		delete cc;
@@ -236,12 +270,11 @@ using std::string;
 		if (global->useCorrelation) {
 			if (global->autoCorrelateOnly) {
 				// autocorrelation only (q1=q2)
-				for (int i=0; i < nQ; i++) {
-					for (int k=0; k < nLag; k++) {
-						if (global->sumCorrelation)
-							info->correlation[i*nLag + k] = cc->autoCorr()->get(i,k);
-						else 
+				if (!global->sumCorrelation) {
+					for (int i=0; i < nQ; i++) {
+						for (int k=0; k < nLag; k++) {
 							buffer[i*nLag + k] = cc->autoCorr()->get(i,k);
+						}
 					}
 				}
 				fwrite(&nQD,sizeof(double),1,filePointerWrite);
@@ -249,13 +282,12 @@ using std::string;
 				
 			} else {
 				// full version
-				for (int i=0; i < nQ; i++) {
-					for (int j=0; j < nQ; j++) {
-						for (int k=0; k < nLag; k++) {
-							if (global->sumCorrelation)
-								info->correlation[i*nQ*nLag + j*nLag + k] = cc->crossCorr()->get(i,j,k);
-							else 
+				if (!global->sumCorrelation) {
+					for (int i=0; i < nQ; i++) {
+						for (int j=0; j < nQ; j++) {
+							for (int k=0; k < nLag; k++) {
 								buffer[i*nQ*nLag + j*nLag + k] = cc->crossCorr()->get(i,j,k);
+							}
 						}
 					}
 				}

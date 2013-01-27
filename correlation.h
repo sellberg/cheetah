@@ -42,13 +42,13 @@
 
 	#include "crosscorrelator.h"
 	
-	void correlate(tThreadInfo*, cGlobal*);
+	void correlate(tThreadInfo *info, cGlobal *global, cHit *hit);
 	void writeSAXS(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
 	void writeXCCA(tThreadInfo *info, cGlobal *global, CrossCorrelator *cc, char *eventname);
 
 	#else //no correlation functionality --> define a dummy version of correlate that does nothing
 
-	void correlate(tThreadInfo*, cGlobal*);
+	void correlate(tThreadInfo *info, cGlobal *global);
 
 	#endif
 #endif

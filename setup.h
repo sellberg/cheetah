@@ -179,8 +179,10 @@ public:
     int         useCorrelation;     // set to nonzero to turn on angular cross-correlation module, also controls what correlation algorithm to be used, 1: regular, 2: fast
 	int			sumCorrelation;		// set to nonzero to sum cross-correlation patterns for different hits
 	int			autoCorrelateOnly;		// set to nonzero to only calculate autocorrelation (q1=q2)
-    double 		correlationStartQ;		// customize the range of the correlation algorithms
-    double 		correlationStopQ;		// startQ/stopQ are in absolute units of Å-1
+	int			correlationNormalization;	// switch between normalization algorithms: 1 = intensity, 2 = variance
+	int			correlationQScale;		// customize the scale for the Q-range of the correlation algorithms
+    double 		correlationStartQ;		// 1 = startQ/stopQ are in units of radial distance [pixels]
+    double 		correlationStopQ;		// 2 = startQ/stopQ are in absolute units of momentum transfer [Å-1], 3 = startQ/stopQ are in absolute units of perpendicualar momentum transfer [Å-1]
     int 		correlationNumQ;		// number of q values between start and stop
     double 		correlationStartPhi;	// start angle in degrees, default: 0
     double 		correlationStopPhi;		// stop angle in degrees, default: 360
@@ -189,6 +191,7 @@ public:
 	int		 	*correlationLUT;		// lookup table (LUT) needed for the fast correlation
 	int			correlationLUTdim1;		// dim1 of LUT
 	int			correlationLUTdim2;		// dim2 of LUT
+	int			correlationOutput;		// switch between output formats: 1 = hdf5, 2 = bin, 3 = hdf5+bin, 4 = tiff, 5 = tiff+hdf5, 6 = tiff+bin, 7 = tiff+hdf5+bin
 	
 	// Saving options
 	int			saveRaw;			 // set to save each hit in raw format, in addition to assembled format. Powders are only saved in raw if saveRaw and powdersum are enabled

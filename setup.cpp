@@ -229,6 +229,8 @@ void cGlobal::defaultConfiguration(void) {
 	useCorrelation = 0;
 	sumCorrelation = 0;
 	autoCorrelateOnly = 1;
+	correlationNormalization = 1;
+	correlationQScale = 1;
     correlationStartQ = 100;
     correlationStopQ = 600;
     correlationNumQ = 51;
@@ -238,6 +240,7 @@ void cGlobal::defaultConfiguration(void) {
 	correlationNumDelta = 0;
 	correlationLUTdim1 = 100;
 	correlationLUTdim2 = 100;
+	correlationOutput = 1;
 	
 	// Saving options
 	saveRaw = 0;
@@ -391,6 +394,12 @@ void cGlobal::setup() {
 		correlationLUT = new int[correlationLUTdim1*correlationLUTdim2];
 		if (!correlationNumDelta) 
 			correlationNumDelta = (int) ceil(correlationNumPhi/2.0+1);
+		if (correlationNormalization < 1 || correlationNormalization > 2)
+			correlationNormalization = 1;
+		if (correlationQScale < 1 || correlationQScale > 3)
+			correlationQScale = 1;
+		if (correlationOutput < 1 || correlationOutput > 7)
+			correlationOutput = 1;
 		if (autoCorrelateOnly) {
 			correlation_nn = correlationNumQ*correlationNumDelta;
 		} else {
@@ -885,6 +894,12 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	else if (!strcmp(tag, "autocorrelateonly")) {
 		autoCorrelateOnly = atoi(value);
 	}
+	else if (!strcmp(tag, "correlationnormalization")) {
+		correlationNormalization = atoi(value);
+	}
+	else if (!strcmp(tag, "correlationqscale")) {
+		correlationQScale = atoi(value);
+	}
     else if (!strcmp(tag, "correlationstartq")) {
 		correlationStartQ = atof(value);
 	}
@@ -911,6 +926,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
     else if (!strcmp(tag, "correlationlutdim2")) {
 		correlationLUTdim2 = atoi(value);
+	}
+	else if (!strcmp(tag, "correlationoutput")) {
+		correlationOutput = atoi(value);
 	}
 	else if (!strcmp(tag, "saveraw")) {
 		saveRaw = atoi(value);
