@@ -45,10 +45,6 @@ using std::string;
 		DEBUGL1_ONLY cout << "CORRELATING... in thread #" << threadInfo->threadNum << "." << endl;
 
 		//prepare some things for output
-		bool tif_out = false;
-		bool bin_out = true;
-		bool h5_out = true;
-		
 		arraydataIO *io = new arraydataIO;
 		std::ostringstream osst;
 		osst << threadInfo->eventname;
@@ -82,7 +78,12 @@ using std::string;
 		
 		//set bad pixel mask, if necessary
 		if (global->useBadPixelMask){
-			cc->setMask( global->badpixelmask, RAW_DATA_LENGTH );		
+			cc->setMask( global->badpixelmask, RAW_DATA_LENGTH );
+		}
+		
+		//normalize by variance, if necessary
+		if (global->correlationNormalization == 2){
+			cc->setVarianceEnable(true);
 		}
 		
 		//turn on debug level inside the CrossCorrelator, if needed
