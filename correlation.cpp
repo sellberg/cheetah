@@ -242,12 +242,6 @@ using std::string;
 		
 		double *buffer;
 		buffer = (double*) calloc(nQ*nQ*nLag, sizeof(double));
-		if (global->sumCorrelation) {
-			if (info->correlation) {
-				free(info->correlation);
-			}
-			info->correlation = (double*) calloc(global->correlation_nn, sizeof(double));
-		}
 		
 		if (global->autoCorrelateOnly){
 			sprintf(outfile,"%s-xaca.bin",eventname);
