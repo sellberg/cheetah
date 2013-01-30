@@ -58,13 +58,26 @@ using std::string;
 		//the arguments that are passed to the constructor determine 2D/3D calculations with/without mask
 		CrossCorrelator *cc = NULL;
 		if (global->autoCorrelateOnly) {
-			cc = new CrossCorrelator( //auto-correlation 2D case, no mask
-					threadInfo->corrected_data, threadInfo->pix_qx, threadInfo->pix_qy, RAW_DATA_LENGTH, 
-					global->correlationNumPhi, global->correlationNumQ );
+			if (global->correlationQScale == 1) {
+				cc = new CrossCorrelator( //auto-correlation 2D case, no mask, r pixel map [pixels]
+										 threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+										 global->correlationNumPhi, global->correlationNumQ );
+				
+			} else {
+				cc = new CrossCorrelator( //auto-correlation 2D case, no mask, q pixel map [Å-1]
+										 threadInfo->corrected_data, threadInfo->pix_qx, threadInfo->pix_qy, RAW_DATA_LENGTH, 
+										 global->correlationNumPhi, global->correlationNumQ );
+			}
 		} else {
-			cc = new CrossCorrelator( //full cross-correlation 3D case
-					threadInfo->corrected_data, threadInfo->pix_qx, threadInfo->pix_qy, RAW_DATA_LENGTH, 
-					global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );	
+			if (global->correlationQScale == 1) {
+				cc = new CrossCorrelator( //full cross-correlation 3D case, no mask, r pixel map [pixels]
+										 threadInfo->corrected_data, global->pix_x, global->pix_y, RAW_DATA_LENGTH, 
+										 global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );	
+			} else {
+				cc = new CrossCorrelator( //full cross-correlation 3D case, no mask, q pixel map [Å-1]
+										 threadInfo->corrected_data, threadInfo->pix_qx, threadInfo->pix_qy, RAW_DATA_LENGTH, 
+										 global->correlationNumQ, global->correlationNumQ, global->correlationNumPhi );	
+			}
 		}
 		
 		//set bad pixel mask, if necessary

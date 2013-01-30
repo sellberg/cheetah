@@ -394,12 +394,18 @@ void cGlobal::setup() {
 		correlationLUT = new int[correlationLUTdim1*correlationLUTdim2];
 		if (!correlationNumDelta) 
 			correlationNumDelta = (int) ceil(correlationNumPhi/2.0+1);
-		if (correlationNormalization < 1 || correlationNormalization > 2)
+		if (correlationNormalization < 1 || correlationNormalization > 2) {
+			cout << "Invalid option: correlationNormalization = " << correlationNormalization << ", set to default value (1 = intensity)" << endl;
 			correlationNormalization = 1;
-		if (correlationQScale < 1 || correlationQScale > 3)
+		}
+		if (correlationQScale < 1 || correlationQScale > 3) {
+			cout << "Invalid option: correlationQScale = " << correlationQScale << ", set to default value (1 = pixels)" << endl;
 			correlationQScale = 1;
-		if (correlationOutput < 1 || correlationOutput > 7)
+		}
+		if (correlationOutput < 1 || correlationOutput > 7) {
+			cout << "Invalid option: correlationOutput = " << correlationOutput << ", set to default value (1 = hdf5)" << endl;
 			correlationOutput = 1;
+		}
 		if (autoCorrelateOnly) {
 			correlation_nn = correlationNumQ*correlationNumDelta;
 		} else {
@@ -414,6 +420,17 @@ void cGlobal::setup() {
 				waterCorrelation = (double*) calloc(correlation_nn, sizeof(double));
 		}
 	}// useCorrelation end	
+	
+	/*
+	 *	Set up solid angle correction algorithm switch
+	 */
+	if (useSolidAngleCorrection < 0) {
+		cout << "Invalid option: useSolidAngleCorrection = " << useSolidAngleCorrection << ", correction disabled (0 = off)" << endl;
+		useSolidAngleCorrection = 0;
+	} else if (useSolidAngleCorrection > 2) {
+		cout << "Invalid option: useSolidAngleCorrection = " << useSolidAngleCorrection << ", set to default value (1 = rigorous)" << endl;
+		useSolidAngleCorrection = 1;
+	}
 	
 	/*
 	 *	Set up thread management

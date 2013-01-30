@@ -134,7 +134,7 @@ public:
 	double		horizontalPolarization;		// determines the ratio of horizontal polarization versus vertical polarization of the FEL beam, valid values are [0,1]
 	
 	// Solid angle correction
-	int			useSolidAngleCorrection;	// set to nonzero to calculate and apply solid angle correction to each hit (or saved event), only the theta-dependent part of the correction is applied to the 2D scattering pattern
+	int			useSolidAngleCorrection;	// set to nonzero to calculate and apply solid angle correction to each hit (or saved event), only the theta-dependent part of the correction is applied to the 2D scattering pattern, also controls what correction algorithm to be used: 1 = rigorous, 2 = azimuthally symmetric
 	
 	// Attenuation correction
 	int			useAttenuationCorrection;		// Whether to correct each event's intensity with the calculated attenuation
