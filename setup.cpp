@@ -272,6 +272,8 @@ void cGlobal::defaultConfiguration(void) {
 void cGlobal::setup() {
 		
 	//initially, set everything to NULL, allocate only those that are actually needed below
+	selfdark = NULL;
+	hotpixelmask = NULL;
 	powderRaw = NULL;
 	powderAssembled = NULL;
 	iceRaw = NULL;
@@ -340,7 +342,8 @@ void cGlobal::setup() {
 	/*
 	 *	Set up arrays for remembering powder data, background, etc.
 	 */	
-	selfdark = (float*) calloc(pix_nn, sizeof(float));
+	if (useSubtractPersistentBackground)
+		selfdark = (float*) calloc(pix_nn, sizeof(float));
 	
 	if (useAutoHotpixel) 
 		hotpixelmask = (float*) calloc(pix_nn, sizeof(float));
@@ -1563,7 +1566,7 @@ void cGlobal::readGaincal(char *filename){
 	
 	// Invert the gain so we have an array that all we need to do is simple multiplication
 	// Pixels with zero gain become dead pixels
-	if(invertGain) {
+	if (invertGain) {
 		for(long i=0;i<pix_nn;i++) {
 			if (gaincal[i] != 0) {
 				if (normalizeGain)

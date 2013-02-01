@@ -211,10 +211,12 @@ void *worker(void *threadarg) {
 	/*
 	 *	Update the running background
 	 */
-	if (global->backgroundfinder.use){	
-		updatePersistentBackground(threadInfo, global, hit.background);
-	} else {
-		updatePersistentBackground(threadInfo, global, hit.standard);
+	if(global->useSubtractPersistentBackground) {
+		if (global->backgroundfinder.use){	
+			updatePersistentBackground(threadInfo, global, hit.background);
+		} else {
+			updatePersistentBackground(threadInfo, global, hit.standard);
+		}
 	}
 
 	/*
