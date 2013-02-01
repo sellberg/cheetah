@@ -536,43 +536,56 @@ void cGlobal::setup() {
 			phi[i] = phii;
 		}
 		
-		if (debugLevel >= 1) {
-			// VERIFY OUTPUT
-			array1D<double> *oneX = new array1D<double>(pix_x, pix_nn);
-			array1D<double> *oneY = new array1D<double>(pix_y, pix_nn);
-			array1D<double> *onePhi = new array1D<double>(phi, pix_nn);		
-			arraydataIO *io = new arraydataIO();
-			array2D<double> *two = 0;
-			
-			//raw images
-			char	filename[1024];
-			
-			sprintf(filename,"pixX_raw.h5");
-			writeSimpleHDF5(filename, pix_x, (int) pix_nx, (int) pix_ny, H5T_NATIVE_FLOAT);
-			sprintf(filename,"pixY_raw.h5");			
-			writeSimpleHDF5(filename, pix_y, (int) pix_nx, (int) pix_ny, H5T_NATIVE_FLOAT);
+	}
+	
+	/*
+	 *	Verify pixel maps
+	 */
+	if (debugLevel >= 1) {
+		
+		array1D<double> *oneX = new array1D<double>(pix_x, pix_nn);
+		array1D<double> *oneY = new array1D<double>(pix_y, pix_nn);
+		array1D<double> *onePhi = NULL;
+		if (usePolarizationCorrection || useCorrelation)
+			onePhi = new array1D<double>(phi, pix_nn);
+		arraydataIO *io = new arraydataIO();
+		array2D<double> *two = NULL;
+		
+		//raw images
+		char	filename[1024];
+		printf("Saving raw pixel maps to files\n");
+		
+		sprintf(filename,"pixX_raw.h5");
+		writeSimpleHDF5(filename, pix_x, (int) pix_nx, (int) pix_ny, H5T_NATIVE_FLOAT);
+		
+		sprintf(filename,"pixY_raw.h5");			
+		writeSimpleHDF5(filename, pix_y, (int) pix_nx, (int) pix_ny, H5T_NATIVE_FLOAT);
+		
+		if (usePolarizationCorrection || useCorrelation) {
 			sprintf(filename,"pixPHI_raw.h5");			
 			writeSimpleHDF5(filename, phi, (int) pix_nx, (int) pix_ny, H5T_NATIVE_DOUBLE);
-			
-			//assembled images
-			string ext = "_asm.h5";
-			
-			ns_cspad_util::createAssembledImageCSPAD( oneX, oneX, oneY, two );		
-			io->writeToFile( "pixX"+ext, two );
-			
-			ns_cspad_util::createAssembledImageCSPAD( oneY, oneX, oneY, two );
-			io->writeToFile( "pixY"+ext, two );
-			
-			ns_cspad_util::createAssembledImageCSPAD( onePhi, oneX, oneY, two );
-			io->writeToFile( "pixPHI"+ext, two );
-			
-			delete oneX;
-			delete oneY;
-			delete onePhi;
-			delete two;
-			delete io;
 		}
 		
+		//assembled images
+		string ext = "_asm.h5";
+		printf("Saving assembled pixel maps to files\n");
+		
+		ns_cspad_util::createAssembledImageCSPAD( oneX, oneX, oneY, two );		
+		io->writeToFile( "pixX"+ext, two );
+		
+		ns_cspad_util::createAssembledImageCSPAD( oneY, oneX, oneY, two );
+		io->writeToFile( "pixY"+ext, two );
+		
+		if (usePolarizationCorrection || useCorrelation) {
+			ns_cspad_util::createAssembledImageCSPAD( onePhi, oneX, oneY, two );
+			io->writeToFile( "pixPHI"+ext, two );
+		}
+		
+		delete oneX;
+		delete oneY;
+		delete onePhi;
+		delete two;
+		delete io;
 	}
 	
 	/*

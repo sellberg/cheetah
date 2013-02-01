@@ -665,18 +665,17 @@ void calculateSolidAngleCorrection(tThreadInfo *threadInfo, cGlobal *global) {
 			double solid_angle[2]; // array of solid angles of the two plane triangles that form the pixel
 			double total_solid_angle;
 			
-			// OBS: current assignment relies on X/Y/Z coordinates from assembled pixel maps, where X is in OPPOSITE direction (positive values away from the hutch door) of the CXI coordinate system
 			// upper left corner
-			corner_coordinates[0][0] = global->pix_x[i]*global->pixelSize - global->pixelSize/2;
+			corner_coordinates[0][0] = global->pix_x[i]*global->pixelSize + global->pixelSize/2;
 			corner_coordinates[0][1] = global->pix_y[i]*global->pixelSize + global->pixelSize/2;
 			// upper right corner
-			corner_coordinates[1][0] = global->pix_x[i]*global->pixelSize + global->pixelSize/2;
+			corner_coordinates[1][0] = global->pix_x[i]*global->pixelSize - global->pixelSize/2;
 			corner_coordinates[1][1] = global->pix_y[i]*global->pixelSize + global->pixelSize/2;
 			// lower right corner
-			corner_coordinates[2][0] = global->pix_x[i]*global->pixelSize + global->pixelSize/2;
+			corner_coordinates[2][0] = global->pix_x[i]*global->pixelSize - global->pixelSize/2;
 			corner_coordinates[2][1] = global->pix_y[i]*global->pixelSize - global->pixelSize/2;
 			// lower left corner
-			corner_coordinates[3][0] = global->pix_x[i]*global->pixelSize - global->pixelSize/2;
+			corner_coordinates[3][0] = global->pix_x[i]*global->pixelSize + global->pixelSize/2;
 			corner_coordinates[3][1] = global->pix_y[i]*global->pixelSize - global->pixelSize/2;
 			// assign Z coordinate as detector distance and calculate length of the vectors to the pixel coordinates
 			for (int j = 0; j < 4; j++) {
