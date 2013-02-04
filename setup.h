@@ -72,8 +72,8 @@ public:
 	int			useCenterCorrection;	// set to nonzero to shift 0 of pixel array to the center of the square hole
 	float		pixelCenterX;		// option to manually override the calculated center of the square hole (if useCenterCorrection is enabled) and set the center to X in pixels if pixelCenterX is nonzero
 	float		pixelCenterY;		// option to manually override the calculated center of the square hole (if useCenterCorrection is enabled) and set the center to Y in pixels if pixelCenterY is nonzero
-	int			calculateCenterCorrectionPowder;	// set to nonzero to calculate center of pixel array from powder pattern using a Hough transform, overrides the use of useCenterCorrection in readDetectorGeometry and disables it.
-	int			calculateCenterCorrectionHit;	// set to nonzero to calculate center of pixel array from each hit using a Hough transform, overrides the use of useCenterCorrection in readDetectorGeometry and applies it (if enabled) after the correction has been calculated.
+	int			calculateCenterCorrectionPowder;	// set to nonzero to calculate center of pixel array from powder pattern using a Hough transform, and applies it to powder averages after the correction has been calculated
+	int			calculateCenterCorrectionHit;	// set to nonzero to calculate center of pixel array from each hit using a Hough transform, and applies it after the correction has been calculated
 	double		centerCorrectionThreshold;	// determines the threshold for which below pixel intensities are set to zero
 	double		centerCorrectionMaxR;	// maximum radius value in pixels that the hough transform will be performed for, the calibration ring should lie BELOW this value.
 	double		centerCorrectionMinR;	// minimum radius value in pixels that the hough transform will be performed for, the calibration ring should lie ABOVE this value.
@@ -358,8 +358,8 @@ public:
 	void parseCommandLineArguments(int, char**);	// reads command line arguments
 	void setup(void);				// function that sets parameter values from default/config file/command line arguments
 	void readDetectorGeometry(char *);		// following functions read the h5 files in raw format
-	float pixelCenter(float *pixel_array); // help function for readDetectorGeometry to calculate center of pixel array
-	void shiftQuads(float *xarray, float *quad_dx, float *yarray, float *quad_dy); // help function for readDetectorGeometry to shift quads w.r.t. each other
+	float pixelCenter(float pixel_array[]); // help function for readDetectorGeometry to calculate center of pixel array
+	void shiftQuads(float xarray[], float dx[], float yarray[], float dy[]); // help function for readDetectorGeometry to shift quads w.r.t. each other
 	void readDarkcal(char *);
 	void readGaincal(char *);
 	void readPeakmask(char *);

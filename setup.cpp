@@ -349,20 +349,17 @@ void cGlobal::setup() {
 		hotpixelmask = (float*) calloc(pix_nn, sizeof(float));
 	
 	if (powdersum) {
-		if (hitfinder.use || listfinder.use) 
+		if (hitfinder.use || listfinder.use) {
 			powderAssembled = (double*) calloc(image_nn, sizeof(double));
-		if (icefinder.use) 
+			powderRaw = (double*) calloc(pix_nn, sizeof(double));
+		}
+		if (icefinder.use) {
 			iceAssembled = (double*) calloc(image_nn, sizeof(double));
-		if (waterfinder.use) 
+			iceRaw = (double*) calloc(pix_nn, sizeof(double));
+		}
+		if (waterfinder.use) {
 			waterAssembled = (double*) calloc(image_nn, sizeof(double));
-	
-		if (saveRaw) {
-			if (hitfinder.use || listfinder.use) 
-				powderRaw = (double*) calloc(pix_nn, sizeof(double));
-			if (icefinder.use) 
-				iceRaw = (double*) calloc(pix_nn, sizeof(double));
-			if (waterfinder.use) 
-				waterRaw = (double*) calloc(pix_nn, sizeof(double));
+			waterRaw = (double*) calloc(pix_nn, sizeof(double));
 		}
 		
 		if (powderAngularAvg || refineMetrology) {
@@ -1337,7 +1334,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	
 	
 	// Center correct the array w.r.t the square hole created by the quads (assume beam is centered)
-	if (useCenterCorrection && !calculateCenterCorrectionPowder && !calculateCenterCorrectionHit) {
+	if (useCenterCorrection) {
 		if (debugLevel >= 1) cout << "\tX values:" << endl;
 		float x0 = pixelCenter(pix_x);
 		if (debugLevel >= 1) cout << "\tY values:" << endl;
@@ -1373,7 +1370,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 			quad_dy[3] = quad3DY;
 		}
 	}	
-	if (useMetrologyRefinement && !refineMetrology) {
+	if (useMetrologyRefinement) {
 		cout << "\tQuadrant refinement:" << endl;
 		shiftQuads(pix_x, quad_dx, pix_y, quad_dy);
 	}
@@ -1418,8 +1415,8 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	ymax = lrint(ymax);
 	ymin = lrint(ymin);
 	printf("\tImage bounds:\n");
-	printf("\tx range %f to %f\n",xmin,xmax);
-	printf("\ty range %f to %f\n",ymin,ymax);
+	printf("\tx range %f to %f pixels\n",xmin,xmax);
+	printf("\ty range %f to %f pixels\n",ymin,ymax);
 	
 	
 	// How big must the output image be?
@@ -1429,14 +1426,14 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	if(fabs(ymin) > max) max = fabs(ymin);
 	image_nx = 2*(unsigned)max;
 	image_nn = image_nx*image_nx;
-	printf("\tImage output array will be %i x %i\n",(int)image_nx,(int)image_nx);
+	printf("\tImage output array will be %i x %i pixels\n",(int)image_nx,(int)image_nx);
 }
 
 
 /*
  *	Help function for readDetectorGeometry to calculate center of pixel array
  */
-float cGlobal::pixelCenter( float *pixel_array ) {
+float cGlobal::pixelCenter( float pixel_array[] ) {
 	float center = 0;
 	int quads = 4;
 	float dq1 = 0;
@@ -1451,8 +1448,8 @@ float cGlobal::pixelCenter( float *pixel_array ) {
 		else if (i == 2) dq1 -= pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
 		else dq2 -= pixel_array[8*ROWS*(2*COLS-1)+i*2*ROWS];
 	}
-	if (debugLevel >= 1) cout << "\tGap(Q0-Q2) = " << dq1 << endl;
-	if (debugLevel >= 1) cout << "\tGap(Q1-Q3) = " << dq2 << endl;
+	if (debugLevel >= 1) cout << "\tGap(Q0-Q2) = " << dq1 << " pixels" << endl;
+	if (debugLevel >= 1) cout << "\tGap(Q1-Q3) = " << dq2 << " pixels" << endl;
 	return center/quads;
 }
 
@@ -1460,7 +1457,7 @@ float cGlobal::pixelCenter( float *pixel_array ) {
 /*
  *	Help function for readDetectorGeometry to shift quads w.r.t. each other
  */
-void cGlobal::shiftQuads(float *xarray, float *dx, float *yarray, float *dy) {
+void cGlobal::shiftQuads(float xarray[], float dx[], float yarray[], float dy[]) {
 	
 	for (int quad=0; quad<4; quad++) {
 		cout << "\tQuad" << quad << "(dx,dy) = (" << dx[quad] << "," << dy[quad] << ")" << endl;

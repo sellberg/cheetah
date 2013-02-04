@@ -698,11 +698,10 @@ void endjob()
 	// Calculate center correction from regular powder pattern
 	if (global.hitfinder.use && global.powdersum && global.calculateCenterCorrectionPowder) {
 		calculateCenterCorrection(&global, global.powderRaw, global.npowder);
-		if (global.useCenterCorrection) {
-			updatePixelArrays(&global);
-			updateImageArrays(&global);
-			updateSAXSArrays(&global);
-		}
+		shiftPixelCenter(&global);
+		updatePixelArrays(&global);
+		updateImageArrays(&global);
+		updateAngularAvgArrays(&global);
 	}
 	
 	
@@ -711,6 +710,9 @@ void endjob()
 		cout << "Refining metrology..." << endl;
 		translateQuads(&global);
 		rotateQuads(&global);
+		updatePixelArrays(&global);
+		updateImageArrays(&global);
+		updateAngularAvgArrays(&global);
 	}
 	
 	

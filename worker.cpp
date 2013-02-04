@@ -748,37 +748,33 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 	
     //standard hit
 	if (hit->standard || global->listfinder.use){
-		// Sum raw format data
-		if (global->powdersum && global->saveRaw) {
+		if (global->powdersum) {
+			// Sum raw format data
 			pthread_mutex_lock(&global->powdersumraw_mutex);
 			for(long i=0; i<global->pix_nn; i++)
 				global->powderRaw[i] += threadInfo->corrected_data[i];
 			pthread_mutex_unlock(&global->powdersumraw_mutex);
-		}
-		
-		// Sum assembled data		
-		if (global->powdersum) {
+			
+			// Sum assembled data		
 			pthread_mutex_lock(&global->powdersumassembled_mutex);
 			global->npowder += 1;
 			for(long i=0; i<global->image_nn; i++)
 				if(threadInfo->image[i] > global->powderthresh)
 					global->powderAssembled[i] += threadInfo->image[i];
 			pthread_mutex_unlock(&global->powdersumassembled_mutex);
-		}
+		}		
 	}
 	
 	//ice hit
 	if (hit->ice){
-		// Sum raw format data 	: ice
-		if (global->powdersum && global->saveRaw) {
+		if (global->powdersum) {
+			// Sum raw format data 	: ice
 			pthread_mutex_lock(&global->icesumraw_mutex);
 			for(long i=0; i<global->pix_nn; i++)
 				global->iceRaw[i] += threadInfo->corrected_data[i];
-			pthread_mutex_unlock(&global->icesumraw_mutex);			
-		}
-	
-		// Sum assembled data	: ice
-		if (global->powdersum) {
+			pthread_mutex_unlock(&global->icesumraw_mutex);
+			
+			// Sum assembled data	: ice
 			pthread_mutex_lock(&global->icesumassembled_mutex);
 			global->nice += 1;
 			for(long i=0; i<global->image_nn; i++)
@@ -790,16 +786,14 @@ void addToPowder(tThreadInfo *threadInfo, cGlobal *global, cHit *hit){
 	
 	//water hit
 	if (hit->water){
-		// Sum raw format data  : water
-		if (global->powdersum && global->saveRaw) {
+		if (global->powdersum) {
+			// Sum raw format data  : water
 			pthread_mutex_lock(&global->watersumraw_mutex);
 			for(long i=0; i<global->pix_nn; i++)
 				global->waterRaw[i] += threadInfo->corrected_data[i];
 			pthread_mutex_unlock(&global->watersumraw_mutex);
-		}
-	
-		// Sum assembled data	: water
-		if (global->powdersum) {
+			
+			// Sum assembled data	: water
 			pthread_mutex_lock(&global->watersumassembled_mutex);
 			global->nwater += 1;
 			for(long i=0; i<global->image_nn; i++)
@@ -851,6 +845,95 @@ void addToCorrelation(tThreadInfo *threadInfo, cGlobal *global, cHit *hit) {
 /*
  *	Interpolate raw (corrected) cspad data into a physical 2D image
  *	using pre-defined pixel mapping (as loaded from .h5 file)
+ *  This function is used for powder averages
+ */
+void assemble2Dimage(double corrected_data[], double *&image, cGlobal *global){
+	
+	// Allocate temporary arrays for pixel interpolation (needs to be floating point)
+	double	*data = (double*) calloc(global->image_nn,sizeof(double));
+	double	*weight = (double*) calloc(global->image_nn,sizeof(double));	
+	
+	// Loop through all pixels and interpolate onto regular grid
+	float	x, y;
+	double	pixel_value, w;
+	long	ix, iy;
+	float	fx, fy;
+	long	image_index;
+	
+	for(long i=0;i<global->pix_nn;i++){
+		// Pixel location with (0,0) at array element (0,0) in bottom left corner
+		x = global->pix_x[i] + global->image_nx/2;
+		y = global->pix_y[i] + global->image_nx/2;
+		pixel_value = corrected_data[i];
+		
+		// Split coordinate into integer and fractional parts
+		ix = (long) floor(x);
+		iy = (long) floor(y);
+		fx = x - ix;
+		fy = y - iy;
+		
+		// Interpolate intensity over adjacent 4 pixels using fractional overlap as the weighting factor
+		// (0,0)
+		if(ix>=0 && iy>=0 && ix<global->image_nx && iy<global->image_nx) {
+			w = (double) (1-fx)*(1-fy);
+			image_index = ix + global->image_nx*iy;
+			data[image_index] += w*pixel_value;
+			weight[image_index] += w;
+		}
+		// (+1,0)
+		if((ix+1)>=0 && iy>=0 && (ix+1)<global->image_nx && iy<global->image_nx) {
+			w = (double) (fx)*(1-fy);
+			image_index = (ix+1) + global->image_nx*iy;
+			data[image_index] += w*pixel_value;
+			weight[image_index] += w;
+		}
+		// (0,+1)
+		if(ix>=0 && (iy+1)>=0 && ix<global->image_nx && (iy+1)<global->image_nx) {
+			w = (double) (1-fx)*(fy);
+			image_index = ix + global->image_nx*(iy+1);
+			data[image_index] += w*pixel_value;
+			weight[image_index] += w;
+		}
+		// (+1,+1)
+		if((ix+1)>=0 && (iy+1)>=0 && (ix+1)<global->image_nx && (iy+1)<global->image_nx) {
+			w = (double) (fx)*(fy);
+			image_index = (ix+1) + global->image_nx*(iy+1);
+			data[image_index] += w*pixel_value;
+			weight[image_index] += w;
+		}
+	}
+	
+	
+	// Reweight pixel interpolation
+	for(long i=0; i<global->image_nn; i++){
+		if(weight[i] < 0.05)
+			data[i] = 0;
+		else
+			data[i] /= weight[i];
+	}
+	
+	
+	// Allocate memory for output image
+	if (image)
+		free(image);
+	image = (double*) calloc(global->image_nn, sizeof(double));
+	
+	// Copy interpolated image across into image array
+	for(long i=0;i<global->image_nn;i++){
+		image[i] = data[i];
+	}
+	
+	// Free temporary arrays
+	free(data);
+	free(weight);
+	
+}
+
+
+/*
+ *	Interpolate raw (corrected) cspad data into a physical 2D image
+ *	using pre-defined pixel mapping (as loaded from .h5 file)
+ *  This function is used for individual shots
  */
 void assemble2Dimage(tThreadInfo *threadInfo, cGlobal *global){
 	
@@ -864,7 +947,7 @@ void assemble2Dimage(tThreadInfo *threadInfo, cGlobal *global){
 	long	ix, iy;
 	float	fx, fy;
 	long	image_index;
-
+	
 	for(long i=0;i<global->pix_nn;i++){
 		// Pixel location with (0,0) at array element (0,0) in bottom left corner
 		x = global->pix_x[i] + global->image_nx/2;
@@ -916,14 +999,14 @@ void assemble2Dimage(tThreadInfo *threadInfo, cGlobal *global){
 		else
 			data[i] /= weight[i];
 	}
-
+	
 	
 	// Allocate memory for output image
 	threadInfo->image = (float*) calloc(global->image_nn,sizeof(float));
-
+	
 	// Copy interpolated image across into image array
 	for(long i=0;i<global->image_nn;i++){
-			threadInfo->image[i] = data[i];
+		threadInfo->image[i] = data[i];
 	}
 	
 	// Free temporary arrays
@@ -2074,21 +2157,62 @@ void calculateCenterCorrection(tThreadInfo *info, cGlobal *global, float *intens
 	delete hough;
 }
 
-void updatePixelArrays(cGlobal *global) {
-	// update pixel arrays
+void shiftPixelCenter(cGlobal *global) {
 	
+	// shift center in pixel arrays
 	pthread_mutex_lock(&global->pixelcenter_mutex);
 	for (int i=0; i<global->pix_nn; i++) {
 		global->pix_x[i] -= global->pixelCenterX;
 		global->pix_y[i] -= global->pixelCenterY;
-		float rtemp = sqrt(global->pix_x[i]*global->pix_x[i] + global->pix_y[i]*global->pix_y[i]);
-		if (rtemp > global->pix_rmax) global->pix_rmax = rtemp;
 	}
-	global->pix_xmax -= global->pixelCenterX;
-	global->pix_xmin -= global->pixelCenterX;
-	global->pix_ymax -= global->pixelCenterY;
-	global->pix_ymin -= global->pixelCenterY;
 	pthread_mutex_unlock(&global->pixelcenter_mutex);
+	
+}
+
+void updatePixelArrays(cGlobal *global) {
+	
+	/*
+	 *	Find bounds of image array and update global radius variables
+	 */
+	float	xmax = -1e9;
+	float	xmin =  1e9;
+	float	ymax = -1e9;
+	float	ymin =  1e9;
+	float	rmax = 0;
+	pthread_mutex_lock(&global->pixelcenter_mutex);
+	for (int i=0; i<global->pix_nn; i++) {
+		if (global->pix_x[i] > xmax) xmax = global->pix_x[i];
+		if (global->pix_x[i] < xmin) xmin = global->pix_x[i];
+		if (global->pix_y[i] > ymax) ymax = global->pix_y[i];
+		if (global->pix_y[i] < ymin) ymin = global->pix_y[i];
+		global->pix_r[i] = sqrt(((double) global->pix_x[i])*global->pix_x[i] + ((double) global->pix_y[i])*global->pix_y[i]);		
+		if (global->pix_r[i] > rmax) rmax = global->pix_r[i];
+	}
+	global->pix_xmax = xmax;
+	global->pix_xmin = xmin;
+	global->pix_ymax = ymax;
+	global->pix_ymin = ymin;
+	global->pix_rmax = rmax;
+	
+	/*
+	 *	Update global angle variables
+	 */
+	if (global->usePolarizationCorrection || global->useCorrelation) {
+		if (global->phi)
+			delete[] global->phi;
+		global->phi = new double[global->pix_nn];
+		// calculate azimuthal angle (phi) for each pixel
+		for (int i = 0; i < global->pix_nn; i++) {
+			double phii = atan2(global->pix_x[i], global->pix_y[i]);
+			if (phii < 0) { // make sure the angle is between 0 and 2PI
+				phii += 2*M_PI;
+			}
+			// assign phi to each pixel
+			global->phi[i] = phii;
+		}
+		
+	}
+	pthread_mutex_unlock(&global->pixelcenter_mutex);	
 	
 }
 
@@ -2140,162 +2264,205 @@ void updateImageArrays(cGlobal *global) {
 	if(fabs(xmin) > max) max = fabs(xmin);
 	if(fabs(ymin) > max) max = fabs(ymin);
 	long image_nx = 2*(unsigned)max;
-	long image_nn = image_nx*image_nx;
+	long image_nn = image_nx*image_nx;	
+	DEBUGL1_ONLY printf("\tUpdated image output array will be %i x %i\n",(int)image_nx,(int)image_nx);
+		
+	// update global variables
+	pthread_mutex_lock(&global->image_mutex);
+	global->image_nx = image_nx;
+	global->image_nn = image_nn;
 	
-	// reallocate assembled arrays if necessary
-	if (image_nx > global->image_nx) {
-		
-		DEBUGL1_ONLY printf("\tUpdated image output array will be %i x %i\n",(int)image_nx,(int)image_nx);
-		
-		// for the assembled powder, we have to reallocate the already saved image and shift with deltax/deltay
-		long deltanx = image_nx-global->image_nx;
-		double *buffer;
-		DEBUGL2_ONLY cout << "deltanx: " << deltanx << ", image_nx: " << image_nx << ", global->image_nx: " << global->image_nx << ", deltax: " << deltax << ", deltay: " << deltay << endl;
-		
-		if (global->generateDarkcal) {
-			// Allocate temporary buffer
-			buffer = (double*) calloc(image_nn, sizeof(double));
-			// Update assembled data
-			pthread_mutex_lock(&global->powdersumassembled_mutex);
-			for(long i=0; i<global->image_nn; i++)
-				buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i-deltax-deltay*image_nx] += global->powderAssembled[i];
-			// Free old memory and update pointers
-			free(global->powderAssembled);
-			global->powderAssembled = buffer;
-			buffer = NULL;
-			pthread_mutex_unlock(&global->powdersumassembled_mutex);
-		}
-		
-		if (global->hitfinder.use && global->powdersum) {
-			// Allocate temporary buffer
-			buffer = (double*) calloc(image_nn, sizeof(double));
-			// Update assembled data
-			pthread_mutex_lock(&global->powdersumassembled_mutex);
-			for(long i=0; i<global->image_nn; i++) {
-				if (buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i-deltax-deltay*image_nx] == 0) {
-					buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i-deltax-deltay*image_nx] = global->powderAssembled[i];
-				} else cout << "WARNING: buffer[" << image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i-deltax-deltay*image_nx << "] already assigned" << endl;
-			}
-			// Free old memory and update pointers
-			free(global->powderAssembled);
-			global->powderAssembled = buffer;
-			buffer = NULL;
-			pthread_mutex_unlock(&global->powdersumassembled_mutex);
-		}
-		
-		if (global->icefinder.use && global->powdersum) {
-			// Allocate temporary buffer
-			buffer = (double*) calloc(image_nn, sizeof(double));
-			// Update assembled data	: ice
-			pthread_mutex_lock(&global->icesumassembled_mutex);
-			for(long i=0; i<global->image_nn; i++)
-				buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i-deltax-deltay*image_nx] += global->iceAssembled[i];
-			// Free old memory and update pointers
-			free(global->iceAssembled);
-			global->iceAssembled = buffer;
-			buffer = NULL;
-			pthread_mutex_unlock(&global->icesumassembled_mutex);			
-		}
-		
-		
-		if (global->waterfinder.use && global->powdersum) {
-			// Allocate temporary buffer
-			buffer = (double*) calloc(image_nn, sizeof(double));
-			// Update assembled data	: water
-			pthread_mutex_lock(&global->watersumassembled_mutex);
-			for(long i=0; i<global->image_nn; i++)
-				buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i-deltax-deltay*image_nx] += global->waterAssembled[i];
-			// Free old memory and update pointers
-			free(global->waterAssembled);
-			global->waterAssembled = buffer;
-			buffer = NULL;
-			pthread_mutex_unlock(&global->watersumassembled_mutex);
-		}
-		
-		// update global variables
-		pthread_mutex_lock(&global->image_mutex);
-		global->image_nx = image_nx;
-		global->image_nn = image_nn;
-		pthread_mutex_unlock(&global->image_mutex);
-		
-	} else {
-		
-		DEBUGL1_ONLY cout << "\tSize of image output array is unchanged." << endl;
-		
-		// for the assembled powder, we have to shift the already saved image with deltax/deltay
-		double *buffer;
-		
-		if (global->generateDarkcal) {
-			// Allocate temporary buffer
-			buffer = (double*) calloc(image_nn, sizeof(double));
-			// Update assembled data
-			pthread_mutex_lock(&global->powdersumassembled_mutex);
-			for(long i=0; i<global->image_nn; i++) {
-				if (global->powderAssembled[i] != 0) buffer[i-deltax-deltay*image_nx] += global->powderAssembled[i];
-			}
-			// Free old memory and update pointers
-			free(global->powderAssembled);
-			global->powderAssembled = buffer;
-			buffer = NULL;
-			pthread_mutex_unlock(&global->powdersumassembled_mutex);
-		}
-		
-		if (global->hitfinder.use && global->powdersum) {
-			// Allocate temporary buffer
-			buffer = (double*) calloc(image_nn, sizeof(double));
-			// Update assembled data
-			pthread_mutex_lock(&global->powdersumassembled_mutex);
-			for(long i=0; i<global->image_nn; i++) {
-				if (global->powderAssembled[i] != 0) {
-					if (i-deltax-deltay*image_nx < 0) cout << "ERROR IN INDEX: " << i-deltax-deltay*image_nx << endl;
-					buffer[i-deltax-deltay*image_nx] += global->powderAssembled[i];
-				}
-			}
-			// Free old memory and update pointers
-			free(global->powderAssembled);
-			global->powderAssembled = buffer;
-			buffer = NULL;
-			pthread_mutex_unlock(&global->powdersumassembled_mutex);
-		}
-		
-		if (global->icefinder.use && global->powdersum) {
-			// Allocate temporary buffer
-			buffer = (double*) calloc(image_nn, sizeof(double));
-			// Update assembled data	: ice
-			pthread_mutex_lock(&global->icesumassembled_mutex);
-			for(long i=0; i<global->image_nn; i++) {
-				if (global->iceAssembled[i] != 0) buffer[i-deltax-deltay*image_nx] += global->iceAssembled[i];
-			}
-			// Free old memory and update pointers
-			free(global->iceAssembled);
-			global->iceAssembled = buffer;
-			buffer = NULL;
-			pthread_mutex_unlock(&global->icesumassembled_mutex);			
-		}
-		
-		
-		if (global->waterfinder.use && global->powdersum) {
-			// Allocate temporary buffer
-			buffer = (double*) calloc(image_nn, sizeof(double));
-			// Update assembled data	: water
-			pthread_mutex_lock(&global->watersumassembled_mutex);
-			for(long i=0; i<global->image_nn; i++) {
-				if (global->waterAssembled[i] != 0) buffer[i-deltax-deltay*image_nx] += global->waterAssembled[i];
-			}
-			// Free old memory and update pointers
-			free(global->waterAssembled);
-			global->waterAssembled = buffer;
-			buffer = NULL;
-			pthread_mutex_unlock(&global->watersumassembled_mutex);
-		}
-		
-		// update global variables
-		pthread_mutex_lock(&global->image_mutex);
-		global->image_nx = image_nx;
-		global->image_nn = image_nn;
-		pthread_mutex_unlock(&global->image_mutex);
-		
+	// update image arrays from raw data
+	if (global->generateDarkcal) {
+		// Update assembled data
+		pthread_mutex_lock(&global->powdersumassembled_mutex);
+		assemble2Dimage(global->powderRaw, global->powderAssembled, global);
+		pthread_mutex_unlock(&global->powdersumassembled_mutex);
 	}
+	
+	if ((global->hitfinder.use || global->listfinder.use) && global->powdersum) {
+		// Update assembled data
+		pthread_mutex_lock(&global->powdersumassembled_mutex);
+		assemble2Dimage(global->powderRaw, global->powderAssembled, global);
+		pthread_mutex_unlock(&global->powdersumassembled_mutex);
+	}
+	
+	if (global->icefinder.use && global->powdersum) {
+		// Update assembled data	: ice
+		pthread_mutex_lock(&global->icesumassembled_mutex);
+		assemble2Dimage(global->iceRaw, global->iceAssembled, global);
+		pthread_mutex_unlock(&global->icesumassembled_mutex);			
+	}
+	
+	
+	if (global->waterfinder.use && global->powdersum) {
+		// Update assembled data	: water
+		pthread_mutex_lock(&global->watersumassembled_mutex);
+		assemble2Dimage(global->waterRaw, global->waterAssembled, global);
+		pthread_mutex_unlock(&global->watersumassembled_mutex);
+	}
+	
+	pthread_mutex_unlock(&global->image_mutex);
+	
+	// OLD ALGORITHM, ONLY WORKED FOR calculateCenterCorrection
+//	// reallocate assembled arrays if necessary
+//	if (image_nx > global->image_nx) {
+//		
+//		DEBUGL1_ONLY printf("\tUpdated image output array will be %i x %i\n",(int)image_nx,(int)image_nx);
+//		
+//		// for the assembled powder, we have to reallocate the already saved image and shift with deltax/deltay
+//		long deltanx = image_nx-global->image_nx;
+//		double *buffer;
+//		DEBUGL2_ONLY cout << "deltanx: " << deltanx << ", image_nx: " << image_nx << ", global->image_nx: " << global->image_nx << ", deltax: " << deltax << ", deltay: " << deltay << endl;
+//		
+//		if (global->generateDarkcal) {
+//			// Allocate temporary buffer
+//			buffer = (double*) calloc(image_nn, sizeof(double));
+//			// Update assembled data
+//			pthread_mutex_lock(&global->powdersumassembled_mutex);
+//			for(long i=0; i<global->image_nn; i++)
+//				buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i-deltax-deltay*image_nx] += global->powderAssembled[i];
+//			// Free old memory and update pointers
+//			free(global->powderAssembled);
+//			global->powderAssembled = buffer;
+//			buffer = NULL;
+//			pthread_mutex_unlock(&global->powdersumassembled_mutex);
+//		}
+//		
+//		if (global->hitfinder.use && global->powdersum) {
+//			// Allocate temporary buffer
+//			buffer = (double*) calloc(image_nn, sizeof(double));
+//			// Update assembled data
+//			pthread_mutex_lock(&global->powdersumassembled_mutex);
+//			for(long i=0; i<global->image_nn; i++) {
+//				if (buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i-deltax-deltay*image_nx] == 0) {
+//					buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i-deltax-deltay*image_nx] = global->powderAssembled[i];
+//				} else cout << "WARNING: buffer[" << image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i-deltax-deltay*image_nx << "] already assigned" << endl;
+//			}
+//			// Free old memory and update pointers
+//			free(global->powderAssembled);
+//			global->powderAssembled = buffer;
+//			buffer = NULL;
+//			pthread_mutex_unlock(&global->powdersumassembled_mutex);
+//		}
+//		
+//		if (global->icefinder.use && global->powdersum) {
+//			// Allocate temporary buffer
+//			buffer = (double*) calloc(image_nn, sizeof(double));
+//			// Update assembled data	: ice
+//			pthread_mutex_lock(&global->icesumassembled_mutex);
+//			for(long i=0; i<global->image_nn; i++)
+//				buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i-deltax-deltay*image_nx] += global->iceAssembled[i];
+//			// Free old memory and update pointers
+//			free(global->iceAssembled);
+//			global->iceAssembled = buffer;
+//			buffer = NULL;
+//			pthread_mutex_unlock(&global->icesumassembled_mutex);			
+//		}
+//		
+//		
+//		if (global->waterfinder.use && global->powdersum) {
+//			// Allocate temporary buffer
+//			buffer = (double*) calloc(image_nn, sizeof(double));
+//			// Update assembled data	: water
+//			pthread_mutex_lock(&global->watersumassembled_mutex);
+//			for(long i=0; i<global->image_nn; i++)
+//				buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i-deltax-deltay*image_nx] += global->waterAssembled[i];
+//			// Free old memory and update pointers
+//			free(global->waterAssembled);
+//			global->waterAssembled = buffer;
+//			buffer = NULL;
+//			pthread_mutex_unlock(&global->watersumassembled_mutex);
+//		}
+//		
+//		// update global variables
+//		pthread_mutex_lock(&global->image_mutex);
+//		global->image_nx = image_nx;
+//		global->image_nn = image_nn;
+//		pthread_mutex_unlock(&global->image_mutex);
+//		
+//	} else {
+//		
+//		DEBUGL1_ONLY cout << "\tSize of image output array is unchanged." << endl;
+//		
+//		// for the assembled powder, we have to shift the already saved image with deltax/deltay
+//		double *buffer;
+//		
+//		if (global->generateDarkcal) {
+//			// Allocate temporary buffer
+//			buffer = (double*) calloc(image_nn, sizeof(double));
+//			// Update assembled data
+//			pthread_mutex_lock(&global->powdersumassembled_mutex);
+//			for(long i=0; i<global->image_nn; i++) {
+//				if (global->powderAssembled[i] != 0) buffer[i-deltax-deltay*image_nx] += global->powderAssembled[i];
+//			}
+//			// Free old memory and update pointers
+//			if (global->powderAssembled)
+//				free(global->powderAssembled);
+//			global->powderAssembled = buffer;
+//			buffer = NULL;
+//			pthread_mutex_unlock(&global->powdersumassembled_mutex);
+//		}
+//		
+//		if (global->hitfinder.use && global->powdersum) {
+//			// Allocate temporary buffer
+//			buffer = (double*) calloc(image_nn, sizeof(double));
+//			// Update assembled data
+//			pthread_mutex_lock(&global->powdersumassembled_mutex);
+//			for(long i=0; i<global->image_nn; i++) {
+//				if (global->powderAssembled[i] != 0) {
+//					if (i-deltax-deltay*image_nx < 0) cout << "ERROR IN INDEX: " << i-deltax-deltay*image_nx << endl;
+//					buffer[i-deltax-deltay*image_nx] += global->powderAssembled[i];
+//				}
+//			}
+//			// Free old memory and update pointers
+//			if (global->powderAssembled)
+//				free(global->powderAssembled);
+//			global->powderAssembled = buffer;
+//			buffer = NULL;
+//			pthread_mutex_unlock(&global->powdersumassembled_mutex);
+//		}
+//		
+//		if (global->icefinder.use && global->powdersum) {
+//			// Allocate temporary buffer
+//			buffer = (double*) calloc(image_nn, sizeof(double));
+//			// Update assembled data	: ice
+//			pthread_mutex_lock(&global->icesumassembled_mutex);
+//			for(long i=0; i<global->image_nn; i++) {
+//				if (global->iceAssembled[i] != 0) buffer[i-deltax-deltay*image_nx] += global->iceAssembled[i];
+//			}
+//			// Free old memory and update pointers
+//			if (global->iceAssembled)
+//				free(global->iceAssembled);
+//			global->iceAssembled = buffer;
+//			buffer = NULL;
+//			pthread_mutex_unlock(&global->icesumassembled_mutex);			
+//		}
+//		
+//		
+//		if (global->waterfinder.use && global->powdersum) {
+//			// Allocate temporary buffer
+//			buffer = (double*) calloc(image_nn, sizeof(double));
+//			// Update assembled data	: water
+//			pthread_mutex_lock(&global->watersumassembled_mutex);
+//			for(long i=0; i<global->image_nn; i++) {
+//				if (global->waterAssembled[i] != 0) buffer[i-deltax-deltay*image_nx] += global->waterAssembled[i];
+//			}
+//			// Free old memory and update pointers
+//			if (global->waterAssembled)
+//				free(global->waterAssembled);
+//			global->waterAssembled = buffer;
+//			buffer = NULL;
+//			pthread_mutex_unlock(&global->watersumassembled_mutex);
+//		}
+//		
+//		// update global variables
+//		pthread_mutex_lock(&global->image_mutex);
+//		global->image_nx = image_nx;
+//		global->image_nn = image_nn;
+//		pthread_mutex_unlock(&global->image_mutex);
+//		
+//	}
 }
 
 void updateImageArrays(cGlobal *global, cHit *hit) {
@@ -2341,7 +2508,8 @@ void updateImageArrays(cGlobal *global, cHit *hit) {
 			for(long i=0; i<global->image_nn; i++)
 				buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i] += global->powderAssembled[i];
 			// Free old memory and update pointers
-			free(global->powderAssembled);
+			if (global->powderAssembled)
+				free(global->powderAssembled);
 			global->powderAssembled = buffer;
 			buffer = NULL;
 			pthread_mutex_unlock(&global->powdersumassembled_mutex);
@@ -2355,7 +2523,8 @@ void updateImageArrays(cGlobal *global, cHit *hit) {
 			for(long i=0; i<global->image_nn; i++)
 				buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i] = global->powderAssembled[i];
 			// Free old memory and update pointers
-			free(global->powderAssembled);
+			if (global->powderAssembled)
+				free(global->powderAssembled);
 			global->powderAssembled = buffer;
 			buffer = NULL;
 			pthread_mutex_unlock(&global->powdersumassembled_mutex);
@@ -2369,7 +2538,8 @@ void updateImageArrays(cGlobal *global, cHit *hit) {
 			for(long i=0; i<global->image_nn; i++)
 				buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i] = global->iceAssembled[i];
 			// Free old memory and update pointers
-			free(global->iceAssembled);
+			if (global->iceAssembled)
+				free(global->iceAssembled);
 			global->iceAssembled = buffer;
 			buffer = NULL;
 			pthread_mutex_unlock(&global->icesumassembled_mutex);			
@@ -2384,7 +2554,8 @@ void updateImageArrays(cGlobal *global, cHit *hit) {
 			for(long i=0; i<global->image_nn; i++)
 				buffer[image_nx*deltanx/2+deltanx/2+deltanx*int(i/global->image_nx)+i] = global->waterAssembled[i];
 			// Free old memory and update pointers
-			free(global->waterAssembled);
+			if (global->waterAssembled)
+				free(global->waterAssembled);
 			global->waterAssembled = buffer;
 			buffer = NULL;
 			pthread_mutex_unlock(&global->watersumassembled_mutex);
@@ -2400,31 +2571,48 @@ void updateImageArrays(cGlobal *global, cHit *hit) {
 	} else DEBUGL1_ONLY cout << "\tSize of image output array is unchanged." << endl;
 }
 
-void updateSAXSArrays(cGlobal *global) {
-	// update size of SAXS arrays before they are filled
+void updateAngularAvgArrays(cGlobal *global) {
+	// update size of angular average arrays before they are filled
 	
-	if (global->powdersum && global->powderAngularAvg) {
+	/*
+	 *	Update global angular average variables
+	 */
+	if ((global->powdersum && (global->powderAngularAvg || global->refineMetrology)) || global->hitAngularAvg) {
 		if (global->angularAvgStopQ == 0 || global->angularAvgStopQ < global->angularAvgStartQ) {
-			global->angularAvg_nn = (unsigned) round(global->pix_rmax/global->angularAvgDeltaQ)+1;
+			global->angularAvg_nn = (unsigned) ceil(global->pix_rmax/global->angularAvgDeltaQ)+1;
 			global->angularAvgStartQ = 0;
 		} else {
-			global->angularAvg_nn = (unsigned) round((global->angularAvgStopQ-global->angularAvgStartQ)/global->angularAvgDeltaQ)+1;
+			global->angularAvg_nn = (unsigned) ceil((global->angularAvgStopQ-global->angularAvgStartQ)/global->angularAvgDeltaQ)+1;
 		}
-		free(global->angularAvgQ);
-		global->angularAvgQ = (double*) calloc(global->angularAvg_nn, sizeof(double));
-		if (global->hitfinder.use) {
-			free(global->powderAverage);
+		if (global->hitfinder.use || global->listfinder.use) {
+			if (global->powderAverage)
+				free(global->powderAverage);
 			global->powderAverage = (double*) calloc(global->angularAvg_nn, sizeof(double));
 		}
 		if (global->icefinder.use) {
-			free(global->iceAverage);
+			if (global->iceAverage)
+				free(global->iceAverage);
 			global->iceAverage = (double*) calloc(global->angularAvg_nn, sizeof(double));
 		}
 		if (global->waterfinder.use) {
-			free(global->waterAverage);
+			if (global->waterAverage)
+				free(global->waterAverage);
 			global->waterAverage = (double*) calloc(global->angularAvg_nn, sizeof(double));
 		}
-	}
+		if (global->angularAvgQ)
+			delete[] global->angularAvgQ;
+		global->angularAvgQ = new double[global->angularAvg_nn];
+		for (int i=0; i<global->angularAvg_nn; i++) {
+			global->angularAvgQ[i] = global->angularAvgStartQ + i*global->angularAvgDeltaQ;
+		}
+		// calculate index for each pixel with correct bin lengths in angular average array
+		if (global->angularAvg_i)
+			delete[] global->angularAvg_i;
+		global->angularAvg_i = new int[global->pix_nn];
+		for (int i=0; i<global->pix_nn; i++) {
+			global->angularAvg_i[i] = (int) round( (global->pix_r[i] - global->angularAvgStartQ) / global->angularAvgDeltaQ );
+		}	
+	}	
 }
 
 
@@ -2545,8 +2733,10 @@ void translateQuads(cGlobal *global) {
 	}
 	
 	// clear global arrays
-	free(global->pix_x);
-	free(global->pix_y);
+	if (global->pix_x)
+		free(global->pix_x);
+	if (global->pix_y)
+		free(global->pix_y);
 	
 	// shift pix_x and pix_y to the correct position and update global arrays
 	global->shiftQuads(pix_x, global->quad_dx, pix_y, global->quad_dy);
