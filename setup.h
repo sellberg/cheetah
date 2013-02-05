@@ -74,6 +74,7 @@ public:
 	float		pixelCenterY;		// option to manually override the calculated center of the square hole (if useCenterCorrection is enabled) and set the center to Y in pixels if pixelCenterY is nonzero
 	int			calculateCenterCorrectionPowder;	// set to nonzero to calculate center of pixel array from powder pattern using a Hough transform, and applies it to powder averages after the correction has been calculated
 	int			calculateCenterCorrectionHit;	// set to nonzero to calculate center of pixel array from each hit using a Hough transform, and applies it after the correction has been calculated
+	int			calculateCenterCorrectionQuad;	// set to nonzero to calculate center of each quad in pixel array from powder pattern using a Hough transform, and applies it after the correction has been calculated, also controls what correction algorithm to be used: 1 = unified center, 2 = unified radius
 	double		centerCorrectionThreshold;	// determines the threshold for which below pixel intensities are set to zero
 	double		centerCorrectionMaxR;	// maximum radius value in pixels that the hough transform will be performed for, the calibration ring should lie BELOW this value.
 	double		centerCorrectionMinR;	// minimum radius value in pixels that the hough transform will be performed for, the calibration ring should lie ABOVE this value.

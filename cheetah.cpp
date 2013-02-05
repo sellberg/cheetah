@@ -705,6 +705,15 @@ void endjob()
 	}
 	
 	
+	// Calculate center correction from regular powder pattern for each quad
+	if (global.hitfinder.use && global.powdersum && global.calculateCenterCorrectionQuad) {
+		calculateCenterCorrectionQuad(&global, global.powderRaw, global.npowder); // function also shifts Quads
+		updatePixelArrays(&global);
+		updateImageArrays(&global);
+		updateAngularAvgArrays(&global);
+	}
+	
+	
 	// Refine metrology by translating/rotating quads w.r.t each other from regular powder pattern
 	if (global.hitfinder.use && global.powdersum && global.refineMetrology) {
 		cout << "Refining metrology..." << endl;

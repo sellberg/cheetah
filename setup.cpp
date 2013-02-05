@@ -74,6 +74,7 @@ void cGlobal::defaultConfiguration(void) {
 	pixelCenterY = 0;
 	calculateCenterCorrectionPowder = 0;
 	calculateCenterCorrectionHit = 0;
+	calculateCenterCorrectionQuad = 0;
 	centerCorrectionThreshold = 150;
 	centerCorrectionMaxR = 600;
 	centerCorrectionMinR = 400;
@@ -328,6 +329,7 @@ void cGlobal::setup() {
 			hitAngularAvg = 0;
 			calculateCenterCorrectionPowder = 0;
 			calculateCenterCorrectionHit = 0;
+			calculateCenterCorrectionQuad = 0;
 			refineMetrology = 0;
 			usePolarizationCorrection = 0;
 			useSolidAngleCorrection = 0;
@@ -430,6 +432,17 @@ void cGlobal::setup() {
 	} else if (useSolidAngleCorrection > 2) {
 		cout << "Invalid option: useSolidAngleCorrection = " << useSolidAngleCorrection << ", set to default value (1 = rigorous)" << endl;
 		useSolidAngleCorrection = 1;
+	}
+	
+	/*
+	 *	Set up quad center algorithm switch
+	 */
+	if (calculateCenterCorrectionQuad < 0) {
+		cout << "Invalid option: calculateCenterCorrectionQuad = " << calculateCenterCorrectionQuad << ", correction disabled (0 = off)" << endl;
+		calculateCenterCorrectionQuad = 0;
+	} else if (calculateCenterCorrectionQuad > 2) {
+		cout << "Invalid option: calculateCenterCorrectionQuad = " << calculateCenterCorrectionQuad << ", set to default value (1 = unified center)" << endl;
+		calculateCenterCorrectionQuad = 1;
 	}
 	
 	/*
@@ -800,6 +813,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "calculatecentercorrectionhit")) {
 		calculateCenterCorrectionHit = atoi(value);
+	}
+	else if (!strcmp(tag, "calculatecentercorrectionquad")) {
+		calculateCenterCorrectionQuad = atoi(value);
 	}
 	else if (!strcmp(tag, "centercorrectionthreshold")) {
 		centerCorrectionThreshold = atof(value);
@@ -1356,7 +1372,7 @@ void cGlobal::readDetectorGeometry(char* filename) {
 	// Shift quads according to metrology refinement
 	quad_dx = NULL;
 	quad_dy = NULL;
-	if (refineMetrology || useMetrologyRefinement) {
+	if (refineMetrology || useMetrologyRefinement || calculateCenterCorrectionQuad) {
 		quad_dx = (float *) calloc(4, sizeof(float));
 		quad_dy = (float *) calloc(4, sizeof(float));
 		if (useMetrologyRefinement) {

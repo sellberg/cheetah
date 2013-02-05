@@ -2037,7 +2037,7 @@ int makeQcalibration(tThreadInfo *threadInfo, cGlobal *global) {
 }
 
 
-void calculateCenterCorrection(cGlobal *global, double *intensities, double normalization) {
+void calculateCenterCorrection(cGlobal *global, double intensities[], double normalization) {
 	
 	// calculating center correction from an array of doubles with intensities in raw format (index number matches pix_x and pix_y)
 	printf("calculating center correction...\n");
@@ -2099,7 +2099,7 @@ void calculateCenterCorrection(cGlobal *global, double *intensities, double norm
 	delete hough;
 }
 
-void calculateCenterCorrection(tThreadInfo *info, cGlobal *global, float *intensities, float normalization) {
+void calculateCenterCorrection(tThreadInfo *info, cGlobal *global, float intensities[], float normalization) {
 	
 	// calculating center correction from an array of floats with intensities in raw format (index number matches pix_x and pix_y)
 	DEBUGL1_ONLY printf("calculating center correction...\n");
@@ -2155,6 +2155,115 @@ void calculateCenterCorrection(tThreadInfo *info, cGlobal *global, float *intens
 	
 	// cleanup of allocated memory
 	delete hough;
+}
+
+void calculateCenterCorrectionQuad(cGlobal *global, double intensities[], double normalization) {
+	
+	// calculating center correction from an array of doubles with intensities in raw format (index number matches pix_x and pix_y)
+	printf("calculating center correction for each quad...\n");
+	
+	// calculate size of arrays
+	DEBUGL2_ONLY cout << "MinR: " << global->centerCorrectionMinR << ", MaxR: " << global->centerCorrectionMaxR << ", DeltaR: " << global->centerCorrectionDeltaR << endl;
+	int nR = (int) ceil((global->centerCorrectionMaxR - global->centerCorrectionMinR)/global->centerCorrectionDeltaR) + 1;
+	int nC = (int) ceil((2*global->centerCorrectionMaxC)/global->centerCorrectionDeltaC) + 1;
+	DEBUGL2_ONLY cout << "nR: " << nR << ", nC: " << nC << endl;
+	
+	double radius[4];
+	double dx[4];
+	double dy[4];
+	// loop over quads
+	for (int quad=0; quad<4; quad++) {
+		
+		// declare hough array as 3D array (in doubles) initialized to zero
+		array3D<double> hough = array3D<double>(nR, nC, nC);
+		
+		// loop over all pixels in each quad
+		for(int mi=0; mi<2; mi++) { // mi decides what col in 2x8 matrix of raw data ASICs for each quad
+			for(int mj=0; mj<8; mj++) { // mj decides what row in 2x8 matrix of raw data ASICs for each quad
+				for(int i=0; i<ROWS; i++) {
+					for(int j=0; j<COLS; j++) {
+						
+						long n = (j + mj*COLS) * (8*ROWS); // [row, 0] in 1552x1480 raw data format
+						n += i + mi*ROWS + quad*2*ROWS; // [row, col] in 1552x1480 raw data format
+						
+						// calculate hough array
+						if (intensities[n]/normalization > global->centerCorrectionThreshold) {
+							float x = global->pix_x[n];
+							float y = global->pix_y[n];
+							for (int na=0; na<nC; na++) {
+								double a = na*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+								for (int nb=0; nb<nC; nb++) {
+									double b = nb*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+									double r = sqrt(((double) x-a)*((double) x-a) + ((double) y-b)*((double) y-b));
+									if (r>global->centerCorrectionMinR && r<global->centerCorrectionMaxR) {
+										int nr = (int) round((r-global->centerCorrectionMinR)/global->centerCorrectionDeltaR);
+										hough.set(nr, na, nb, hough.get(nr, na, nb)+1);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		// find maximum in hough array
+		double max = 0;
+		int imax, jmax, kmax;
+		for(int i=0; i<nR; i++) {
+			for(int j=0; j<nC; j++) {
+				for(int k=0; k<nC; k++) {
+					if(hough.get(i, j, k) > max) {
+						max = hough.get(i, j, k);
+						imax = i;
+						jmax = j;
+						kmax = k;
+					}
+				}
+			}
+		}
+		DEBUGL2_ONLY cout << "imax: " << imax << ", jmax: " << jmax << ", kmax: " << kmax << ", houghmax: " << max << endl;
+		
+		// assign new center to local variables
+		radius[quad] = imax*global->centerCorrectionDeltaR + global->centerCorrectionMinR;
+		dx[quad] = jmax*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+		dy[quad] = kmax*global->centerCorrectionDeltaC - global->centerCorrectionMaxC;
+		
+	}
+	
+	if (global->calculateCenterCorrectionQuad == 1) {
+		// calculate quad shift for global pixel arrays with unified center		
+		for (int quad=0; quad<4; quad++) {		
+			global->quad_dx[quad] = (float) -dx[quad];
+			global->quad_dy[quad] = (float) -dy[quad];
+			DEBUGL1_ONLY cout << "\tQuad" << quad << " radius = " << radius[quad] << endl;
+		}
+		
+	} else {
+		// calculate max radius from hough transform
+		double rmax = 0;
+		for (int quad=0; quad<4; quad++) {
+			if (radius[quad] > rmax)
+				rmax = radius[quad];
+		}
+		
+		// calculate quad shift for global pixel arrays with unified radius
+		// Q0 (+X, +Y)
+		global->quad_dx[0] = -dx[0] + (rmax - radius[0])/sqrt(2.0);
+		global->quad_dy[0] = -dy[0] + (rmax - radius[0])/sqrt(2.0);
+		// Q1 (-X, +Y)
+		global->quad_dx[1] = -dx[1] - (rmax - radius[1])/sqrt(2.0);
+		global->quad_dy[1] = -dy[1] + (rmax - radius[1])/sqrt(2.0);
+		// Q2 (-X, -Y)
+		global->quad_dx[2] = -dx[2] - (rmax - radius[2])/sqrt(2.0);
+		global->quad_dy[2] = -dy[2] - (rmax - radius[2])/sqrt(2.0);
+		// Q3 (+X, -Y)
+		global->quad_dx[3] = -dx[3] + (rmax - radius[3])/sqrt(2.0);
+		global->quad_dy[3] = -dy[3] - (rmax - radius[3])/sqrt(2.0);
+	}
+	
+	// shift global pixel arrays to the correct position
+	global->shiftQuads(global->pix_x, global->quad_dx, global->pix_y, global->quad_dy);
 }
 
 void shiftPixelCenter(cGlobal *global) {
