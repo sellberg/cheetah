@@ -195,6 +195,7 @@ void updateImageArrays(cGlobal *global, cHit *hit);
 void updateAngularAvgArrays(cGlobal *global);
 void translateQuads(cGlobal *global);
 void rotateQuads(cGlobal *global);
+void optimizeGap(cGlobal *global);
 
 
 #endif

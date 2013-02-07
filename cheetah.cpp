@@ -719,6 +719,7 @@ void endjob()
 		cout << "Refining metrology..." << endl;
 		translateQuads(&global);
 		rotateQuads(&global);
+		optimizeGap(&global);
 		updatePixelArrays(&global);
 		updateImageArrays(&global);
 		updateAngularAvgArrays(&global);
