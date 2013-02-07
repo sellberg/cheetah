@@ -1835,14 +1835,81 @@ void savePowderAngularAvg(cGlobal *global) {
 }
 
 
-void calculateIntensityAvg(tThreadInfo *threadInfo, cGlobal *global) {
+void calculateQuadAngularAvg(cGlobal *global, int quad) {
 	
-	threadInfo->intensityAvg = 0;
+	// calculating angular average from the powder pattern on a single quad
 	
-	for (long i=0; i<global->pix_nn; i++)
-		threadInfo->intensityAvg += threadInfo->corrected_data[i];
+	// allocate local counter arrays
+	unsigned *counterp = NULL;
+	unsigned *counteri = NULL;
+	unsigned *counterw = NULL;
+	if (global->hitfinder.use || global->listfinder.use) {
+		counterp = (unsigned*) calloc(global->angularAvg_nn, sizeof(unsigned));
+	}
+	if (global->icefinder.use) {
+		counteri = (unsigned*) calloc(global->angularAvg_nn, sizeof(unsigned));
+	}
+	if (global->waterfinder.use) {
+		counterw = (unsigned*) calloc(global->angularAvg_nn, sizeof(unsigned));
+	}
 	
-	threadInfo->intensityAvg /= global->pix_nn;
+	// angular average for each |q| for the pixels in the quad
+	for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
+		for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
+			for(int i=0; i<ROWS; i++){
+				for(int j=0; j<COLS; j++){
+					long index = (j + mj*COLS) * (8*ROWS); // [row, 0] in 1552x1480 raw data format
+					index += i + mi*ROWS + quad*2*ROWS; // [row, col] in 1552x1480 raw data format
+					if ( global->angularAvg_i[index] < global->angularAvg_nn && global->angularAvg_i[index] >= 0 && (!global->useBadPixelMask || global->badpixelmask[index]) ) {
+						if (global->hitfinder.use || global->listfinder.use) {
+							global->powderAverage[global->angularAvg_i[index]] += global->powderRaw[index];
+							counterp[global->angularAvg_i[index]]++;
+						}
+						if (global->icefinder.use) {
+							global->iceAverage[global->angularAvg_i[index]] += global->iceRaw[index];
+							counteri[global->angularAvg_i[index]]++;
+						}
+						if (global->waterfinder.use) {
+							global->waterAverage[global->angularAvg_i[index]] += global->waterRaw[index];
+							counterw[global->angularAvg_i[index]]++;
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	if (global->useSolidAngleCorrection) {
+		double solidAngle = global->pixelSize*global->pixelSize/(global->detectorZ/1000*global->detectorZ/1000);
+		for (int i=0; i<global->angularAvg_nn; i++) {
+			if (global->hitfinder.use || global->listfinder.use) {
+				if (counterp[i]) global->powderAverage[i] /= counterp[i]*solidAngle;
+			}
+			if (global->icefinder.use) {
+				if (counteri[i]) global->iceAverage[i] /= counteri[i]*solidAngle;
+			}
+			if (global->waterfinder.use) {
+				if (counterw[i]) global->waterAverage[i] /= counterw[i]*solidAngle;
+			}			
+		}
+	} else {
+		for (int i=0; i<global->angularAvg_nn; i++) {
+			if (global->hitfinder.use || global->listfinder.use) {
+				if (counterp[i]) global->powderAverage[i] /= counterp[i];
+			}
+			if (global->icefinder.use) {
+				if (counteri[i]) global->iceAverage[i] /= counteri[i];
+			}
+			if (global->waterfinder.use) {
+				if (counterw[i]) global->waterAverage[i] /= counterw[i];
+			}
+		}
+	}
+	
+	// free memory of local variables
+	free(counterp);
+	free(counteri);
+	free(counterw);
 	
 }
 
@@ -1899,6 +1966,18 @@ void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global) {
 		free(buffer);
 		
 	}
+	
+}
+
+
+void calculateIntensityAvg(tThreadInfo *threadInfo, cGlobal *global) {
+	
+	threadInfo->intensityAvg = 0;
+	
+	for (long i=0; i<global->pix_nn; i++)
+		threadInfo->intensityAvg += threadInfo->corrected_data[i];
+	
+	threadInfo->intensityAvg /= global->pix_nn;
 	
 }
 
@@ -2571,8 +2650,10 @@ void translateQuads(cGlobal *global) {
 	float dx, dy;
 	int refinementNumC = int(2*round(global->refinementMaxC/global->refinementDeltaC) + 1);
 	double imax[4];
+	double rmax[4];
 	for (int i=0; i<4; i++) {
 		imax[i] = 0;
+		rmax[i] = 0;		
 	}
 	
 	float *pix_x = global->pix_x; // let original pix_x be stored through local pointer
@@ -2590,33 +2671,21 @@ void translateQuads(cGlobal *global) {
 		// refine x
 		for (int x=0; x<refinementNumC; x++) {
 			dx = x*global->refinementDeltaC - global->refinementMaxC;
-			DEBUGL1_ONLY cout << "dx: " << dx << endl;
+			DEBUGL2_ONLY cout << "dx: " << dx << endl;
 			
 			// refine y
 			for (int y=0; y<refinementNumC; y++) {
 				dy = y*global->refinementDeltaC - global->refinementMaxC; 
-				DEBUGL1_ONLY cout << "\tdy: " << dy << endl;
+				DEBUGL2_ONLY cout << "\tdy: " << dy << endl;
 				
-				// shift global->pix_x
+				// shift global->pix_x and global->pix_y
 				for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
 					for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
 						for(int i=0; i<ROWS; i++){
 							for(int j=0; j<COLS; j++){
-								long index = (j + mj*COLS) * (8*ROWS);
-								index += i + mi*ROWS + quad*2*ROWS;
+								long index = (j + mj*COLS) * (8*ROWS); // [row, 0] in 1552x1480 raw data format
+								index += i + mi*ROWS + quad*2*ROWS; // [row, col] in 1552x1480 raw data format
 								global->pix_x[index] += dx;
-							}
-						}
-					}
-				}
-				
-				// shift global->pix_y
-				for(int mi=0; mi<2; mi++){ // mi decides what col in 2x8 matrix of raw data ASICs for each quad
-					for(int mj=0; mj<8; mj++){ // mj decides what row in 2x8 matrix of raw data ASICs for each quad
-						for(int i=0; i<ROWS; i++){
-							for(int j=0; j<COLS; j++){
-								int index = (j + mj*COLS) * (8*ROWS);
-								index += i + mi*ROWS + quad*2*ROWS;
 								global->pix_y[index] += dy;
 							}
 						}
@@ -2630,22 +2699,30 @@ void translateQuads(cGlobal *global) {
 				for (int i=0; i<global->pix_nn; i++) {
 					global->angularAvg_i[i] = (int) round( (global->pix_r[i] - global->angularAvgStartQ) / global->angularAvgDeltaQ );
 				}
-				calculatePowderAngularAvg(global);
+				if (global->refineMetrology == 2) calculatePowderAngularAvg(global);
+				else calculateQuadAngularAvg(global, quad);
 				
 				// evaluate maximum intensity
 				double imaxtemp = 0;
+				double rmaxtemp = 0;
 				for (int i=0; i<global->angularAvg_nn; i++) {
-					if (global->powderAverage[i] > imaxtemp) imaxtemp = global->powderAverage[i];
+					if (global->powderAverage[i] > imaxtemp) {
+						imaxtemp = global->powderAverage[i];
+						rmaxtemp = i*global->angularAvgDeltaQ + global->angularAvgStartQ;
+					}
 					global->powderAverage[i] = 0;
 				}
-				DEBUGL1_ONLY cout << "\tQ" << quad << ", Imax: " << imaxtemp << endl;
+				DEBUGL2_ONLY cout << "\tQ" << quad << ", Imax: " << imaxtemp<< ", rmax: " << rmaxtemp << endl;
 				
 				// update best dx/dy based on maximum intensity
 				if (imaxtemp > imax[quad]) {
 					imax[quad] = imaxtemp;
+					rmax[quad] = rmaxtemp;
 					global->quad_dx[quad] = dx;
 					global->quad_dy[quad] = dy;
-					cout << "\tQ" << quad << ": (" << dx << "," << dy << ")" << endl;
+					cout << "\tQ" << quad << ": (" << dx << "," << dy << ")";
+					DEBUGL1_ONLY cout << " at rmax = " << rmaxtemp << " pixels (Imax = " << imaxtemp << ")";
+					cout << endl;
 				}
 				
 				// restore global arrays

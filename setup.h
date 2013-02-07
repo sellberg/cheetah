@@ -90,7 +90,7 @@ public:
 	float		quad2DY;
 	float		quad3DX;
 	float		quad3DY;
-	int			refineMetrology;	// refine metrology by translating/rotating quads w.r.t. each other
+	int			refineMetrology;	// refine metrology by translating/rotating quads w.r.t. each other, also switches between algorithms: 1 = angular average calculated for each quad separately, 2 = angular average calculated for all quads together
 	float		refinementMaxC;			// maximum value in pixels of the shift in the quad center that the refinement will be performed for, the true quad center should lie inside +/- this value.
 	float		refinementDeltaC;		// step length in pixels for the quad center
 		

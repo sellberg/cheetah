@@ -386,7 +386,15 @@ void cGlobal::setup() {
 		angularAvg_i = new int[pix_nn];
 		for (int i=0; i<pix_nn; i++) {
 			angularAvg_i[i] = (int) round( (pix_r[i] - angularAvgStartQ) / angularAvgDeltaQ );
-		}	
+		}
+		// setup quad refinement algorithm switch
+		if (refineMetrology < 0) {
+			cout << "Invalid option: refineMetrology = " << refineMetrology << ", correction disabled (0 = off)" << endl;
+			refineMetrology = 0;
+		} else if (refineMetrology > 2) {
+			cout << "Invalid option: refineMetrology = " << refineMetrology << ", set to default value (1 = angular average for separate quads)" << endl;
+			refineMetrology = 1;
+		}
 	}
 	
 	/*
@@ -424,7 +432,7 @@ void cGlobal::setup() {
 	}// useCorrelation end	
 	
 	/*
-	 *	Set up solid angle correction algorithm switch
+	 *	Setup solid angle correction algorithm switch
 	 */
 	if (useSolidAngleCorrection < 0) {
 		cout << "Invalid option: useSolidAngleCorrection = " << useSolidAngleCorrection << ", correction disabled (0 = off)" << endl;
@@ -435,7 +443,7 @@ void cGlobal::setup() {
 	}
 	
 	/*
-	 *	Set up quad center algorithm switch
+	 *	Setup quad center algorithm switch
 	 */
 	if (calculateCenterCorrectionQuad < 0) {
 		cout << "Invalid option: calculateCenterCorrectionQuad = " << calculateCenterCorrectionQuad << ", correction disabled (0 = off)" << endl;
@@ -446,7 +454,7 @@ void cGlobal::setup() {
 	}
 	
 	/*
-	 *	Set up thread management
+	 *	Setup thread management
 	 */
 	nActiveThreads = 0;
 	threadCounter = 0;
