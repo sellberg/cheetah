@@ -146,6 +146,9 @@ public:
 	// Energy calibration
 	int			useEnergyCalibration;		// Save histogram of energies and wavelengths for energy calibration
 	
+	// Average intensity statitiscs
+	int			useIntensityStatistics;		// Save histogram of avg intensities
+	
 	// Single-pixel statitiscs
 	int			usePixelStatistics;		// Save intensities for randomly chosen single pixels (currently 26 pixels with high, medium, and low variance)
 	char		pixelFile[1024];		// Name of the file containing the pixel list
@@ -227,6 +230,7 @@ public:
 	pthread_mutex_t	nActiveThreads_mutex;		// there should be one mutex variable for each global variable which threads write to.
 	pthread_mutex_t	hotpixel_mutex;
 	pthread_mutex_t	selfdark_mutex;
+	pthread_mutex_t	intensities_mutex;
 	pthread_mutex_t	powdersumraw_mutex;
 	pthread_mutex_t	powdersumassembled_mutex;
 	pthread_mutex_t	powdersumcorrelation_mutex;
@@ -306,7 +310,19 @@ public:
 	unsigned		*Lhist;	// Histogram of wavelengths
 	
 	
-	// Attenuation variables
+	// Intensity statistics variables
+	double			*intensities;		// Dynamic array of avg intensities for all events
+	bool			*hits;		// Dynamic array of hits for all events
+	unsigned		intensityCapacity;	// Allocated size of dynamic intensity array
+	unsigned		nIntensities;		// Number of avg intensities saved in dynamic intensity array
+	unsigned		*Ihist;	// Histogram of intensities
+	unsigned		*IHhist;// Histogram of intensities of hits
+	double			Imin;	// Lowest avg intensity
+	double			Imax;	// Highest avg intensity
+	double			Imean;	// Mean avg intensity
+	
+	
+	// Pixel statistics variables
 	unsigned		*pixels;		// Pointer to dynamic array of all pixel indices in the raw data format
 	double			*pixelXYList;	// Pointer to dynamic array of all pixel x/y values imported from python scripts in (1480,1552) format
 	unsigned		pixelCapacity;	// Allocated size of dynamic pixel array
@@ -372,6 +388,7 @@ public:
 	void readAttenuations(char *);		// read in list of attenuations
 	void expandAttenuationCapacity();
 	void expandEnergyCapacity();
+	void expandIntensityCapacity();
 	void readPixels(char *);			// read in list of pixels to be analyzed on a single-pixel basis
 	void expandPixelCapacity();
 	void createLookupTable();			// create lookup table (LUT) needed for the fast correlation algorithm	

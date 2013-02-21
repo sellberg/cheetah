@@ -147,6 +147,9 @@ void cGlobal::defaultConfiguration(void) {
 	// Energy calibration
 	useEnergyCalibration = 0;
 	
+	// Intensity statistics
+	useIntensityStatistics = 0;
+	
 	// Single-pixel statistics
 	usePixelStatistics = 0;
 	strcpy(pixelFile, "pixels.dat");
@@ -461,6 +464,7 @@ void cGlobal::setup() {
 	pthread_mutex_init(&nActiveThreads_mutex, NULL);
 	pthread_mutex_init(&hotpixel_mutex, NULL);
 	pthread_mutex_init(&selfdark_mutex, NULL);
+	pthread_mutex_init(&intensities_mutex, NULL);
 	pthread_mutex_init(&powdersumraw_mutex, NULL);
 	pthread_mutex_init(&powdersumassembled_mutex, NULL);
 	pthread_mutex_init(&powdersumcorrelation_mutex, NULL);
@@ -663,6 +667,24 @@ void cGlobal::setup() {
 		energyCapacity = 1000; // Starting capacity of dynamic arrays
 		energies = new double[energyCapacity]; // Dynamic array of all photon energies (eV)
 		wavelengths = new double[energyCapacity]; // Dynamic array of all wavelengths (Å)
+	}
+	
+	/*
+	 *	Setup global intensity statistics variables
+	 */
+	intensities = NULL;
+	hits = NULL;
+	nIntensities = 0;
+	intensityCapacity = 0;
+	Ihist = NULL;	// Histogram is allocated in makeIntensityHistograms()
+	IHhist = NULL;	// Histogram is allocated in makeIntensityHistograms()
+	Imin = 100000;	// Lowest avg intensity
+	Imax = -10000;	// Highest avg intensity
+	Imean = 0;	// Mean avg intensity of hits
+	if (useIntensityStatistics) {
+		intensityCapacity = 100; // Starting capacity of dynamic intensity array
+		intensities = new double[intensityCapacity]; // Dynamic array of avg intensities
+		hits = new bool[intensityCapacity];
 	}
 	
 	/*
@@ -1025,6 +1047,9 @@ void cGlobal::parseConfigTag(char *tag, char *value) {
 	}
 	else if (!strcmp(tag, "useenergycalibration")) {
 		useEnergyCalibration = atoi(value);
+	}
+	else if (!strcmp(tag, "useintensitystatistics")) {
+		useIntensityStatistics = atoi(value);
 	}
 	else if (!strcmp(tag, "usepixelstatistics")) {
 		usePixelStatistics = atoi(value);
@@ -1807,7 +1832,7 @@ void cGlobal::expandAttenuationCapacity() {
 
 
 /*
- *	Expand capacity of dynamic attenuation arrays
+ *	Expand capacity of dynamic photon energy/wavelength arrays
  */
 void cGlobal::expandEnergyCapacity() {
 	energyCapacity *= 2;
@@ -1821,6 +1846,24 @@ void cGlobal::expandEnergyCapacity() {
 	}
 	delete[] oldEnergies;
 	delete[] oldWavelengths;
+}
+
+
+/*
+ *	Expand capacity of dynamic intensity/hits arrays
+ */
+void cGlobal::expandIntensityCapacity() {
+	intensityCapacity *= 2;
+	double *oldIntensities = intensities;
+	intensities = new double[intensityCapacity];
+	bool *oldHits = hits;
+	hits = new bool[intensityCapacity];
+	for (int i=0; i<nIntensities; i++) {
+		intensities[i] = oldIntensities[i];
+		hits[i] = oldHits[i];
+	}
+	delete[] oldIntensities;
+	delete[] oldHits;
 }
 
 

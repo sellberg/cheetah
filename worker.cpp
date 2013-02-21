@@ -296,6 +296,25 @@ void *worker(void *threadarg) {
      *  Calculate intensity average
      */
 	calculateIntensityAvg(threadInfo, global);
+	if (global->useIntensityStatistics) {
+		pthread_mutex_lock(&global->intensities_mutex);
+		if (global->nIntensities >= global->intensityCapacity) global->expandIntensityCapacity();
+		if (global->hdf5dump || global->generateDarkcal
+							 || hit.standard
+							 || hit.water
+							 || hit.ice
+							 || !hit.background) {
+			global->hits[global->nIntensities] = true;
+		} else {
+			global->hits[global->nIntensities] = false;
+		}
+		// OBS: - the order of global->intensities will not be exactly the same as the event order, but close enough (within global->nThreads of events)
+		//      - if useSolidAngleCorrection and/or usePolarizationCorrection is enabled, they will only be calculated for hits/saved events
+		global->intensities[global->nIntensities++] = threadInfo->intensityAvg; 
+		if (threadInfo->intensityAvg > global->Imax) global->Imax = threadInfo->intensityAvg;
+		if (threadInfo->intensityAvg < global->Imin) global->Imin = threadInfo->intensityAvg;
+		pthread_mutex_unlock(&global->intensities_mutex);
+	}
 	
 	
 	/*
@@ -335,6 +354,7 @@ void *worker(void *threadarg) {
 														|| (hit.water && global->waterfinder.savehits) 
 														|| (hit.ice && global->icefinder.savehits) 
 														|| (!hit.background && global->backgroundfinder.savehits) )) {
+		// save pixel intensities of hit without Q-scale (1D array)
 		//if (!global->useCorrelation) fail = calculatePixelMaps(threadInfo, global);
 		//if (!fail) savePixelIntensities(threadInfo, global);
 		//else cout << "Failed to calibrate Q for " << threadInfo->eventname << ", pixel intensities NOT saved." << endl;
@@ -1982,6 +2002,67 @@ void calculateIntensityAvg(tThreadInfo *threadInfo, cGlobal *global) {
 }
 
 
+void saveIntensities(cGlobal *global) {
+	
+	if (global->useIntensityStatistics) {
+		
+		char	filename[1024];
+		double *buffer = (double*) calloc(global->nIntensities, sizeof(double));
+		printf("Saving average intensities to file\n");
+		sprintf(filename,"r%04u-intensities.h5",global->runNumber);
+		for(long i=0; i<global->nIntensities; i++)
+			buffer[i] = global->intensities[i];
+		writeSimpleHDF5(filename, buffer, global->nIntensities, 1, H5T_NATIVE_DOUBLE);
+		free(buffer);
+		
+	}
+	
+}
+
+
+void makeIntensityHistograms(cGlobal *global) {
+	
+	double deltaI = 0.1; // 0.1 ADU steps
+	unsigned Ibins = (unsigned) ceil((global->Imax-global->Imin)/deltaI)+1;
+	unsigned nHits = 0;
+	
+	if (Ibins > 1) {
+		global->Ihist = (unsigned*) calloc(Ibins, sizeof(unsigned));
+		global->IHhist = (unsigned*) calloc(Ibins, sizeof(unsigned));
+		for (long i=0; i<global->nIntensities; i++) {
+			global->Ihist[int(round((global->intensities[i]-global->Imin)/deltaI))]++;
+			if (global->hits[i]) {
+				global->IHhist[int(round((global->intensities[i]-global->Imin)/deltaI))]++;
+				global->Imean += global->intensities[i];
+				nHits++;
+			}
+		}
+		global->Imean /= nHits;
+		char	filename[1024];
+		float *buffer = (float*) calloc(4*Ibins, sizeof(float));
+		printf("Saving histograms of average intensities to file\n");
+		printf("\tMean average intensity of hits: %f ADU\n",global->Imean);
+		sprintf(filename,"r%04u-intensity_histograms.h5",global->runNumber);
+		for(int i=0; i<Ibins; i++) {
+			buffer[i] = (float) global->Ihist[i];
+			buffer[Ibins+i] = (float) global->IHhist[i];
+			buffer[2*Ibins+i] = (float) global->Imin+i*deltaI;
+		}
+		
+		writeSimpleHDF5(filename, buffer, Ibins, 3, H5T_NATIVE_FLOAT);
+		free(buffer);
+		free(global->Ihist);
+		free(global->IHhist);
+		global->Ihist = NULL;
+		global->IHhist = NULL;
+	} else {
+		// disable intensity if not enough bins
+		global->useIntensityStatistics = 0;
+	}
+	
+}
+
+
 void savePixelIntensities(tThreadInfo *threadInfo, cGlobal *global) {
 	
 	// save pixel intensities of hit without Q-scale (1D array)
@@ -2031,8 +2112,8 @@ void makeEnergyHistograms(cGlobal *global) {
 	double deltaL = (global->Lmax-global->Lmin)/(Ebins-1);
 	
 	if (Ebins > 1) {
-		global->Ehist = (unsigned*) calloc(Ebins, sizeof(float));
-		global->Lhist = (unsigned*) calloc(Ebins, sizeof(float));
+		global->Ehist = (unsigned*) calloc(Ebins, sizeof(unsigned));
+		global->Lhist = (unsigned*) calloc(Ebins, sizeof(unsigned));
 		for (long i=0; i<global->nEnergies; i++) {
 			global->Ehist[int(round((global->energies[i]-global->Emin)/deltaE))]++;
 			global->Lhist[int(round((global->wavelengths[i]-global->Lmin)/deltaL))]++;
@@ -2058,6 +2139,8 @@ void makeEnergyHistograms(cGlobal *global) {
 		free(buffer);
 		free(global->Ehist);
 		free(global->Lhist);
+		global->Ehist = NULL;
+		global->Lhist = NULL;
 	} else {
 		// disable energy calibration if not enough bins
 		global->useEnergyCalibration = 0;

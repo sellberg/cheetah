@@ -726,6 +726,13 @@ void endjob()
 	}
 	
 	
+	// Save intensity statistics
+	if (global.useIntensityStatistics) {
+		saveIntensities(&global);
+		makeIntensityHistograms(&global);
+	}
+	
+	
 	// Save energy calibration
 	if (global.useEnergyCalibration) {
 		saveEnergies(&global);
@@ -800,6 +807,8 @@ void endjob()
 	delete[] global.changedAttenuationEvents;
 	delete[] global.totalThicknesses;
 	delete[] global.energies;
+	delete[] global.intensities;
+	delete[] global.hits;
 	delete[] global.pixels;
 	delete[] global.pixelXYList;	
 	delete[] global.wavelengths;
@@ -824,6 +833,7 @@ void endjob()
 	pthread_mutex_destroy(&global.correlationFFT_mutex);
 	pthread_mutex_destroy(&global.pixelcenter_mutex);
 	pthread_mutex_destroy(&global.image_mutex);	
+    pthread_mutex_destroy(&global.intensities_mutex);
     pthread_mutex_destroy(&global.selfdark_mutex);
 	pthread_mutex_destroy(&global.hotpixel_mutex);
 	pthread_mutex_destroy(&global.nhits_mutex);

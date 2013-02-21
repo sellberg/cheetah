@@ -181,6 +181,8 @@ void calculateAngularAvg(tThreadInfo *threadInfo, cGlobal *global);
 void saveAngularAvg(tThreadInfo *threadInfo, cGlobal *global);
 void calculateIntensityAvg(tThreadInfo *threadInfo, cGlobal *global);
 void savePixelIntensities(tThreadInfo *threadInfo, cGlobal *global);
+void saveIntensities(cGlobal *global);
+void makeIntensityHistograms(cGlobal *global);
 void saveEnergies(cGlobal *global);
 void makeEnergyHistograms(cGlobal *global);
 void makePowderQcalibration(cGlobal *global);
