@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/reg/g/psdm/sw/releases/ana-current/arch/x86_64-rhel5-gcc41-opt/bin/python
 
 # Usage:
 # In this directory, type:
@@ -38,8 +38,11 @@ import matplotlib.pyplot as P
 # Be careful of the trailing "/"; 
 # ensure you have the necessary read/write permissions.
 ########################################################
-source_dir = "/reg/d/psdm/cxi/cxi25410/scratch/cleaned_hdf5/"
-write_dir = ""
+source_dir = "/reg/d/psdm/cxi/cxi74613/scratch/cleaned_hdf5/"
+#source_dir = "/reg/d/psdm/cxi/cxi74613/ftc/cleaned_hdf5/"
+#source_dir = "/reg/neh/home3/sellberg/NML-2013/analysis/cheetah_scripts/test_runs/"
+#write_dir = "/reg/d/psdm/cxi/cxi74613/ftc/sellberg/figures/"
+write_dir = "/reg/neh/home3/sellberg/NML-2013/analysis/cheetah_scripts/figures/"
 
 runtag = "r%s"%(options.runNumber)
 print source_dir+runtag+"/"+runtag+"-energies.h5"
@@ -48,6 +51,7 @@ d = N.array(f['/data/data'])
 energies = d[0]
 wavelengths = d[1]
 f.close()
+
 energies[N.isnan(energies)] = 0
 wavelengths[N.isnan(wavelengths)] = 0
 energies = energies[energies != 0]
@@ -56,9 +60,11 @@ if options.max_value == 0:
     options.max_value = len(energies)
 eav = N.average(energies)
 wav = N.average(wavelengths)
+estd = N.std(energies)
+wstd = N.std(wavelengths)
 
-print "Average photon energy = %s eV"%(eav)
-print "Average wavelength = %s A"%(wav)
+print "Average photon energy = %s eV, std = %s eV"%(eav, estd)
+print "Average wavelength = %s A, std = %s A"%(wav, wstd)
 print "Interactive controls for zooming at the bottom of figure screen (zooming..etc)."
 print "Hit Ctl-\ or close all windows (Alt-F4) to terminate viewing program."
 

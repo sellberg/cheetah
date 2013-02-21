@@ -7,7 +7,6 @@ import scipy as S
 import scipy.ndimage as Sndim
 import h5py
 from matplotlib.pyplot import imsave as pltimsave
-import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import my_favorites as mf
 import time
@@ -17,13 +16,13 @@ def find_streak():
     
     # Define paths and names. Make the list of files to process
     #paths for SLAC
-    #datapath = "/reg/d/ana01/cxi/cxi25410/scratch/cleaned_hdf5/r0107/"
-    #outpath = "/reg/d/ana01/cxi/cxi25410/scratch/amartin/test/"    
+    datapath = "/reg/neh/home/sellberg/NML-2011/analysis/cheetah_scripts/test_runs/r0125/"
+    outpath = "/reg/neh/home/sellberg/NML-2011/analysis/cheetah_scripts/test_runs/streak_cleaned/r0125/"    
 
     #paths for local windows
-    datapath = "D:\\work\\water LCLS 2011\\streak_finding_Jonas\\r0120\\"
-    outpath = "D:\\work\\water LCLS 2011\\streak_finding_Jonas\\output2\\"
-    description = "r0120_200imtest"
+    #datapath = "F:\\Work back up\\LCLSWater2011\\LCLS_2011_feb_water\\r0101\\"
+    #outpath = "F:\\Work back up\\LCLSWater2011\\LCLS_2011_feb_water\\"
+    description = "r0116_100imtest"
     #outname = "r0107_test_streaks_removed.h5"
     maskname = description+"_mask"
     h5sumname = description+"_h5sum"
@@ -48,8 +47,8 @@ def find_streak():
     #implot = plt.imshow(image)
     #plt.draw()
     s_init = h5data.shape
-    xshift_init = 4 ##-20
-    yshift_init = -10 ##0
+    xshift_init = 0
+    yshift_init = 0
     cenx_init = s_init[0]/2 + xshift_init
     ceny_init = s_init[1]/2 + yshift_init
     h5file.close()
@@ -62,9 +61,6 @@ def find_streak():
     xshift = 0
     yshift = 0
 
-    # define the centre in the cropped coordinates
-    #centre = [516,502]
-
     #define the centre region
     radius = 60
     circ_centre = mf.circle(s[0],s[1],rad=radius,cenx=cenx,ceny=ceny) 
@@ -75,7 +71,7 @@ def find_streak():
 
 
     # set the threshold and the morphology masks
-    threshold = 150 #0.01
+    threshold = 0.01
     radius = 150
     hsize = 5
     #circ = mf.circle(s[0],s[1],rad=radius,cenx=cenx,ceny=ceny) 
@@ -93,7 +89,7 @@ def find_streak():
     # Loop over the file list
     count = 0
     #flist2 = [flist[2]] 
-    max = 200
+    max = 100
     for ii in N.arange(max):
         i = flist[ii]
 	count += 1
@@ -110,8 +106,7 @@ def find_streak():
 	print image
         #define the mask using the threshold
         print N.amax(image) 
-	#istreak = N.where(image > N.amax(image)*threshold) #relative threshold
-	istreak = N.where(image > threshold)   #absolute threshold
+	istreak = N.where(image > N.amax(image)*threshold)   
         mask = N.zeros(image.shape,dtype="bool")
 	mask[istreak] = 1
         
@@ -120,30 +115,41 @@ def find_streak():
         mask = Sndim.morphology.binary_closing(mask,structure=mcstruct)
         mask = Sndim.morphology.binary_opening(mask,structure=mostruct)
 
-        masksave = mask
-
         # compensate for missing hole
         mask[cenx-hsize:cenx+hsize,ceny-hsize:ceny+hsize] = 1.
 
         # dilate the mask by itself  	
-        mask = dilate_fft(mask,centre=[cenx,ceny])
+        mask = dilate_fft(mask)
         mask = Sndim.morphology.binary_dilation(mask,structure=mdstruct)
         print "Done with dilation"
 
         # find the region at the centre
         masklabelled, num_features = Sndim.label(mask)
         print "Number of regions: ", num_features
-        
+        iregion = 0
+	iregion2 = 0
+        for i in N.arange(num_features):
+            if i == 0: continue
+            ilabel = N.where(masklabelled == i)
+            print i, len(ilabel[0]) 
+            mask2 = N.zeros(mask.shape)
+            mask2[ilabel] = 1.
+            if N.sum(mask2*circ_lower) != 0: iregion = i
+            if N.sum(mask2*circ_upper) != 0: iregion2 = i
+
+        print "iregions ", iregion, iregion2
         mask2 = N.zeros(mask.shape)
 
-        temp = masklabelled*circ_centre
-        mlset = set(temp.flat)
-        for i in mlset:
-                if i != 0:
-                     print "in set mlset", i
-                     ilabel = N.where(masklabelled == i)
-                     mask2[ilabel] = 1.
-                #print "length 1", len(ilabel[0])
+	if (iregion != 0):
+            ilabel = N.where(masklabelled == iregion)
+            mask2[ilabel] = 1.
+            print "length 1", len(ilabel[0])
+
+        if (iregion2 !=0):  
+            ilabel2 = N.where(masklabelled == iregion2)
+            mask2[ilabel2] = 1.
+            print "length 2", len(ilabel2[0])
+	
 
         if (N.sum(mask2) != 0): mask = mask2           
 
@@ -151,9 +157,9 @@ def find_streak():
         mask = mf.array_shift(mask,xshift,yshift)
         
 
-        plt.close()
+        #plt.close()
 	#implot = plt.imshow(mask*N.abs(image)**0.3)
-	#implot = plt.imshow(masksave + mask + circ_lower + circ_upper)
+	#implot = plt.imshow(masklabelled + circ_upper + circ_lower)
         #plt.draw()
 
         # calculate image and mask sums
@@ -222,7 +228,7 @@ def find_streak():
 
 
     #Clean up the display
-    #time.sleep(5)
+    time.sleep(5)
     #cleanup_display()
 
     print "Finished!"
@@ -245,18 +251,16 @@ def MakeFileList(path,ext):
 
 
 # initialise dynamic display
-def init_display():
-    plt.ion()
-    plt.hold(False)
+#def init_display():
+#    plt.ion()
+#    plt.hold(False)
 
-def cleanup_display():
-    plt.close()
-    plt.ioff()
+#def cleanup_display():
+#    plt.close()
+#    plt.ioff()
 
 # dilate by performing the autocorrelation
-def dilate_fft(im, centre=[-1,-1]):
-
-    if centre[0] == -1: centre = centre_of_mask(im)
+def dilate_fft(im):
     
     fim = N.fft.fft2(im)
     im2 = N.fft.ifft2(N.abs(fim)**2)
@@ -266,10 +270,7 @@ def dilate_fft(im, centre=[-1,-1]):
 
     mask = N.zeros(im2.shape,dtype="bool")
     mask[imask] = 1
-    
-    print N.max(mask), N.min(mask)
-    print 'CENTRE!!!::::', centre
-    mask = mf.array_shift(mask,centre[0],centre[1])
+    mask = mf.array_shift(mask,mask.shape[0]/2,mask.shape[1]/2)
     return mask
 
 # crop a function
@@ -295,7 +296,4 @@ def size(image):
     s[:] = image.shape[:]
     return s
     
-def centre_of_mask(mask):
-    imask = N.where(mask == 1)
-    centre = [N.sum(imask[0][:])/imask[0].size, N.sum(imask[1][:])/imask[1].size] 
-    return centre
+find_streak()

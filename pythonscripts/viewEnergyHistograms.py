@@ -1,8 +1,8 @@
-#!/usr/bin/python
+#!/reg/g/psdm/sw/releases/ana-current/arch/x86_64-rhel5-gcc41-opt/bin/python
 
 # Usage:
 # In this directory, type:
-#    ./viewEnergyHistograms.py -rxxxx -m 400 (optional) -x 800 (optional)
+#    ./viewEnergyHistograms.py -rxxxx
 # For details, type 
 #	 python viewEnergyHistograms.py --help
 # where rxxxx is the run number of hits and nonhits found using the hitfinder executable. 
@@ -34,8 +34,11 @@ import matplotlib.pyplot as P
 # Be careful of the trailing "/"; 
 # ensure you have the necessary read/write permissions.
 ########################################################
-source_dir = "/reg/d/psdm/cxi/cxi25410/scratch/cleaned_hdf5/"
-write_dir = ""
+source_dir = "/reg/d/psdm/cxi/cxi74613/scratch/cleaned_hdf5/"
+#source_dir = "/reg/d/psdm/cxi/cxi74613/ftc/cleaned_hdf5/"
+#source_dir = "/reg/neh/home3/sellberg/NML-2013/analysis/cheetah_scripts/test_runs/"
+#write_dir = "/reg/d/psdm/cxi/cxi74613/ftc/sellberg/figures/"
+write_dir = "/reg/neh/home3/sellberg/NML-2013/analysis/cheetah_scripts/figures/"
 
 runtag = "r%s"%(options.runNumber)
 print source_dir+runtag+"/"+runtag+"-energy_histograms.h5"

@@ -2,9 +2,9 @@
 
 # Usage:
 # In this directory, type:
-#    ./viewCorrelationSum.py -rxxxx -m 10000
+#    ./viewMetrology.py -rxxxx -m 10000 (optional) -n 0 (optional)
 # For details, type 
-#	 python viewCorrelationSum.py --help
+#	 python viewMetrology.py --help
 # where rxxxx is the run number of hits and nonhits found using the hitfinder executable. 
 # By default, this script looks into the h5 files that are in the appropriate rxxxx directory
 #
@@ -16,11 +16,12 @@ import re
 from optparse import OptionParser
 
 parser = OptionParser()
-parser.add_option("-r", "--run", action="store", type="string", dest="runNumber", 
-					help="run number you wish to view", metavar="rxxxx", default="")
-parser.add_option("-m", "--max", action="store", type="float", dest="max_value", 
-					help="Mask out pixels above this value", metavar="max_value", default="10000000")
-					
+parser.add_option("-f", "--file", action="store", type="string", dest="fileName", 
+					help="input file you wish to view", metavar="FILENAME", default="")
+parser.add_option("-m", "--max", action="store", type="float", dest="max",
+		                        help="upper viewing limit", metavar="MAX_VALUE", default="0")
+parser.add_option("-n", "--min", action="store", type="float", dest="min",
+		                        help="lower viewing limit", metavar="MIN_VALUE", default="0")
 
 (options, args) = parser.parse_args()
 
@@ -37,17 +38,18 @@ import matplotlib.pyplot as P
 # Be careful of the trailing "/"; 
 # ensure you have the necessary read/write permissions.
 ########################################################
-#source_dir = "/reg/d/psdm/cxi/cxi25410/scratch/cleaned_hdf5/"
-source_dir = "/reg/neh/home/sellberg/NML-2011/analysis/cheetah_scripts/test_runs/"
-write_dir = "/reg/neh/home/sellberg/NML-2011/analysis/cheetah_scripts/figures/"
+source_dir = os.getcwd()+'/'
+write_dir = source_dir
 
-runtag = "r%s"%(options.runNumber)
-print source_dir+runtag+"/"+runtag+"-CorrelationSum.h5"
-f = H.File(source_dir+runtag+"/"+runtag+"-CorrelationSum.h5","r")
-d = N.array(f['/data/data'])
-d *= (d < options.max_value)
+filename = options.fileName
+print source_dir+filename
+f = H.File(source_dir+filename,"r")
+x = N.array(f['/x'])
+y = N.array(f['/y'])
+z = N.array(f['/z'])
 f.close()
 
+print x[0][0]
 
 ########################################################
 # Imaging class copied from Ingrid Ofte's pyana_misc code
@@ -56,19 +58,24 @@ class img_class (object):
 	def __init__(self, inarr, filename):
 		self.inarr = inarr
 		self.filename = filename
-		self.cmax = self.inarr.max()
-		self.cmin = self.inarr.min()
+		if (options.max == options.min):
+			self.cmax = self.inarr.max()
+			self.cmin = self.inarr.min()
+		else:
+			self.cmax = options.max
+			self.cmin = options.min
 	
 	def on_keypress(self,event):
 		if event.key == 'p':
-			if not os.path.exists(write_dir + runtag):
-				os.mkdir(write_dir + runtag)
-			pngtag = write_dir + runtag + "/%s.png" % (self.filename)	
+			if not os.path.exists(write_dir):
+				os.mkdir(write_dir)
+			pngtag = write_dir + "/%s.png" % (self.filename)	
 			print "saving image as " + pngtag 
 			P.savefig(pngtag)
 		if event.key == 'r':
-			colmin, colmax = self.orglims
-			P.clim(colmin, colmax)
+			self.cmax = self.inarr.max()
+			self.cmin = self.inarr.min()
+			P.clim(self.cmin, self.cmax)
 			P.draw()
 
 
@@ -97,10 +104,8 @@ class img_class (object):
 		cid2 = fig.canvas.mpl_connect('button_press_event', self.on_click)
 		canvas = fig.add_subplot(111)
 		canvas.set_title(self.filename)
-		P.xlabel("delta")
-		P.ylabel("Q")
-		self.axes = P.imshow(self.inarr, origin='lower', vmax = self.cmax, aspect="auto")
-		#self.axes = P.imshow(self.inarr, origin='lower', vmin = -1, vmax = 1, aspect="auto")
+		P.rc('image',origin='lower')
+		self.axes = P.imshow(self.inarr, vmin = self.cmin, vmax = self.cmax)
 		self.colbar = P.colorbar(self.axes, pad=0.01)
 		self.orglims = self.axes.get_clim()
 		P.show()
@@ -112,9 +117,11 @@ print "Interactive controls for zooming at the bottom of figure screen (zooming.
 print "Press 'p' to save PNG of image (with the current colorscales) in the appropriately named folder."
 print "Hit Ctl-\ or close all windows (Alt-F4) to terminate viewing program."
 
-#data = d[0:50]
-#currImg = img_class(data, runtag + "_xaca")
-currImg = img_class(d, runtag + "_xaca")
+currImg = img_class(x, filename + "_x")
 currImg.draw_img()
 
-P.show()
+currImg = img_class(y, filename + "_y")
+currImg.draw_img()
+
+currImg = img_class(z, filename + "_z")
+currImg.draw_img()

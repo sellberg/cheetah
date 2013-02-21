@@ -2,9 +2,9 @@
 
 # Usage:
 # In this directory, type:
-#    ./viewAssembledSum.py -rxxxx -a (optional) -m 10000
+#    ./viewDarkcal.py -rxxxx -a (optional) -m 10000
 # For details, type 
-#	 python viewAssembledSum.py --help
+#	 python viewDarkcal.py --help
 # where rxxxx is the run number of hits and nonhits found using the hitfinder executable. 
 # By default, this script looks into the h5 files that are in the appropriate rxxxx directory
 #
@@ -20,12 +20,8 @@ parser.add_option("-r", "--run", action="store", type="string", dest="runNumber"
 					help="run number you wish to view", metavar="rxxxx", default="")
 parser.add_option("-a", "--avg", action="store_true", dest="ang_average", 
 					help="flag to compute angular average", default=False)
-parser.add_option("-c", "--circle", action="store", type="float", dest="circleRadius", 
-					help="radius of circle (default: 0 = off)", metavar="RADIUS", default="0")
 parser.add_option("-m", "--max", action="store", type="float", dest="max_value", 
-					help="Mask out pixels above this value", metavar="max_value", default="10000")
-parser.add_option("-t", "--tag", action="store", type="string", dest="fileTag",
-		                        help="optional file tag for run", metavar="FILETAG", default="")
+					help="Mask out pixels above this value", metavar="max_value", default="10000000")
 					
 
 (options, args) = parser.parse_args()
@@ -44,20 +40,40 @@ import matplotlib.pyplot as P
 # ensure you have the necessary read/write permissions.
 ########################################################
 source_dir = "/reg/d/psdm/cxi/cxi74613/scratch/cleaned_hdf5/"
-#source_dir = "/reg/neh/home3/sellberg/NML-2013/analysis/cheetah_scripts/test_runs/"
 #source_dir = "/reg/d/psdm/cxi/cxi74613/ftc/cleaned_hdf5/"
+#source_dir = "/reg/neh/home3/sellberg/NML-2013/analysis/cheetah_scripts/test_runs/"
 #write_dir = "/reg/d/psdm/cxi/cxi74613/ftc/sellberg/figures/"
 write_dir = "/reg/neh/home3/sellberg/NML-2013/analysis/cheetah_scripts/figures/"
 
 runtag = "r%s"%(options.runNumber)
-print source_dir+runtag+"/"+runtag+"-AssembledSum.h5"
-f = H.File(source_dir+runtag+"/"+runtag+"-AssembledSum.h5","r")
+print source_dir+runtag+"/"+runtag+"-darkcal.h5"
+f = H.File(source_dir+runtag+"/"+runtag+"-darkcal.h5","r")
 d = N.array(f['/data/data'])
 d *= (d < options.max_value)
 
 f.close()
 
-print len(d), "x", len(d[0]), "pixels"
+print "DARKCAL STATISTICS"
+print "min = %f, max = %f, mean = %f, median = %f, std = %f" % (N.min(d), N.max(d), N.mean(d), N.median(d), N.std(d))
+
+hist_bins = N.arange(N.floor(d.min()), N.ceil(d.max()) + 2) - 0.5
+hist, hist_bins = N.histogram(d, bins=hist_bins)
+hist_bins = [(hist_bins[j] + hist_bins[j+1])/2 for j in range(len(hist))]
+
+fig = P.figure()
+canvas = fig.add_subplot(111)
+#canvas.set_title("Histogram %s, min=%d, max=%d, mean=%.1f, std=%.1f" % (runtag, d.min(), d.max(), d.mean(), d.std()))
+canvas.set_title("Histogram %s" % (runtag))
+P.bar(hist_bins, hist, align='center')
+P.xlabel("Intensity (ADUs)")
+P.ylabel("Number of pixels")
+if not os.path.exists(write_dir + runtag):
+	os.mkdir(write_dir + runtag)
+pngtag = write_dir + runtag + "/%s-darkcal_hist.png" % (runtag)
+P.savefig(pngtag)
+print "saving image as " + pngtag
+P.show()
+
 vx = N.arange(-880,880)
 vy = N.arange(-880,880)
 X,Y = N.meshgrid(vx,vx)
@@ -85,17 +101,15 @@ intensMask = (d.flatten()>0.)
 class img_class (object):
 	def __init__(self, inarr, filename):
 		self.inarr = inarr*(inarr>0)
-		for i in range(len(inarr)):
-			self.inarr[i] = self.inarr[i][::-1]
 		self.filename = filename
-		self.cmax = self.inarr.max()
+		self.cmax = 0.1*self.inarr.max()
 		self.cmin = self.inarr.min()
 	
 	def on_keypress(self,event):
 		if event.key == 'p':
 			if not os.path.exists(write_dir + runtag):
 				os.mkdir(write_dir + runtag)
-			pngtag = write_dir + runtag + "/%s.png" % (self.filename)	
+			pngtag = write_dir + runtag + "/%s-darkcal.png" % (self.filename)	
 			print "saving image as " + pngtag 
 			P.savefig(pngtag)
 		if event.key == 'r':
@@ -133,13 +147,6 @@ class img_class (object):
 		self.axes = P.imshow(self.inarr, vmax = self.cmax)
 		self.colbar = P.colorbar(self.axes, pad=0.01)
 		self.orglims = self.axes.get_clim()
-		if (options.circleRadius > 0):
-	                #Approximate, center
-	                (xTemp,yTemp) = self.inarr.shape
-			circ = P.Circle((xTemp/2, yTemp/2), radius=options.circleRadius)
-			circ.set_fill(False)
-			circ.set_edgecolor('k')
-			canvas.add_patch(circ)
 		P.show()
 
 print "Right-click on colorbar to set maximum scale."
@@ -172,8 +179,7 @@ if (options.ang_average is True):
 	P.draw()
 	#avg_vals.tofile(write_dir + runtag + "_ang_avg.dat", sep="\n",format="%e")
 
-if (options.fileTag == ""):
-	currImg = img_class(d, runtag)
-else:
-	currImg = img_class(d, runtag+'-'+options.fileTag)
+currImg = img_class(d, runtag)
 currImg.draw_img()
+
+P.show()
