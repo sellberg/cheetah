@@ -1,0 +1,7 @@
+#!/bin/bash
+
+#Watches the current jobs that matches string "tah" as in cheetah
+#Updates every 10 seconds
+#Highlights updates
+
+watch -n 10 "bjobs -u all -q psfehq | grep tah | sed 's/  / /g' | sed 's/  / /g'"

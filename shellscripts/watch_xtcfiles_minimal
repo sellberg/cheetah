@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ $# -eq 1 ]
+then
+    watch -n 10 "ls -lrt /reg/d/psdm/cxi/"$1"/xtc/*-s00-c00.xtc /reg/d/psdm/cxi/"$1"/xtc/*.inprogress| tail -n 20 |awk '{print \$9,\$5/(1024*1024*1024),\$6,\$7,\$8}' | sort "
+else
+    echo To watch xtc files: ./watch_xtcfiles_minimal cxixxxxx
+fi

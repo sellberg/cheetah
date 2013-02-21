@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ $# -eq 1 ]
+then
+
+        chown -R $USER:cxi74613 $1
+	chmod -R g+w $1
+
+else
+        echo To change permissions: ./permissions rxxxx
+fi

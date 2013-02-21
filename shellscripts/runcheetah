@@ -1,0 +1,50 @@
+#!/bin/tcsh
+
+# Script for simplifying the conversion of XTC files to HDF5
+#
+
+#setenv XTCDIR '/reg/d/psdm/cxi/cxi80410/xtc'
+#setenv XTCDIR '/reg/d/psdm/cxi/cxi25410/xtc'
+#setenv XTCDIR '/reg/d/psdm/cxi/cxi35711/xtc'
+setenv XTCDIR '/reg/d/psdm/cxi/cxi74613/xtc'
+#setenv H5DIR '/reg/d/psdm/cxi/cxi74613/scratch/sellberg/test_runs'
+setenv H5DIR '/reg/d/psdm/cxi/cxi74613/scratch/cleaned_hdf5'
+#setenv H5DIR '/reg/d/psdm/cxi/cxi74613/ftc/sellberg/test_runs'
+#setenv H5DIR '/reg/d/psdm/cxi/cxi74613/ftc/cleaned_hdf5'
+setenv INIDIR '/reg/neh/home3/sellberg/NML-2013/analysis/cheetah_scripts'
+setenv COMMAND '/reg/neh/home3/sellberg/source/cheetah/cheetah'
+
+# Create directory for this data set
+echo 'Creating directory'
+if( ! -e $H5DIR/$1) then
+	mkdir $H5DIR/$1
+endif
+
+# Move to HDF5 directory
+cd $H5DIR/$1
+
+# Create configuration files
+echo 'Creating configuration files'
+cp $INIDIR/cheetah.ini .
+ls $XTCDIR/*$1* > files.txt
+
+# Clean out old HDF5 files
+echo 'Removing existing HDF5 files'
+rm *.h5
+
+# Clean out old binary files
+echo 'Removing existing binary files'
+rm *.bin
+
+# Clean out old TIFF imaged
+echo 'Removing existing TIFF images'
+rm *.tif
+
+# Spawn cspad_cryst for file conversion
+#$COMMAND -l files.txt -s 42000 -n 5000
+$COMMAND -l files.txt -n 15000
+
+# Changing permissions
+cd $H5DIR
+./permissions $1
+echo 'runcheetah has finished'

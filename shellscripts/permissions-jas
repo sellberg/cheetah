@@ -1,0 +1,7 @@
+FOLDERS=`ls -al | awk '{$3="sellberg"; print $9}'`
+
+for i in $FOLDERS
+do
+        chown -R sellberg:cxi74613 $i
+	chmod -R g+w $i
+done

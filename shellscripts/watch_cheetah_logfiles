@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#HDF5_DIR='/reg/d/psdm/cxi/cxi74613/scratch/cleaned_hdf5'
+
+if [ $# -eq 1 ]
+then
+    EXPERIMENT=$1
+    watch -d -n 10 'for i in `/bin/ls -rt /reg/d/psdm/cxi/'$EXPERIMENT'/scratch/cleaned_hdf5/r0*/log.txt | tail -n 5`; do echo $i; tail -n 10 $i; done'
+else
+    echo To watch cheetah logfiles: ./watch_cheetah_logfiles cxixxxxx
+fi
+

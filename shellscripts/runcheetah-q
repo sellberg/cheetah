@@ -1,0 +1,27 @@
+#!/bin/tcsh
+# Anton Barty, modified by Jonas Sellberg
+# Script for launching 'cheetah' using the LCLS batch queue system
+# Launch from pslogin using the same syntax as cheetah
+# eg:
+# > runcheetah-q r0032
+#
+# Useful commands 
+# bsub		Submit a job
+# bjobs		Summary of my running jobs
+# bjobs -l	More info on jobs than you want
+# bkill		Kill a job
+# bqueues	Info on queues
+# bmod
+# busers	Summary of my batch activity
+
+
+#setenv LOGDIR '/reg/d/psdm/cxi/cxi74613/scratch/sellberg/test_runs/logs'
+setenv LOGDIR '/reg/d/psdm/cxi/cxi74613/scratch/cleaned_hdf5/logs'
+#setenv LOGDIR '/reg/d/psdm/cxi/cxi74613/ftc/sellberg/test_runs/logs'
+#setenv LOGDIR '/reg/d/psdm/cxi/cxi74613/ftc/cleaned_hdf5/logs'
+setenv COMMAND '/reg/neh/home3/sellberg/NML-2013/analysis/cheetah_scripts/runcheetah' 
+
+# NEH QUEUE
+#bsub -q psnehq -o $LOGDIR/$1.log  $COMMAND $1
+# FEH QUEUE
+bsub -q psfehq -o $LOGDIR/$1.log  $COMMAND $1
