@@ -126,21 +126,22 @@ end
 pro cspad_geometry
 
 	;; Output filename
-	filename = 'cspad_pixelmap.h5'
+	filename = 'D:\Projects CFEL\cpad_geometry\cspad_pixelmap_with_split.h5'
 	
 	
 	;; Base module geometry
 	ROWS = 194
 	COLS = 185
-	pixsize = 110e-6
+	pixsize = 109.92 ;;110e-6
 	module_width = 2*max([ROWS,COLS])
 
 	;; Create base module (consisting of two 2x1s with a 2-pixel split between them)
 	mx = xarr(2*ROWS,2*COLS)-ROWS
 	my = yarr(2*ROWS,2*COLS)-COLS
-	;;my[*,0:COLS-1] -= 1
-	;;my[*,COLS:2*COLS-1] += 1
-
+	;my[*,0:COLS-1] -= 1
+	;my[*,COLS:2*COLS-1] += 1
+  mx[0:ROWS-1, *] += -1.5 
+  mx[ROWS:2*ROWS-1, *] += +1.5
 
 	;; Create output arrays
 	x = fltarr(8*ROWS,8*COLS)
@@ -233,4 +234,5 @@ pro cspad_geometry
 	;;
 	stop
 end
+
 
