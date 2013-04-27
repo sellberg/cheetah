@@ -3,6 +3,7 @@
 #include "ami/qt/AxisInfo.hh"
 #include "ami/qt/ImageFrame.hh"
 #include "ami/qt/QtPersistent.hh"
+#include "ami/qt/Rect.hh"
 
 #include <QtGui/QLineEdit>
 #include <QtGui/QDoubleValidator>
@@ -12,15 +13,22 @@
 
 using namespace Ami::Qt;
 
+static double _limit(double i, double lo, double hi)
+{
+  if (i<lo) return lo;
+  else if (i>hi) return hi;
+  else return i;
+}
+
 RectangleCursors::RectangleCursors(ImageFrame& f,
                                    QtPWidget*  fParent) :
   QWidget(0),
   _frame(f),
   _frameParent(fParent),
-  _x0(f.size().width()/4),
-  _y0(f.size().width()/4),
-  _x1(f.size().width()*3/4),
-  _y1(f.size().width()*3/4),
+  _x0(0),
+  _y0(0),
+  _x1(-1UL),
+  _y1(-1UL),
   _edit_x0   (new QLineEdit),
   _edit_y0   (new QLineEdit),
   _edit_x1   (new QLineEdit),
@@ -28,12 +36,13 @@ RectangleCursors::RectangleCursors(ImageFrame& f,
   _xmax      (-1),
   _ymax      (-1),
   _delta_x   (new QLabel),
-  _delta_y   (new QLabel)
+  _delta_y   (new QLabel),
+  _npixels   (new QLabel)
 {
-  _edit_x0->setMaximumWidth(40);
-  _edit_y0->setMaximumWidth(40);
-  _edit_x1->setMaximumWidth(40);
-  _edit_y1->setMaximumWidth(40);
+  _edit_x0->setMaximumWidth(44);
+  _edit_y0->setMaximumWidth(44);
+  _edit_x1->setMaximumWidth(44);
+  _edit_y1->setMaximumWidth(44);
 
   new QDoubleValidator(_edit_x0);
   new QDoubleValidator(_edit_y0);
@@ -61,16 +70,17 @@ RectangleCursors::RectangleCursors(ImageFrame& f,
   layout->addWidget(new QLabel(QString(QChar(0x0394))),row,0);
   layout->addWidget(_delta_x              ,row,1);
   layout->addWidget(_delta_y              ,row,2);
+  layout->addWidget(_npixels              ,row,3);
   
   setLayout(layout);
 
   connect(grab, SIGNAL(clicked()), this, SLOT(grab()));
 
-  connect(_edit_x0   , SIGNAL(editingFinished()), this, SLOT(update_edits()));
-  connect(_edit_y0   , SIGNAL(editingFinished()), this, SLOT(update_edits()));
-  connect(_edit_x1   , SIGNAL(editingFinished()), this, SLOT(update_edits()));
-  connect(_edit_y1   , SIGNAL(editingFinished()), this, SLOT(update_edits()));
-
+  connect(_edit_x0   , SIGNAL(editingFinished()), this, SIGNAL(edited()));
+  connect(_edit_y0   , SIGNAL(editingFinished()), this, SIGNAL(edited()));
+  connect(_edit_x1   , SIGNAL(editingFinished()), this, SIGNAL(edited()));
+  connect(_edit_y1   , SIGNAL(editingFinished()), this, SIGNAL(edited()));
+  connect( this      , SIGNAL(edited())         , this, SLOT(update_edits()));
   _set_edits();
 }
 
@@ -102,6 +112,24 @@ void RectangleCursors::load(const char*& p)
   _set_edits();
 }
 
+void RectangleCursors::save(Rect& r) const
+{
+  r.x0 = unsigned(xlo());
+  r.y0 = unsigned(ylo());
+  r.x1 = unsigned(xhi());
+  r.y1 = unsigned(yhi());
+}
+
+void RectangleCursors::load(const Rect& r)
+{
+  _x0 = double(r.x0);
+  _y0 = double(r.y0);
+  _x1 = double(r.x1);
+  _y1 = double(r.y1);
+  _set_edits();
+  update_edits();
+}
+
 void RectangleCursors::grab() 
 {
   _frame.set_cursor_input(this); 
@@ -116,10 +144,10 @@ void RectangleCursors::update_edits()
   _x1 = _edit_x1   ->text().toDouble();
   _y1 = _edit_y1   ->text().toDouble();
 
-  if (_x0 > _xmax) _x0 = _xmax;
-  if (_y0 > _ymax) _y0 = _ymax;
-  if (_x1 > _xmax) _x1 = _xmax;
-  if (_y1 > _ymax) _y1 = _ymax;
+  _x0 = _limit(_x0,0,_xmax);
+  _y0 = _limit(_y0,0,_ymax);
+  _x1 = _limit(_x1,0,_xmax);
+  _y1 = _limit(_y1,0,_ymax);
 
   _set_edits();
 
@@ -134,6 +162,7 @@ void RectangleCursors::_set_edits()
   _edit_y1   ->setText(QString::number(_y1));
   _delta_x   ->setText(QString::number(_x1-_x0));
   _delta_y   ->setText(QString::number(_y1-_y0));
+  _npixels   ->setText(QString("%1 pixels").arg((_x1-_x0+1)*(_y1-_y0+1)));
 }
 
 void RectangleCursors::draw(QImage& image)
@@ -143,8 +172,15 @@ void RectangleCursors::draw(QImage& image)
 
   const AxisInfo& xinfo = *_frame.xinfo();
   const AxisInfo& yinfo = *_frame.yinfo();
-  _xmax = (unsigned) (xinfo.position(sz.width())-1);
-  _ymax = (unsigned) (yinfo.position(sz.height())-1);
+  { unsigned xmax = (unsigned) (xinfo.position(sz.width ())-1);
+    unsigned ymax = (unsigned) (yinfo.position(sz.height())-1);
+    if (_xmax != xmax || 
+        _ymax != ymax) {
+      _xmax = xmax;
+      _ymax = ymax;
+      update_edits();
+    }
+  }
 
   unsigned jlo = unsigned(xinfo.tick(xlo())), jhi = unsigned(xinfo.tick(xhi()));
   unsigned klo = unsigned(yinfo.tick(ylo())), khi = unsigned(yinfo.tick(yhi()));
@@ -169,18 +205,14 @@ void RectangleCursors::draw(QImage& image)
 
 void RectangleCursors::mousePressEvent(double x,double y)
 {
-  _x0=x; _y0=y;
-
-  if (_x0 > _xmax) _x0 = _xmax;
-  if (_y0 > _ymax) _y0 = _ymax;
+  _x0 = _limit(x,0,_xmax);
+  _y0 = _limit(y,0,_ymax);
 }
 
 void RectangleCursors::mouseMoveEvent (double x,double y)
 {
-  _x1=x; _y1=y;
-
-  if (_x1 > _xmax) _x1 = _xmax;
-  if (_y1 > _ymax) _y1 = _ymax;
+  _x1 = _limit(x,0,_xmax);
+  _y1 = _limit(y,0,_ymax);
 
   _set_edits();
   emit changed();

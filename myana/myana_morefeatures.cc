@@ -1,7 +1,7 @@
-/* $Id: myana_morefeatures.cc,v 1.34 2012/05/04 23:26:35 tomytsai Exp $ */
-//#include <TROOT.h>
-//#include <TH1F.h>
-//#include <TProfile.h>
+/* $Id: myana_morefeatures.cc,v 1.35 2013/03/18 01:44:38 weaver Exp $ */
+#include <TROOT.h>
+#include <TH1F.h>
+#include <TProfile.h>
 
 #include "myana.hh"
 #include "main.hh"
@@ -15,15 +15,15 @@ static const int            maxETofChannel = 20;
 static int                  numChannelsITof;
 static int                  numSamplesITof;
 static double               sampleIntervalITof;
-//static TProfile*            profileITof = NULL;
-//static TH1F*                h1fITof[numITofShot];
-//static TH1F*                constFracITof;
+static TProfile*            profileITof = NULL;
+static TH1F*                h1fITof[numITofShot];
+static TH1F*                constFracITof;
 static unsigned int         shotCountITof = 0;
 
 static int                  numChannelsETof;
 static int                  numSamplesETof;
 static double               sampleIntervalETof;
-//static TProfile*            profileETof[maxETofChannel];
+static TProfile*            profileETof[maxETofChannel];
 
 static int                  numChannelsMbes;
 static int                  numSamplesMbes;
@@ -74,55 +74,19 @@ void beginjob() {
   fail = getLocalTime( time );
 
   /*
-   * Processing control (calibration) data
-   */
-  numControlPv = getControlPvNumber();
-  for (int controlPv = 0; controlPv < numControlPv; controlPv++ )
-    {
-      const char* pvName;
-      int arrayIndex;
-
-      fail = getControlPvName( controlPv, pvName, arrayIndex );
-      if ( fail != 0 ) continue;    
-
-      double value;
-      fail = getControlValue(pvName, arrayIndex, value);
-      if ( fail != 0 ) continue;
-
-      printf( "Control PV %d: %s [%d] = %lf\n", controlPv, pvName, arrayIndex, value );
-    }  
-
-  numMonitorPv = getMonitorPvNumber();
-  for (int monitorPv = 0; monitorPv < numMonitorPv; monitorPv++ )
-    {
-      const char* pvName;
-      int arrayIndex;
-
-      fail = getMonitorPvName( monitorPv, pvName, arrayIndex );
-      if ( fail != 0 ) continue;    
-
-      double hilimit, lolimit;
-      fail = getMonitorValue(pvName, arrayIndex, hilimit, lolimit );    
-      if ( fail != 0 ) continue;
-
-      printf( "Monitor PV %d: %s [%d] ", monitorPv, pvName, arrayIndex );
-      printf( "High Limit %lf  Low Limit %lf\n", hilimit, lolimit );
-    }  
-
-  /*
    * Processing ITof Config Data
    */     
   fail = getAcqConfig( AmoITof, numChannelsITof, numSamplesITof, sampleIntervalITof);
 
   // create an "averaging" histogram (called "profile")
-//  profileITof = new TProfile("avg","avg",numSamplesITof,
-//                             0.0,sampleIntervalITof,"");
-//  profileITof->SetYTitle("Volts");    //optional
-//  profileITof->SetXTitle("Seconds");//optional
+  profileITof = new TProfile("avg","avg",numSamplesITof,
+                             0.0,sampleIntervalITof,"");
+  profileITof->SetYTitle("Volts");    //optional
+  profileITof->SetXTitle("Seconds");//optional
 
   // create a constant-fraction histogram for itof.
-//  constFracITof = new TH1F("ITOF Constant Fraction","ITOF Constant Fraction",
-//                           numSamplesITof,0.0,sampleIntervalITof);
+  constFracITof = new TH1F("ITOF Constant Fraction","ITOF Constant Fraction",
+                           numSamplesITof,0.0,sampleIntervalITof);
 
   char name[32];
   // create 5 individual shot histograms
@@ -237,6 +201,44 @@ void beginrun()
 
 void begincalib()
 {
+  int fail;
+
+  /*
+   * Processing control (calibration) data
+   */
+  numControlPv = getControlPvNumber();
+  for (int controlPv = 0; controlPv < numControlPv; controlPv++ )
+    {
+      const char* pvName;
+      int arrayIndex;
+
+      fail = getControlPvName( controlPv, pvName, arrayIndex );
+      if ( fail != 0 ) continue;    
+
+      double value;
+      fail = getControlValue(pvName, arrayIndex, value);
+      if ( fail != 0 ) continue;
+
+      printf( "Control PV %d: %s [%d] = %lf\n", controlPv, pvName, arrayIndex, value );
+    }  
+
+  numMonitorPv = getMonitorPvNumber();
+  for (int monitorPv = 0; monitorPv < numMonitorPv; monitorPv++ )
+    {
+      const char* pvName;
+      int arrayIndex;
+
+      fail = getMonitorPvName( monitorPv, pvName, arrayIndex );
+      if ( fail != 0 ) continue;    
+
+      double hilimit, lolimit;
+      fail = getMonitorValue(pvName, arrayIndex, hilimit, lolimit );    
+      if ( fail != 0 ) continue;
+
+      printf( "Monitor PV %d: %s [%d] ", monitorPv, pvName, arrayIndex );
+      printf( "High Limit %lf  Low Limit %lf\n", hilimit, lolimit );
+    }  
+
 }
 
 // This is called once every shot.  You can ask for
@@ -291,17 +293,17 @@ void event()
   {        
     float baseline  = -0.03;
     float threshold = -0.06;
-//    fillConstFrac(timeITof,voltageITof,numSamplesITof,
-//                  baseline,threshold,constFracITof);
+    fillConstFrac(timeITof,voltageITof,numSamplesITof,
+                  baseline,threshold,constFracITof);
 
     for (i=0;i<numSamplesITof;i=i+1) 
       {
         double t = timeITof[i];
         double v = voltageITof[i];
-//        profileITof->Fill(t,v);
-//        if (shotCountITof<5) h1fITof[shotCountITof]->Fill(t,v);
+        profileITof->Fill(t,v);
+        if (shotCountITof<5) h1fITof[shotCountITof]->Fill(t,v);
       }
-//    shotCountITof++;
+    shotCountITof++;
   }
 
   /*
@@ -318,7 +320,7 @@ void event()
             {
               double t = timeETof[j];
               double v = voltageETof[j];
-             // profileETof[i]->Fill(t,v);
+              profileETof[i]->Fill(t,v);
             }
         }
     }

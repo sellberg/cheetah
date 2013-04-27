@@ -39,6 +39,7 @@
   /reg/g/pcds/package/ana/release/pdsdata/fccd/FccdConfigV2.hh \
   /reg/g/pcds/package/ana/release/pdsdata/timepix/ConfigV1.hh \
   /reg/g/pcds/package/ana/release/pdsdata/timepix/ConfigV2.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/timepix/ConfigV3.hh \
   /reg/g/pcds/package/ana/release/pdsdata/timepix/DataV1.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/TypeId.hh \
   /reg/g/pcds/package/ana/release/pdsdata/timepix/DataV2.hh \

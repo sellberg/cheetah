@@ -24,6 +24,7 @@
 #include "pdsdata/fccd/FccdConfigV2.hh"
 #include "pdsdata/timepix/ConfigV1.hh"
 #include "pdsdata/timepix/ConfigV2.hh"
+#include "pdsdata/timepix/ConfigV3.hh"
 #include "pdsdata/timepix/DataV1.hh"
 #include "pdsdata/timepix/DataV2.hh"
 #include "pdsdata/camera/TwoDGaussianV1.hh"
@@ -159,6 +160,9 @@ public:
   }
   void process(const DetInfo&, const Timepix::ConfigV2&) {
     printf("*** Processing Timepix ConfigV2 object\n");
+  }
+  void process(const DetInfo&, const Timepix::ConfigV3&) {
+    printf("*** Processing Timepix ConfigV3 object\n");
   }
   void process(const DetInfo&, const Timepix::DataV1&) {
     printf("*** Processing Timepix DataV1 object\n");
@@ -608,23 +612,27 @@ public:
     }
     case (TypeId::Id_TimepixConfig) :
       {
-      switch (xtc->contains.version()) {
+      unsigned version = xtc->contains.version();
+      switch (version) {
         case 1:
           process(info, *(const Timepix::ConfigV1*)(xtc->payload()));
           break;
         case 2:
           process(info, *(const Timepix::ConfigV2*)(xtc->payload()));
           break;
+        case 3:
+          process(info, *(const Timepix::ConfigV3*)(xtc->payload()));
+          break;
         default:
-          printf(" *** unsupported TypeId::Id_TimepixConfig version = %u ***\n",
-                 xtc->contains.version());
+          printf("Unsupported timepix configuration version %u\n", version);
           break;
       }
       break;
       }
     case (TypeId::Id_TimepixData) :
       {
-      switch (xtc->contains.version()) {
+      unsigned version = xtc->contains.version();
+      switch (version) {
         case 1:
           process(info, *(const Timepix::DataV1*)(xtc->payload()));
           break;
@@ -632,8 +640,7 @@ public:
           process(info, *(const Timepix::DataV2*)(xtc->payload()));
           break;
         default:
-          printf(" *** unsupported TypeId::Id_TimepixData version = %u ***\n",
-                 xtc->contains.version());
+          printf("Unsupported timepix data version %u\n", version);
           break;
       }
       break;

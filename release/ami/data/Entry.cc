@@ -4,6 +4,7 @@
 #include <new>
 
 #include "ami/data/Entry.hh"
+#include "ami/data/DescEntry.hh"
 #include "pdsdata/xtc/ClockTime.hh"
 
 using namespace Ami;
@@ -60,18 +61,41 @@ const Pds::ClockTime& Entry::time() const
   return *reinterpret_cast<const Pds::ClockTime*>(_payload);
 }
 
-static const Pds::ClockTime _invalid(0,0);
+static const Pds::ClockTime _invalid(0,1);
 
 void Entry::valid(const Pds::ClockTime& t) 
 {
-  *_payload = *(reinterpret_cast<const unsigned long long*>(&t));
+  *_payload = *(reinterpret_cast<const unsigned long long*>(&t)) & ~1ULL;
 }
 
 void Entry::valid(double v)
 {
-  new ((char*)_payload) Pds::ClockTime(unsigned(v),unsigned(drem(v,1)*1.e9));
+  new ((char*)_payload) Pds::ClockTime(unsigned(v),unsigned(drem(v,1)*1.e9)&~1);
 }
 
-void Entry::invalid() { valid(_invalid); }
+void Entry::invalid() 
+{ 
+  *_payload |= 1ULL;
+}
 
-bool Entry::valid() const { return !(time()==_invalid); }
+bool Entry::valid() const { return ((*_payload)&1)==0; }
+
+void Entry::merge(char* p) const
+{
+  uint64_t* u = reinterpret_cast<uint64_t*>(p);
+  if (*u > *_payload) {
+    if (desc().aggregate()) {
+      *u = (*u) | (*_payload & 1ULL);
+      _merge((char*)(u+1));
+    }
+  }
+  else {
+    if (desc().aggregate()) {
+      *u = (*_payload) | (*u & 1ULL);
+      _merge((char*)(u+1));
+    }
+    else {
+      memcpy(p,_payload,_payloadsize);
+    }
+  }
+}

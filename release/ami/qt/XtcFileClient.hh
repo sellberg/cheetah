@@ -7,6 +7,7 @@
 #include <QtGui/QFileDialog>
 #include <QtGui/QGroupBox>
 #include <QtGui/QLabel>
+#include <QtGui/QLineEdit>
 #include <QtGui/QPlastiqueStyle>
 #include <QtGui/QPushButton>
 #include <QtGui/QSlider>
@@ -34,19 +35,27 @@ namespace Ami {
     class XtcFileClient : public QWidget, public Routine {
       Q_OBJECT
     public:
-      XtcFileClient(QGroupBox* groupBox, XtcClient& client, const char* curdir, bool testMode);
+      XtcFileClient(QGroupBox* groupBox, XtcClient& client, const char* curdir, bool testMode, bool liveReadMode);
       ~XtcFileClient();
       void configure();
     private slots:
       void selectDir();
       void selectRun(int);
       void runClicked();
+      void pauseClicked();
       void stopClicked();
+      void nextEventClicked();
+      void prevEventClicked();
+      void nextCalibClicked();
+      void prevCalibClicked();
+      void jumpToCalibAndEvent();
+      void jumpToTime();
       void hzSliderChanged(int);
       void runSliderChanged(int value);
       void printDgram(const Dgram dg);
       void setStatus(const QString s);
       void setStatusLabelText(const QString s);
+      void setPauseButtonLabel(const QString s);
       void setEnabled(QWidget* widget, bool enabled);
       void updateDirLabel();
       void updateRunCombo();
@@ -54,6 +63,7 @@ namespace Ami {
     signals:
       void _printDgram(const Dgram dg);
       void _setStatusLabelText(const QString s);
+      void _setPauseButtonLabel(const QString s);
       void _setEnabled(QWidget* widget, bool enabled);
       void _updateDirLabel();
       void _updateRunCombo();
@@ -68,23 +78,43 @@ namespace Ami {
       void runSliderSetValue(double value);
       void do_configure(QString runName);
       void run();
-      void seekTime(double time);
+      int  seekTime(double time);
+      int  jumpToNext(int iJumpToNextCalib, int iJumpToNextEvent);
       void setDir(QString dir);
       XtcRun _run;
       bool _runValid;
       XtcClient _client;
       QString _curdir;
       bool _testMode;
+      bool _liveReadMode;
       Task* _task;  // thread for Qt
       QPushButton* _dirSelect;
       QLabel* _dirLabel;
       QComboBox* _runCombo;
       QStringList _runList;
       QString _runName;
+
       QPushButton* _runButton;
+      QPushButton* _pauseButton;
       QPushButton* _stopButton;
       QPushButton* _exitButton;
+
+      QPushButton* _prevCalibButton;
+      QPushButton* _prevEventButton;
+      QPushButton* _nextEventButton;
+      QPushButton* _nextCalibButton;
+
+      QLabel* _jumpLabel1;
+      QLineEdit* _jumpCalibInput;
+      QLabel* _jumpLabel2;
+      QLineEdit* _jumpEventInput;
+      QLabel* _jumpLabel3;
+      QLineEdit* _jumpMinInput;
+      QLabel* _jumpLabel4;
+      QLineEdit* _jumpSecInput;
+
       QLabel* _startLabel;
+      QLabel* _eventLabel;
       QLabel* _damageLabel;
 
       QSlider* _runSlider;
@@ -93,6 +123,13 @@ namespace Ami {
       int _runSliderMovedTo; // Qt sets this to _runSlider->value() if user moved slider
       bool _runSliderBeingSet;
 
+      int _iJumpCalib;
+      int _iJumpEvent;
+      double _fJumpMin;
+      double _fJumpSec;
+      int _iJumpToNextCalib;
+      int _iJumpToNextEvent;
+
       QLabel* _hzLabel;
       QSlider* _hzSlider;
       QLabel* _hzSliderLabel;
@@ -100,6 +137,7 @@ namespace Ami {
 
       QLabel* _statusLabel;
       bool _running;
+      bool _paused;
       bool _stopped;
       int _dgCount;
       double _executionStart;

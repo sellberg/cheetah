@@ -150,9 +150,12 @@ double BinMathC::EntryImageTerm::evaluate() const {
   const DescImage&  d = e.desc();
   const ImageMask* mask = d.mask();
   double s0 = 0, sum = 0, sqsum = 0;
+  double xsum = 0, ysum = 0;
   double p   = double(e.info(EntryImage::Pedestal));
   if (mask) {
     unsigned xlo=_xlo, xhi=_xhi, ylo=_ylo, yhi=_yhi;
+    if (xhi >= d.nbinsx()) xhi = d.nbinsx()-1;
+    if (yhi >= d.nbinsy()) yhi = d.nbinsy()-1;
     for(unsigned j=ylo; j<=yhi; j++) {
       if (!mask->row(j)) continue;
       for(unsigned i=xlo; i<=xhi; i++)
@@ -161,6 +164,8 @@ double BinMathC::EntryImageTerm::evaluate() const {
           s0    += 1;
           sum   += v;
           sqsum += v*v;
+	  xsum  += double(i)*v;	    
+	  ysum  += double(j)*v;
         }
     }
   }
@@ -174,30 +179,51 @@ double BinMathC::EntryImageTerm::evaluate() const {
             s0    += 1;
             sum   += v;
             sqsum += v*v;
+	    xsum  += double(i)*v;	    
+	    ysum  += double(j)*v;
           }
       }
     }
   }
   else {
     unsigned xlo=_xlo, xhi=_xhi, ylo=_ylo, yhi=_yhi;
+    if (xhi >= d.nbinsx()) xhi = d.nbinsx()-1;
+    if (yhi >= d.nbinsy()) yhi = d.nbinsy()-1;
     for(unsigned j=ylo; j<=yhi; j++)
       for(unsigned i=xlo; i<=xhi; i++) {
         double v = double(e.content(i,j))-p;
         s0    += 1;
         sum   += v;
         sqsum += v*v;
+	xsum  += double(i)*v;	    
+	ysum  += double(j)*v;
       }
   }
   double n = double(e.info(EntryImage::Normalization));
+  double q = double(d.ppxbin()*d.ppybin());
   double v;
   switch(_mom) {
   case Zero:
     v = sum;
     if (n>0) v/=n;
     break;
+  case Mean:
+    v = sum/(s0*q);
+    if (n>0) v/=n;
+    break;
+  case Variance:
+    v = sqrt((sqsum/s0 - pow(sum/s0,2))/q);;
+    if (n>0) v/=n;
+    break;
   case Contrast:
     v = sqrt(s0*sqsum/(sum*sum) - 1);
     //          if (n>0) v/=sqrt(n);
+    break;
+  case XCenterOfMass:
+    v = xsum/sum*d.ppxbin();
+    break;
+  case YCenterOfMass:
+    v = ysum/sum*d.ppybin();
     break;
   default:
     v = 0;
@@ -231,6 +257,7 @@ double BinMathC::EntryImageTermF::evaluate() const
   const DescImage& d = e.desc();
   const ImageMask* mask = d.mask();
   double s0 = 0, sum = 0, sqsum = 0;
+  double xsum = 0, ysum = 0;
   const double p = e.info(EntryImage::Pedestal);
   int ixlo, ixhi, iylo, iyhi;
   if (mask) {
@@ -255,6 +282,8 @@ double BinMathC::EntryImageTermF::evaluate() const
             s0    += 1;
             sum   += v;
             sqsum += v*v;
+	    xsum  += double(i)*v;	    
+	    ysum  += double(j)*v;
           }
         }
       }
@@ -281,6 +310,8 @@ double BinMathC::EntryImageTermF::evaluate() const
               s0    += 1;
               sum   += v;
               sqsum += v*v;
+	      xsum  += double(i)*v;	    
+	      ysum  += double(j)*v;
             }
           }
         }
@@ -306,6 +337,8 @@ double BinMathC::EntryImageTermF::evaluate() const
             s0    += 1;
             sum   += v;
             sqsum += v*v;
+	    xsum  += double(i)*v;	    
+	    ysum  += double(j)*v;
           }
         }
       }
@@ -321,9 +354,23 @@ double BinMathC::EntryImageTermF::evaluate() const
     v = sum;
     if (n > 0) v/=n;
     break;
+  case Mean:
+    v = sum/s0;
+    if (n > 0) v/=n;
+    break;
+  case Variance:
+    v = sqrt(sqsum/s0 - pow(sum/s0,2));
+    if (n > 0) v/=n;
+    break;
   case Contrast:
     v = sqrt(s0*sqsum/(sum*sum) - 1);
-    if ( n > 0) v/=sqrt(n);
+    //    if ( n > 0) v/=sqrt(n);
+    break;
+  case XCenterOfMass:
+    v = xsum/sum*d.ppxbin();
+    break;
+  case YCenterOfMass:
+    v = ysum/sum*d.ppybin();
     break;
   default:
     v = 0;

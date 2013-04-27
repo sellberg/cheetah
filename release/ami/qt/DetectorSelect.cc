@@ -4,6 +4,7 @@
 #include "ami/qt/WaveformClient.hh"
 #include "ami/qt/ImageClient.hh"
 #include "ami/qt/CspadClient.hh"
+#include "ami/qt/FccdClient.hh"
 #include "ami/qt/EnvClient.hh"
 #include "ami/qt/TdcClient.hh"
 #include "ami/qt/SummaryClient.hh"
@@ -15,6 +16,7 @@
 #include "ami/qt/RateDisplay.hh"
 #include "ami/qt/PWidgetManager.hh"
 #include "ami/qt/FeatureRegistry.hh"
+#include "ami/qt/SMPRegistry.hh"
 #include "ami/client/ClientManager.hh"
 #include "ami/service/ConnectionManager.hh"
 #include "ami/service/Task.hh"
@@ -66,7 +68,7 @@ DetectorSelect::DetectorSelect(const QString& label,
                                unsigned ppinterface,
                                unsigned interface,
                                unsigned serverGroup,
-                               QGroupBox* guestBox,
+                               QWidget* guestBox,
                                bool quiet) :
   QtPWidget   (0),
   //  _quiet      (quiet),
@@ -126,7 +128,7 @@ DetectorSelect::DetectorSelect(const QString& label,
     connect(resetB , SIGNAL(clicked()), this, SLOT(reset_plots()));
     connect(saveB  , SIGNAL(clicked()), this, SLOT(save_plots()));
     connect(filterB, SIGNAL(clicked()), this, SLOT(set_filters()));
-
+    
     layout->addWidget(_detList = new QListWidget(this));
 #if 1
     //
@@ -134,8 +136,8 @@ DetectorSelect::DetectorSelect(const QString& label,
     //
     { DetectorListItem* ditem = new DetectorListItem(_detList, "Env"    , envInfo, 1);
       const char* p=0;
-      Ami::Qt::AbsClient* cl = _create_client(ditem->info,ditem->channel,ditem->text(),p);
-      //      cl->hide(); 
+      _create_client(ditem->info,ditem->channel,ditem->text(),p);
+      // _create_client(ditem->info,ditem->channel,ditem->text(),p)->hide();
     }
 #else
     *new DetectorListItem(_detList, "Env", envInfo, 1);
@@ -207,24 +209,7 @@ void DetectorSelect::save_setup ()
      len, MaxConfigSize);
   }
 
-  char time_buffer[32];
-  time_t seq_tm = time(NULL);
-  strftime(time_buffer,32,"%Y%m%d_%H%M%S",localtime(&seq_tm));
-
-  QString def = QString("%1/%2.ami").arg(Path::base()).arg(time_buffer);
-  QString fname =     
-    QFileDialog::getSaveFileName(this,"Save Setup to File (.ami)",
-                                 def,"*.ami");
-  FILE* o = fopen(qPrintable(fname),"w");
-  if (o) {
-    fwrite(buffer,len,1,o);
-    fclose(o);
-    printf("Saved %d bytes to %s\n",len,qPrintable(fname));
-  }
-  else {
-    QString msg = QString("Error opening %1 : %2").arg(fname).arg(strerror(errno));
-    QMessageBox::critical(this,"Save Error",msg);
-  }
+  Path::saveAmiFile(this, buffer, len);
 
   delete[] buffer;
 }
@@ -317,7 +302,7 @@ void DetectorSelect::print_setup()
 
 void DetectorSelect::default_setup()
 {
-  Defaults::instance()->show();
+  Defaults::instance()->front();
 }
 
 void DetectorSelect::set_filters()
@@ -352,7 +337,7 @@ void DetectorSelect::save_plots()
 }
 
 Ami::Qt::AbsClient* DetectorSelect::_create_client(const Pds::Src& src, 
-               unsigned channel,
+						   unsigned channel,
                                                    const QString& name,
                                                    const char*& p)
 {
@@ -378,7 +363,10 @@ Ami::Qt::AbsClient* DetectorSelect::_create_client(const Pds::Src& src,
     case Pds::DetInfo::Princeton: 
     case Pds::DetInfo::Fli      : 
     case Pds::DetInfo::Andor    : 
-    case Pds::DetInfo::Fccd     : client = new Ami::Qt::ImageClient   (this, info, channel); break;
+    case Pds::DetInfo::OrcaFl40 : 
+      client = new Ami::Qt::ImageClient   (this, info, channel);
+      break;
+    case Pds::DetInfo::Fccd     : client = new Ami::Qt::FccdClient    (this, info, channel); break;
     case Pds::DetInfo::Cspad    :
     case Pds::DetInfo::Cspad2x2 : client = new Ami::Qt::CspadClient   (this, info, channel); break;
     default: printf("Device type %x not recognized\n", info.device()); break;
@@ -465,6 +453,8 @@ int  DetectorSelect::configured      () { return 0; }
 
 void DetectorSelect::discovered      (const DiscoveryRx& rx) 
 { 
+  SMPRegistry::instance().nservers(rx.nsources());
+
   for(int i=0; i<Ami::NumberOfSets; i++) {
     Ami::ScalarSet set((Ami::ScalarSet)i);
     FeatureRegistry::instance(set).insert(rx.features(set));

@@ -1,4 +1,5 @@
-2012-Apr-03 tomytsai Added Ocean Optics spectrometer and EpicsConfig
+2012-Dec-21 caf         Added Timepix Config V3.
+2012-Apr-03 tomytsai    Added Ocean Optics spectrometer and EpicsConfig
 2012-Jan-05 caf         Added Timepix detector.
 2011-Nov-08 caf     Tag V03-00-01   Modified some data types for portability.
 2011-Nov-02 caf     Tag V03-00-00.

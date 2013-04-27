@@ -74,9 +74,9 @@ ImageContourProjection::ImageContourProjection(QtPWidget*         parent,
   sumB->setChecked(true);
 
   QVBoxLayout* layout = new QVBoxLayout;
-  { QGroupBox* channel_box = new QGroupBox("Source Channel");
+  { QGroupBox* channel_box = new QGroupBox;
     QHBoxLayout* layout1 = new QHBoxLayout;
-    layout1->addWidget(new QLabel("Channel"));
+    layout1->addWidget(new QLabel("Source Channel"));
     layout1->addWidget(channelBox);
     layout1->addStretch();
     channel_box->setLayout(layout1);
@@ -87,10 +87,10 @@ ImageContourProjection::ImageContourProjection(QtPWidget*         parent,
     layout2->addWidget(_rectangle);
     locations_box->setLayout(layout2);
     layout->addWidget(locations_box); }
-  { QGroupBox* plot_box = new QGroupBox("Plot");
+  { QGroupBox* plot_box = new QGroupBox;
     QVBoxLayout* layout1 = new QVBoxLayout;
     { QHBoxLayout* layout2 = new QHBoxLayout;
-      layout2->addWidget(new QLabel("Title"));
+      layout2->addWidget(new QLabel("Plot Title"));
       layout2->addWidget(_title);
       layout1->addLayout(layout2); }
     { QHBoxLayout* layout2 = new QHBoxLayout;
@@ -120,6 +120,7 @@ ImageContourProjection::ImageContourProjection(QtPWidget*         parent,
   setLayout(layout);
     
   connect(channelBox, SIGNAL(activated(int)), this, SLOT(set_channel(int)));
+  connect(_rectangle, SIGNAL(changed()),      this, SLOT(update_range()));
   connect(_rectangle, SIGNAL(done())   ,      this, SLOT(front()));
   connect(plotB     , SIGNAL(clicked()),      this, SLOT(plot()));
   connect(closeB    , SIGNAL(clicked()),      this, SLOT(hide()));
@@ -179,6 +180,11 @@ void ImageContourProjection::save_plots(const QString& p) const
   int i=1;
   for(std::list<ProjectionPlot*>::const_iterator it=_pplots.begin(); it!=_pplots.end(); it++)
     (*it)->save_plots(QString("%1_%2").arg(p).arg(i++));
+}
+
+void ImageContourProjection::update_range()
+{
+  _frame.replot();
 }
 
 void ImageContourProjection::setVisible(bool v)

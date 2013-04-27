@@ -97,6 +97,7 @@ EvrHandler::EvrHandler(const Pds::DetInfo& info, FeatureCache& f) :
 	       Pds::TypeId::Id_EvrConfig),
   _cache(f)
 {
+  reset();
 }
 
 EvrHandler::~EvrHandler()
@@ -119,8 +120,6 @@ void   EvrHandler::_configure(Pds::TypeId type, const void* payload, const Pds::
   char buffer[64];
   sprintf(buffer,"DAQ:EVR%d:",static_cast<const Pds::DetInfo&>(info()).devId());
   char* iptr = buffer+strlen(buffer);
-
-  memset(_index, -1, sizeof(_index));
 
   switch(type.version()) {
   case 5:
@@ -205,4 +204,5 @@ void   EvrHandler::_damaged  ()
 //  No Entry data
 unsigned     EvrHandler::nentries() const { return 0; }
 const Entry* EvrHandler::entry   (unsigned) const { return 0; }
-void         EvrHandler::reset   () {}
+void         EvrHandler::reset   () { memset(_index, -1, sizeof(_index)); }
+

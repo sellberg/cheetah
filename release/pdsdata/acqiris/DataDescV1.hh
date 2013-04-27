@@ -53,6 +53,7 @@ namespace Pds {
 
     class DataDescV1 {
     public:
+      enum {Version=1};
       uint32_t nbrSamplesInSeg() const;
       uint32_t nbrSegments() const;
       TimestampV1& timestamp(uint32_t seg);

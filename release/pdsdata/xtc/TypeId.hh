@@ -78,6 +78,7 @@ namespace Pds {
       Id_UsdUsbConfig,
       Id_GMD,
       Id_SharedAcqADC,
+      Id_OrcaConfig,
       NumberOf};
     enum { VCompressed = 0x8000 };
 

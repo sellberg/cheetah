@@ -7,7 +7,9 @@ namespace Ami {
 
   class SubFrame {
   public:
-    uint16_t x;
+    SubFrame() : x(0), y(0), nx(0), ny(0) {}
+  public:
+    uint16_t x;  // units are bins
     uint16_t y;
     uint16_t nx;
     uint16_t ny;
@@ -65,7 +67,7 @@ namespace Ami {
     void set_scale(float mmppx,
 		   float mmppy);
 
-    void add_frame(unsigned x,
+    void add_frame(unsigned x,  // units are bins
 		   unsigned y,
 		   unsigned nx,
 		   unsigned ny);

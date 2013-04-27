@@ -1,5 +1,8 @@
 #include "pdsdata/compress/CompressedPayload.hh"
 
+#include "pdsdata/compress/Hist16Engine.hh"
+#include "pdsdata/compress/HistNEngine.hh"
+
 using namespace Pds;
 
 CompressedPayload::CompressedPayload() {}
@@ -24,5 +27,49 @@ const void* CompressedPayload::cdata() const { return (const void*)(this+1); }
 
 bool CompressedPayload::uncompress(void* outbuf) const
 {
-  return false;
+  bool result;
+
+  switch(compressor()) {
+  case CompressedPayload::None:
+    memcpy(outbuf, cdata(), csize());
+    result = true;
+    break;
+  case CompressedPayload::Hist16: {
+    Compress::Hist16Engine::ImageParams params;
+    params.width  = dsize()/2;
+    params.height = 1;
+    params.depth  = 2;
+
+    Compress::Hist16Engine e;
+    int r = e.decompress(cdata(),
+                         csize(),
+                         params, 
+                         outbuf);
+
+    if (r == Compress::Hist16Engine::Success)
+      result = true;
+    else {
+      printf("Hist16Engine::decompress failure %d\n",r);
+      result = false;
+    }
+    break; }
+  case CompressedPayload::HistN: {
+    Compress::HistNEngine e;
+    int r = e.decompress(cdata(),
+                         csize(),
+                         outbuf,
+                         dsize());
+
+    if (r == Compress::HistNEngine::Success)
+      result = true;
+    else {
+      printf("HistNEngine::decompress failure %d\n",r);
+      result = false;
+    }
+    break; }
+  default:
+    result = false;
+    break;
+  }
+  return result;
 }

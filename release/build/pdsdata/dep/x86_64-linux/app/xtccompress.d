@@ -18,6 +18,8 @@
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/cspad/ElementHeader.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/cspad/ElementIterator.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/cspad/CspadCompressor.hh \
+  /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/compress/Hist16Engine.hh \
+  /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/compress/HistNEngine.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/Dgram.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/Sequence.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/ClockTime.hh \
@@ -30,5 +32,4 @@
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/Src.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/Level.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/XtcFileIterator.hh \
-  /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/Dgram.hh \
-  xtccompress_test.icc
+  /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/Dgram.hh

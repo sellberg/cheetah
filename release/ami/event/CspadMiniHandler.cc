@@ -3,6 +3,7 @@
 #include "CspadAlignment_Commissioning.hh"
 
 #include "ami/event/CspadTemp.hh"
+#include "ami/event/CspadCalib.hh"
 #include "ami/data/DescImage.hh"
 #include "ami/data/EntryImage.hh"
 #include "ami/data/ChannelID.hh"
@@ -24,6 +25,9 @@
 
 #define UNBINNED
 #define DO_PED_CORR
+#define POST_INTEGRAL
+
+using Ami::CspadCalib;
 
 typedef Pds::CsPad::MiniElementV1 CspadElement;
 
@@ -60,6 +64,22 @@ static inline unsigned sum1(const uint16_t*& data,
   gn++;
   return v;
 }
+
+static const unsigned no_threshold = 0x00ffffff;
+
+static inline unsigned thr1(double v0, double v1,
+                            const uint16_t*& off,
+                            const uint16_t* const*& psp,
+                            const float*& rms)
+{ 
+  unsigned v;
+  if (off==*psp) { psp++; v = no_threshold; }
+  else {  v = unsigned(v0 + *rms*v1 + 0.5); }
+  off++;
+  rms++;
+  return v;
+}
+
 
 static double frameNoise(const uint16_t*  data,
                          const uint16_t*  off,
@@ -191,7 +211,7 @@ namespace CspadMiniGeometry {
     if (y0 > y1) { unsigned t=y0; y0=y1; y1=t; }			
 
 
-#define BIN_ITER1 {							\
+#define BIN_ITER1(F1) {							\
     const unsigned ColBins = CsPad::ColumnsPerASIC;			\
     const unsigned RowBins = CsPad::MaxRowsPerASIC<<1;			\
     /*  fill the target region  */					\
@@ -230,7 +250,7 @@ namespace CspadMiniGeometry {
     uint16_t*  _sta[CsPad::MaxRowsPerASIC*CsPad::ColumnsPerASIC*2];
   };
 
-#define AsicTemplate(classname,bi,PPB)					\
+#define AsicTemplate(classname,bi,ti,PPB)                               \
   class classname : public Asic {					\
   public:								\
     classname(double x, double y) : Asic(x,y,PPB) {}                    \
@@ -244,46 +264,40 @@ namespace CspadMiniGeometry {
     }									\
     void fill(Ami::EntryImage& image,                                   \
               double v0, double v1) const {                             \
-      const unsigned ColBins = CsPad::ColumnsPerASIC;			\
-      const unsigned RowBins = CsPad::MaxRowsPerASIC<<1;                \
-                                                                        \
-      int k=0;                                                          \
-      for(unsigned i=0; i<ColBins; i++) {				\
-        for(unsigned j=0; j<RowBins; j++,k++) {                         \
-          const unsigned x = CALC_X(column,i,j);                        \
-          const unsigned y = CALC_Y(row   ,i,j);                        \
-          image.content(unsigned(v0),x,y);                              \
-        }                                                               \
-      }									\
+      unsigned u0 = unsigned(v0);                                       \
+      unsigned data = 0;                                                \
+      ti                                                                \
     }									\
     void fill(Ami::EntryImage& image,					\
 	      const uint16_t*  data) const { bi }                       \
   }
 
-#define F1 (*data)
+#define B1 { BIN_ITER1((*data)); }
+#define T1 { BIN_ITER1(u0); }
 
 #define CALC_X(a,b,c) (a+b)			    
 #define CALC_Y(a,b,c) (a-c)			     
-  AsicTemplate(  AsicD0B1, BIN_ITER1, 1);
+  AsicTemplate(  AsicD0B1, B1, T1, 1);
 #undef CALC_X
 #undef CALC_Y
 #define CALC_X(a,b,c) (a+c)			    
 #define CALC_Y(a,b,c) (a+b)			     
-  AsicTemplate( AsicD90B1, BIN_ITER1, 1);
+  AsicTemplate( AsicD90B1, B1, T1, 1);
 #undef CALC_X
 #undef CALC_Y
 #define CALC_X(a,b,c) (a-b)			    
 #define CALC_Y(a,b,c) (a+c)			     
-  AsicTemplate(AsicD180B1, BIN_ITER1, 1);
+  AsicTemplate(AsicD180B1, B1, T1, 1);
 #undef CALC_X
 #undef CALC_Y
 #define CALC_X(a,b,c) (a-c)			    
 #define CALC_Y(a,b,c) (a-b)			     
-  AsicTemplate(AsicD270B1, BIN_ITER1, 1);
+  AsicTemplate(AsicD270B1, B1, T1, 1);
 #undef CALC_X
 #undef CALC_Y
 
-#undef F1
+#undef B1
+#undef T1
 #undef AsicTemplate
 
   class AsicP : public Asic {
@@ -341,18 +355,19 @@ namespace CspadMiniGeometry {
       
       if (sigma) {
         float* sg = _sg;
+        float* gn = _gn;
         for(unsigned col=0; col<CsPad::ColumnsPerASIC; col++) {
           getline(&linep, &sz, sigma);
           *sg++ = strtod(linep,&pEnd);
           for (unsigned row=1; row < 2*Pds::CsPad::MaxRowsPerASIC; row++)
-            *sg++ = strtod(pEnd,&pEnd);
+            *sg++ = strtod(pEnd,&pEnd)*(*gn++);
         }
       }
       else {
         float* sg = _sg;
         for(unsigned col=0; col<CsPad::ColumnsPerASIC; col++) {
           for (unsigned row=0; row < 2*Pds::CsPad::MaxRowsPerASIC; row++)
-            *sg++ = 0.;
+            *sg++ = 0;
         }
       }
       
@@ -368,7 +383,7 @@ namespace CspadMiniGeometry {
 
   static uint16_t  off_no_ped[CsPad::MaxRowsPerASIC*CsPad::ColumnsPerASIC*2];
 
-#define AsicTemplate(classname,bi,PPB)					\
+#define AsicTemplate(classname,bi,ti,PPB)                               \
   class classname : public AsicP {					\
   public:								\
     classname(double x, double y,                                       \
@@ -384,31 +399,19 @@ namespace CspadMiniGeometry {
     }									\
     void fill(Ami::EntryImage& image,                                   \
               double v0, double v1) const {                             \
-      const unsigned ColBins = CsPad::ColumnsPerASIC;			\
-      const unsigned RowBins = CsPad::MaxRowsPerASIC<<1;                \
-                                                                        \
-      uint16_t* const* sta = &_sta[0];                                  \
-      int k=0;                                                          \
-      const unsigned no_threshold = -1;                                 \
-      for(unsigned i=0; i<ColBins; i++) {				\
-        for(unsigned j=0; j<RowBins; j++,k++) {                         \
-          const unsigned x = CALC_X(column,i,j);                        \
-          const unsigned y = CALC_Y(row   ,i,j);                        \
-          if (*sta == _off+k) {                                         \
-            image.content(no_threshold,x,y);                            \
-            sta++;                                                      \
-          }                                                             \
-          else {                                                        \
-            image.content(unsigned(v0 + v1*_sg[k]*_gn[k]),x,y);         \
-          }                                                             \
-        }                                                               \
-      }									\
+      unsigned data = 0;                                                \
+      bool lsuppress  = image.desc().options()&CspadCalib::option_suppress_bad_pixels(); \
+      uint16_t* zero = 0;                                               \
+      const uint16_t* off = _off;                                       \
+      const uint16_t* const * sta = lsuppress ? _sta : &zero;           \
+      const float* rms = _sg;                                           \
+      ti;                                                               \
     }									\
     void fill(Ami::EntryImage& image,					\
 	      const uint16_t*  data) const {                            \
-      bool lsuppress  = image.desc().options()&1;                       \
-      bool lcorrectfn = image.desc().options()&2;                       \
-      bool lnopedestal= image.desc().options()&4;                       \
+      bool lsuppress  = image.desc().options()&CspadCalib::option_suppress_bad_pixels(); \
+      bool lcorrectfn = image.desc().options()&CspadCalib::option_correct_common_mode(); \
+      bool lnopedestal= image.desc().options()&CspadCalib::option_no_pedestal(); \
       uint16_t* zero = 0;                                               \
       const uint16_t*  off = lnopedestal ? off_no_ped : _off;           \
       const uint16_t* const * sta = lsuppress ? _sta : &zero;           \
@@ -418,30 +421,32 @@ namespace CspadMiniGeometry {
     }                                                                   \
   }
 
-#define F1 sum1(data,off,sta,fn,gn)
+#define B1 { BIN_ITER1(sum1(data,off,sta,fn,gn)); }
+#define T1 { BIN_ITER1(thr1(v0,v1,off,sta,rms)); }
 
 #define CALC_X(a,b,c) (a+b)			    
 #define CALC_Y(a,b,c) (a-c)			     
-  AsicTemplate(  AsicD0B1P, BIN_ITER1, 1);
+  AsicTemplate(  AsicD0B1P, B1, T1, 1);
 #undef CALC_X
 #undef CALC_Y
 #define CALC_X(a,b,c) (a+c)			    
 #define CALC_Y(a,b,c) (a+b)			     
-  AsicTemplate( AsicD90B1P, BIN_ITER1, 1);
+  AsicTemplate( AsicD90B1P, B1, T1, 1);
 #undef CALC_X
 #undef CALC_Y
 #define CALC_X(a,b,c) (a-b)			    
 #define CALC_Y(a,b,c) (a+c)			     
-  AsicTemplate(AsicD180B1P, BIN_ITER1, 1);
+  AsicTemplate(AsicD180B1P, B1, T1, 1);
 #undef CALC_X
 #undef CALC_Y
 #define CALC_X(a,b,c) (a-c)			    
 #define CALC_Y(a,b,c) (a-b)			     
-  AsicTemplate(AsicD270B1P, BIN_ITER1, 1);
+  AsicTemplate(AsicD270B1P, B1, T1, 1);
 #undef CALC_X
 #undef CALC_Y
 
-#undef F1
+#undef B1
+#undef T1
 #undef AsicTemplate
 
   class TwoByTwo {
@@ -512,9 +517,20 @@ namespace CspadMiniGeometry {
       double x,y;
 
       Ami::Cspad::TwoByTwoAlignment qalign = qalign_def[0].twobytwo(0);
-      if (gm) 
+      Rotation qrot = D0;
+      if (gm) {
         qalign = Ami::Cspad::QuadAlignment::load(gm)->twobytwo(0);
 
+        size_t sz=256;
+        char* linep = (char *)malloc(sz);
+        while(1) {
+          if (getline(&linep, &sz, gm)==-1) break;
+          if (linep[0]=='#') continue;
+          qrot = Rotation(strtoul(linep,0,0));
+          break;
+        }
+        free(linep);
+      }
       //
       //  Create a default layout
       //
@@ -524,7 +540,7 @@ namespace CspadMiniGeometry {
 	x =  0.5*frame;
 	y = -0.5*frame;
       }
-      mini = new TwoByTwo(x,y,_ppb,D0,qalign);
+      mini = new TwoByTwo(x,y,_ppb,qrot,qalign);
 
       //
       //  Test extremes and narrow the focus
@@ -552,7 +568,7 @@ namespace CspadMiniGeometry {
 
       _pixels = pixels + 2*bin0*_ppb;
 
-      mini = new TwoByTwo(x,y,_ppb,D0,qalign, f,s,g,rms);
+      mini = new TwoByTwo(x,y,_ppb,qrot,qalign, f,s,g,rms);
     }
     ~Detector() { delete mini; }
 
@@ -567,6 +583,10 @@ namespace CspadMiniGeometry {
         sprintf(buff,"%s:Temp[%d]",detname,a);
         _feature[a] = cache.add(buff);
       }
+#ifdef POST_INTEGRAL
+      sprintf(buff,"%s:Cspad::Sum",detname);
+      _feature[4] = cache.add(buff);
+#endif
     }
     void fill(Ami::EntryImage& image,
 	      const Xtc&       xtc) const
@@ -576,6 +596,23 @@ namespace CspadMiniGeometry {
       for(int a=0; a<4; a++)
         _cache->cache(_feature[a],
                       CspadTemp::instance().getTemp(elem->sb_temp(a)));
+#ifdef POST_INTEGRAL
+      if (image.desc().options()&CspadCalib::option_post_integral()) {
+        double s = 0;
+        double p   = double(image.info(Ami::EntryImage::Pedestal));
+        for(unsigned fn=0; fn<image.desc().nframes(); fn++) {
+          int xlo(0), xhi(3000), ylo(0), yhi(3000);
+          if (image.desc().xy_bounds(xlo, xhi, ylo, yhi, fn)) {
+            for(int j=ylo; j<yhi; j++)
+              for(int i=xlo; i<xhi; i++) {
+                double v = double(image.content(i,j))-p;
+                s += v;
+              }
+          }
+        }
+        _cache->cache(_feature[4],s);
+      }
+#endif
     }
     void fill(Ami::EntryImage& image, 
               double v0,double v1) const

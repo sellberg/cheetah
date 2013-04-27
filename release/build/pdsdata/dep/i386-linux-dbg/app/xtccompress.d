@@ -18,6 +18,8 @@
   /reg/g/pcds/package/ana/release/pdsdata/cspad/ElementHeader.hh \
   /reg/g/pcds/package/ana/release/pdsdata/cspad/ElementIterator.hh \
   /reg/g/pcds/package/ana/release/pdsdata/cspad/CspadCompressor.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/compress/Hist16Engine.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/compress/HistNEngine.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/Dgram.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/Sequence.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/ClockTime.hh \
@@ -30,5 +32,4 @@
   /reg/g/pcds/package/ana/release/pdsdata/xtc/Src.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/Level.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/XtcFileIterator.hh \
-  /reg/g/pcds/package/ana/release/pdsdata/xtc/Dgram.hh \
-  xtccompress_test.icc
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/Dgram.hh

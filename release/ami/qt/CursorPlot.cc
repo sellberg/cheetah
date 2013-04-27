@@ -16,6 +16,7 @@
 #include "ami/data/ConfigureRequest.hh"
 #include "ami/data/AbsTransform.hh"
 #include "ami/data/DescEntry.hh"
+#include "ami/data/RawFilter.hh"
 
 #include "ami/data/EntryTH1F.hh"
 #include "ami/data/EntryTH2F.hh"
@@ -180,7 +181,12 @@ void CursorPlot::configure(char*& p, unsigned input, unsigned& output,
 {
   unsigned channel = _channel;
   unsigned input_signature = signatures[channel];
+  configure(p, input_signature, output, xinfo, source);
+}
 
+void CursorPlot::configure(char*& p, unsigned input, unsigned& output,
+			   const AxisInfo& xinfo, ConfigureRequest::Source source)
+{
   // replace cursor values with bin indices
   QString expr(_input->expression());
   QString new_expr;
@@ -208,6 +214,10 @@ void CursorPlot::configure(char*& p, unsigned input, unsigned& output,
     new_expr.replace(QString("]%1[").arg(BinMath::moment2  ()),QString(BinMath::moment2  ()));
     new_expr.replace(QString("]%1[").arg(BinMath::range    ()),QString(BinMath::range    ()));
     new_expr.replace(QString("]%1[").arg(BinMath::contrast ()),QString(BinMath::contrast ()));
+    new_expr.replace(QString("]%1[").arg(BinMath::xmoment  ()),QString(BinMath::xmoment  ()));
+    new_expr.replace(QString("]%1[").arg(BinMath::ymoment  ()),QString(BinMath::ymoment  ()));
+    new_expr.replace(QString("]%1[").arg(BinMath::mean     ()),QString(BinMath::mean     ()));
+    new_expr.replace(QString("]%1[").arg(BinMath::variance ()),QString(BinMath::variance ()));
   }
   QString end_expr;
   { int last=0, next=0, pos=0;
@@ -233,9 +243,9 @@ void CursorPlot::configure(char*& p, unsigned input, unsigned& output,
   
   ConfigureRequest& r = *new (p) ConfigureRequest(ConfigureRequest::Create,
 						  source,
-						  input_signature,
+						  input,
 						  -1,
-						  *channels[channel]->filter().filter(),
+                                                  RawFilter(),
 						  op);
   p += r.size();
   _req.request(r,output);

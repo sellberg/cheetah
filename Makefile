@@ -2,11 +2,12 @@
 # 	Makefile for LCLS csPad detector version of myana
 #	Now morphed into Cheetah
 #	Anton Barty, CFEL, December 2010
+#	last updated by Jonas Sellberg on April 26, 2013
 #	
 #	Note: before this makefile will work it is necessary to compile 
 #	the LCLS libraries.  This is done as follows:
 #	> cd release/pdsdata
-#	> make x86_64-linux
+#	> make x86_64-linux-opt
 #	(this creates the LCLS libraries necessary for compile to complete.
 #	if not done, you'll get an error such as 'can not find libacqdata.so'.
 #	Change the target CPU/OS combination if working on a different system, eg: OS-X)
@@ -19,7 +20,8 @@
 #--------------------------------------------------------------
 #define variables and directories
 TARGET 			= cheetah
-ARCH 			= x86_64-linux
+#ARCH 			= x86_64-linux
+ARCH 			= x86_64-linux-opt
 
 MYANADIR		= myana
 CSPADDIR		= cspad-gjw
@@ -29,7 +31,7 @@ TIFFDIR			= /reg/neh/home/feldkamp/tiff
 FFTWDIR         	= /reg/neh/home/feldkamp/fftw
 GIRAFFEDIR      	= /reg/neh/home/sellberg/source/giraffe
 ROOTSYS			= /reg/g/pcds/package/root
-###OBJFILES		= main.o XtcRun.o
+#OBJFILES		= main.o XtcRun.o
 
 INCLUDEDIRS     = -Irelease \
                   -I$(HDF5DIR)/include \
@@ -54,11 +56,13 @@ LIBRARIES       = -lacqdata \
                   -lprincetondata \
                   -levrdata \
                   -lencoderdata \
+                  -lgsc16aidata \
                   -llusidata \
                   -lcspaddata \
                   -lindexdata \
                   -lanadata \
                   -lcspad2x2data \
+                  -lfexampdata \
                   -lphasicsdata \
                   -ltimepixdata \
                   -loceanopticsdata \

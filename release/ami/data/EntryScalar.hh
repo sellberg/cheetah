@@ -32,10 +32,16 @@ namespace Ami {
     virtual DescScalar& desc();
 
   private:
+    virtual void _merge(char*) const;
+
+  private:
     DescScalar _desc;
 
   private:
     double* _y;
+
+  public:
+    static const char* input_entry();
   };
 
   inline double EntryScalar::entries() const { return _y[0]; }

@@ -135,6 +135,8 @@ namespace Pds {
               exit(1);
             }
             _waitAndFill(fd, dg->xtc.payload()+rsz, sz-rsz);
+	    _pend->push(b);
+	    return true;
           }
         }
       }
@@ -142,7 +144,7 @@ namespace Pds {
       _free->push(b);
       _pend->push(0);
 
-      if (_live) {
+      if (rsz==0 && _live) {
         printf("\rLive read waits...");
         fflush(stdout);
         sleep(1);

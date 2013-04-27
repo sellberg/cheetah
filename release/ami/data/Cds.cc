@@ -2,6 +2,7 @@
 
 #include "Cds.hh"
 #include "Entry.hh"
+#include "EntryView.hh"
 #include "DescEntry.hh"
 #include "ami/service/Semaphore.hh"
 
@@ -11,7 +12,7 @@ using namespace Ami;
 
 Cds::Cds(const char* name) :
   _desc       (name),
-  _payload_sem(Semaphore::FULL),
+  _payload_sem(new Semaphore(Semaphore::FULL)),
   _signature  (0)
 {
   _desc.signature(_signature++);
@@ -116,6 +117,24 @@ void Cds::description(iovec* iov) const
   }
 }
 
+void Cds::description(iovec* iov, EntryList request) const
+{
+  Cds* cthis = const_cast<Cds*>(this);
+  cthis->_desc.nentries(totalentries());
+  iov->iov_base = (void*)&cthis->_desc;
+  iov->iov_len  = sizeof(Desc);
+  iov++;
+  unsigned i=0;
+  for (EnList::const_iterator it=_entries.begin(); it!=_entries.end(); it++, i++) {
+    if (request.contains(i)) {
+      const Entry* en = *it;
+      iov->iov_base = (void*)&en->desc();
+      iov->iov_len = en->desc().size();
+      iov++;
+    }
+  }
+}
+
 void Cds::payload(iovec* iov)
 {
   _request.fill(_entries.size());
@@ -165,3 +184,30 @@ void Cds::request(ReqOpt o)
   _request = EntryList(o==None ? EntryList::Empty : EntryList::Full);
 }
 
+void Cds::mirror(Cds& o)
+{
+  o.reset();
+  for (EnList::const_iterator it=_entries.begin(); it!=_entries.end(); it++) {
+    const Entry* en = *it;
+    o.add(new EntryView(*en));
+  }
+}
+
+static bool entry_comp(Entry* a, Entry* b)
+{
+  if (a->desc().info().phy() != b->desc().info().phy())
+    return a->desc().info().phy() < b->desc().info().phy();
+  if (a->desc().channel() != b->desc().channel())
+    return a->desc().channel() < b->desc().channel();
+  return strcmp(a->desc().name(),b->desc().name());
+}
+
+void Cds::sort()
+{
+  _entries.sort(entry_comp);
+  for (EnList::iterator it=_entries.begin(); it!=_entries.end(); it++) {
+    Entry* entry = *it;
+    entry->desc().signature(_signature++);
+  }
+  _request.fill(_entries.size());
+}

@@ -1,1 +1,1 @@
-/reg/g/pcds/package/ana/release/build/pdsdata/obj/i386-linux-opt/app/xtcmonclient.o /reg/g/pcds/package/ana/release/build/pdsdata/dep/i386-linux-opt/app/xtcmonclient.d: xtcmonclient.cc XtcMonitorClient.hh
+/reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../build/pdsdata/obj/i386-linux-opt/app/xtcmonclient.o /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../build/pdsdata/dep/i386-linux-opt/app/xtcmonclient.d: xtcmonclient.cc XtcMonitorClient.hh

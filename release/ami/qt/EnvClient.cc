@@ -13,6 +13,7 @@
 #include "ami/qt/QtPlot.hh"
 #include "ami/qt/QtPlotSelector.hh"
 
+#include "ami/app/XtcClient.hh"
 #include "ami/client/ClientManager.hh"
 
 #include "ami/data/ConfigureRequest.hh"
@@ -21,7 +22,6 @@
 #include "ami/data/DescCache.hh"
 #include "ami/data/EntryFactory.hh"
 #include "ami/data/EntryScalar.hh"
-#include "ami/data/EnvPlot.hh"
 #include "ami/data/RawFilter.hh"
 
 #include "ami/service/Socket.hh"
@@ -120,7 +120,8 @@ EnvClient::EnvClient(QWidget* parent, const Pds::DetInfo& info, unsigned channel
   connect(this, SIGNAL(description_changed(int)), this, SLOT(_read_description(int)));
   connect((AbsClient*)this, SIGNAL(changed()), this, SLOT(update_configuration()));
 
-#if 0
+#if 1
+  //  Is this dangerous?
   if (_set!=Ami::PostAnalysis)
     _scalar_plot->post(this, SLOT(add_post()));
 #endif
@@ -264,8 +265,13 @@ void EnvClient::discovered(const DiscoveryRx& rx)
 {
   _status->set_state(Status::Discovered);
 
-  const DescEntry* e = rx.entries();
-  _input = e->signature();
+  const DescEntry* e = rx.entry(Ami::EntryScalar::input_entry());
+  if (e)
+    _input = e->signature();
+  else {
+    printf("EnvClient failed to find input\n");
+    _input = -1;
+  }
 
   //  iterate through discovery and print
 #if 0

@@ -3,18 +3,23 @@
 
 #include <QtGui/QWidget>
 
+#include "ami/data/ConfigureRequestor.hh"
+
 class QButtonGroup;
+class QLabel;
 
 namespace Ami {
   class XYHistogram;
+  class Cds;
+  class EntryScalarRange;
   namespace Qt {
     class DescTH1F;
     class RectangleCursors;
+    class ChannelDefinition;
 
     class XYHistogramPlotDesc : public QWidget {
     public:
-      XYHistogramPlotDesc(QWidget* parent,
-                          const RectangleCursors& r);
+      XYHistogramPlotDesc(QWidget* parent);
       ~XYHistogramPlotDesc();
     public:
       void save(char*& p) const;
@@ -22,8 +27,23 @@ namespace Ami {
     public:
       Ami::XYHistogram* desc(const char*) const;
     private:
-      const RectangleCursors& _rectangle;
       DescTH1F* _desc;
+
+      //  Interface for displaying pixel range
+    public:
+      void configure(char*& p, 
+		     unsigned input, 
+		     unsigned& output,
+		     ChannelDefinition* ch[], 
+		     int* signatures, 
+		     unsigned nchannels);
+      void setup_payload(Cds&);
+      void update();
+    private:
+      QLabel*            _pixel_range;
+      unsigned           _output;
+      ConfigureRequestor _req;
+      EntryScalarRange*  _entry;
     };
   };
 };

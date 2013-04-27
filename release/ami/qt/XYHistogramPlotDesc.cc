@@ -1,24 +1,30 @@
 #include "ami/qt/XYHistogramPlotDesc.hh"
 
 #include "ami/qt/QtPersistent.hh"
-#include "ami/qt/RectangleCursors.hh"
 #include "ami/qt/DescTH1F.hh"
 
 #include "ami/data/DescTH1F.hh"
 #include "ami/data/DescScalarRange.hh"
 #include "ami/data/XYHistogram.hh"
 
+#include "ami/qt/ChannelDefinition.hh"
+#include "ami/qt/Filter.hh"
+#include "ami/data/Cds.hh"
+#include "ami/data/ConfigureRequest.hh"
+#include "ami/data/EntryScalarRange.hh"
+
 #include <QtGui/QHBoxLayout>
 #include <QtGui/QVBoxLayout>
+#include <QtGui/QLabel>
 
 using namespace Ami::Qt;
 
 enum { PlotSum, PlotMean };
 
-XYHistogramPlotDesc::XYHistogramPlotDesc(QWidget* parent,
-                                         const RectangleCursors& r) :
+XYHistogramPlotDesc::XYHistogramPlotDesc(QWidget* parent) :
   QWidget(parent),
-  _rectangle(r)
+  _output   (-1),
+  _entry    (0)
 {
   QVBoxLayout* layout1 = new QVBoxLayout;
   layout1->addStretch();
@@ -71,9 +77,21 @@ Ami::XYHistogram* XYHistogramPlotDesc::desc(const char* title) const
   default:
     break;
   }
-  Ami::XYHistogram* r = new Ami::XYHistogram(*desc, 
-                                             _rectangle.xlo(), _rectangle.xhi(),
-                                             _rectangle.ylo(), _rectangle.yhi());
+  Ami::XYHistogram* r = new Ami::XYHistogram(*desc);
   delete desc;
   return r;
 }
+
+void XYHistogramPlotDesc::setup_payload(Cds& cds)
+{
+}
+
+void XYHistogramPlotDesc::configure(char*& p, unsigned input, unsigned& output,
+			   ChannelDefinition* input_channels[], int* input_signatures, unsigned input_nchannels)
+{
+}
+
+void XYHistogramPlotDesc::update()
+{
+}
+

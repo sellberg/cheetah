@@ -15,6 +15,7 @@
 #include "ami/data/ConfigureRequest.hh"
 #include "ami/data/AbsTransform.hh"
 #include "ami/data/DescEntry.hh"
+#include "ami/data/RawFilter.hh"
 
 #include "ami/data/EntryTH1F.hh"
 #include "ami/data/EntryProf.hh"
@@ -87,6 +88,8 @@ void CursorOverlay::load(const char*& p)
   _output_signature=0;
 }
 
+void CursorOverlay::dump(FILE* f) const { _plot->dump(f); }
+
 #include "ami/data/Entry.hh"
 #include "ami/data/DescEntry.hh"
 
@@ -154,7 +157,12 @@ void CursorOverlay::configure(char*& p, unsigned input, unsigned& output,
 {
   unsigned channel = _channel;
   unsigned input_signature = signatures[channel];
+  configure(p,input_signature,output,xinfo,source);
+}
 
+void CursorOverlay::configure(char*& p, unsigned input, unsigned& output,
+                              const AxisInfo& xinfo, ConfigureRequest::Source source)
+{
   // replace cursor values with bin indices
   QString expr(_input->expression());
   QString new_expr;
@@ -181,6 +189,8 @@ void CursorOverlay::configure(char*& p, unsigned input, unsigned& output,
     new_expr.replace(QString("]%1[").arg(BinMath::moment1  ()),QString(BinMath::moment1  ()));
     new_expr.replace(QString("]%1[").arg(BinMath::moment2  ()),QString(BinMath::moment2  ()));
     new_expr.replace(QString("]%1[").arg(BinMath::range    ()),QString(BinMath::range    ()));
+    new_expr.replace(QString("]%1[").arg(BinMath::mean     ()),QString(BinMath::mean     ()));
+    new_expr.replace(QString("]%1[").arg(BinMath::variance ()),QString(BinMath::variance ()));
   }
   QString end_expr;
   { int last=0, next=0, pos=0;
@@ -206,9 +216,9 @@ void CursorOverlay::configure(char*& p, unsigned input, unsigned& output,
   
   ConfigureRequest& r = *new (p) ConfigureRequest(ConfigureRequest::Create,
 						  source,
-						  input_signature,
+						  input,
 						  -1,
-						  *channels[channel]->filter().filter(),
+						  RawFilter(),
 						  op);
   p += r.size();
   _req.request(r,output);
@@ -247,3 +257,5 @@ void CursorOverlay::_attach()
   _plot->attach(_frame->_frame);
   _frame->set_style();
 }
+
+const QtBase* CursorOverlay::base() const { return _plot; }

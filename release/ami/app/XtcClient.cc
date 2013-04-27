@@ -1,6 +1,5 @@
 #include "XtcClient.hh"
 
-#include "ami/app/SummaryAnalysis.hh"
 #include "ami/app/EventFilter.hh"
 
 #include "ami/event/EventHandler.hh"
@@ -18,6 +17,7 @@
 #include "ami/event/UsdUsbHandler.hh"
 #include "ami/event/Gsc16aiHandler.hh"
 #include "ami/event/Opal1kHandler.hh"
+#include "ami/event/OrcaHandler.hh"
 #include "ami/event/QuartzHandler.hh"
 #include "ami/event/PhasicsHandler.hh"
 #include "ami/event/TimepixHandler.hh"
@@ -44,6 +44,8 @@
 #include "pdsdata/xtc/ProcInfo.hh"
 #include "pdsdata/xtc/XtcIterator.hh"
 #include "pdsdata/xtc/Dgram.hh"
+
+//#define DBUG
 
 using namespace Ami;
 
@@ -82,6 +84,11 @@ void XtcClient::processDgram(Pds::Dgram* dg)
 
   FeatureCache& cache = *_cache[PreAnalysis];
 
+#ifdef DBUG
+  if (!dg->seq.isEvent())
+    printf("%s %p\n",TransitionId::name(dg->seq.service()),dg);
+#endif
+
   //  if (dg->seq.isEvent() && dg->xtc.damage.value()==0) {
   if (dg->seq.isEvent() && _ready) {
     _seq = &dg->seq;
@@ -89,12 +96,16 @@ void XtcClient::processDgram(Pds::Dgram* dg)
     if (_filter.accept(dg)) {
       accept = true;
 
+      cache.cache(_runno_index,_runno_value);
       cache.cache(_event_index,_seq->stamp().vector());
-      SummaryAnalysis::instance().clock(dg->seq.clock());
       for(UList::iterator it=_user_ana.begin(); it!=_user_ana.end(); it++)
         (*it)->clock(dg->seq.clock());
       
       iterate(&dg->xtc); 
+      for(HList::iterator it = _handlers.begin(); it != _handlers.end(); it++) {
+        if ((*it)->data_type() == Pds::TypeId::NumberOf)
+          (*it)->_event(dg->xtc.contains, dg->xtc.payload(), _seq->clock());
+      }
 
       _cache[PostAnalysis]->cache(cache);
 
@@ -104,6 +115,7 @@ void XtcClient::processDgram(Pds::Dgram* dg)
     //
     //  Time the processing
     //
+    cache.start();
     timespec tq;
     clock_gettime(CLOCK_REALTIME, &tq);
     if (_ptime_index>=0) {
@@ -123,7 +135,7 @@ void XtcClient::processDgram(Pds::Dgram* dg)
     }
   }
   else if (dg->seq.service() == Pds::TransitionId::BeginRun) {
-    cache.cache(_runno_index,dg->env.value());
+    _runno_value = dg->env.value();
   }
   else if (dg->seq.service() == Pds::TransitionId::Configure) {
 
@@ -135,7 +147,6 @@ void XtcClient::processDgram(Pds::Dgram* dg)
     //  Cleanup previous entries
     _factory.discovery().reset();
     _factory.hidden   ().reset();
-    SummaryAnalysis::instance().reset();
     for(HList::iterator hit = _handlers.begin(); hit != _handlers.end(); hit++) {
       EventHandler* handler = *hit;
       handler->reset();
@@ -153,7 +164,6 @@ void XtcClient::processDgram(Pds::Dgram* dg)
     _filter.configure(dg);
 
     _seq = &dg->seq;
-    SummaryAnalysis::instance().clock(dg->seq.clock());
     for(UList::iterator it=_user_ana.begin(); it!=_user_ana.end(); it++)
       (*it)->clock(dg->seq.clock());
     
@@ -163,13 +173,14 @@ void XtcClient::processDgram(Pds::Dgram* dg)
     //  Create and register new entries
     _entry.clear();
     { ProcInfo info(Pds::Level::Control,0,0);
-      EntryScalar* e = new EntryScalar(reinterpret_cast<const DetInfo&>(info),0,"XtcClient","timestamp");
+      const DetInfo& dinfo = static_cast<const DetInfo&>((Src&)info);
+      EntryScalar* e = new EntryScalar(dinfo,0,EntryScalar::input_entry(),"timestamp");
       _factory.discovery().add(e);
       _entry.push_back(e);
       int imod=0;
       for(UList::iterator it=_user_ana.begin(); it!=_user_ana.end(); it++,imod++) {
         info = ProcInfo(Pds::Level::Event,0,imod);
-        e = new EntryScalar(reinterpret_cast<const DetInfo&>(info),0,(*it)->name(),"module");
+        e = new EntryScalar(dinfo,0,(*it)->name(),"module");
         _factory.discovery().add(e);
         _entry.push_back(e);
       }
@@ -187,6 +198,7 @@ void XtcClient::processDgram(Pds::Dgram* dg)
       }
     }
     printf("XC\n");
+    _factory.discovery().sort();  // Need to set a consistent order across all server processes
     _factory.discovery().showentries();
     //    _factory.hidden   ().showentries();
 
@@ -249,16 +261,13 @@ int XtcClient::process(Pds::Xtc* xtc)
     iterate(xtc);
   }
   else {
-    if (_seq->service()==Pds::TransitionId::L1Accept) {
-      SummaryAnalysis::instance().event    (xtc->src,
-                                            xtc->contains,
-                                            xtc->payload());
+#ifdef DBUG
+    if (_seq->service()==Pds::TransitionId::Configure) {
+      printf("Type %s  Src %08x.%08x\n", 
+	     TypeId::name(xtc->contains.id()),
+	     xtc->src.phy(),xtc->src.log());
     }
-    else if (_seq->service()==Pds::TransitionId::Configure) {
-      SummaryAnalysis::instance().configure(xtc->src,
-                                            xtc->contains,
-                                            xtc->payload());
-    }
+#endif
     for(HList::iterator it = _handlers.begin(); it != _handlers.end(); it++) {
       EventHandler* h = *it;
       if (h->info().level() == xtc->src.level() &&
@@ -310,6 +319,7 @@ int XtcClient::process(Pds::Xtc* xtc)
       case Pds::TypeId::Id_AcqTdcConfig:     h = new AcqTdcHandler     (info); break;
       case Pds::TypeId::Id_TM6740Config:     h = new TM6740Handler     (info); break;
       case Pds::TypeId::Id_Opal1kConfig:     h = new Opal1kHandler     (info); break;
+      case Pds::TypeId::Id_OrcaConfig  :     h = new OrcaHandler       (info); break;
       case Pds::TypeId::Id_QuartzConfig:     h = new QuartzHandler     (info); break;
       case Pds::TypeId::Id_PhasicsConfig:    h = new PhasicsHandler    (info); break;
       case Pds::TypeId::Id_TimepixConfig:    h = new TimepixHandler    (info); break;

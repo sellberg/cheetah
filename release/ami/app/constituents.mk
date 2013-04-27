@@ -53,8 +53,8 @@ tgtlibs_ami += pdsdata/cspaddata pdsdata/lusidata pdsdata/appdata
 tgtlibs_ami += pdsdata/cspad2x2data
 tgtlibs_ami += pdsdata/fexampdata
 tgtlibs_ami += pdsdata/phasicsdata pdsdata/oceanopticsdata pdsdata/flidata pdsdata/andordata
-tgtlibs_ami += pdsdata/compressdata
-tgtlibs_ami += ami/service ami/data ami/server ami/event ami/client ami/app
+tgtlibs_ami += pdsdata/orcadata pdsdata/quartzdata
+tgtlibs_ami += ami/service ami/data ami/server ami/calib ami/event ami/client ami/app
 tgtincs_ami := $(qtincdir)
 ifneq ($(findstring x86_64-linux,$(tgt_arch)),)
   tgtlibs_ami += qt/QtCore
@@ -72,7 +72,7 @@ libnames := app
 
 # List source files for each library
 #libsrcs_app := $(filter-out Agent.cc ami_agent.cc test.cc ami.cc,$(wildcard *.cc))
-libsrcs_app := $(filter-out test.cc ami.cc ami_proxy.cc tcptest.cc,$(wildcard *.cc))
+libsrcs_app := $(filter-out SummaryAnalysis.cc test.cc ami.cc ami_proxy.cc tcptest.cc,$(wildcard *.cc))
 # libsrcs_lib_b := src_6.cc
 
 # List special include directories (if any) needed by lib_a as

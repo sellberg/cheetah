@@ -2,6 +2,7 @@
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/DetInfo.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/Src.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/Level.hh \
+  /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/BldInfo.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/ProcInfo.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/XtcIterator.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/XtcFileIterator.hh \
@@ -17,8 +18,9 @@
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/Src.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/acqiris/ConfigV1.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/TypeId.hh \
-  /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/ipimb/ConfigV2.hh \
+  /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/ipimb/ConfigV1.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/TypeId.hh \
+  /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/ipimb/ConfigV2.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/encoder/ConfigV1.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/TypeId.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/camera/FrameFexConfigV1.hh \

@@ -5,10 +5,12 @@
 #include <fcntl.h>
 
 #include "pdsdata/xtc/DetInfo.hh"
+#include "pdsdata/xtc/BldInfo.hh"
 #include "pdsdata/xtc/ProcInfo.hh"
 #include "pdsdata/xtc/XtcIterator.hh"
 #include "pdsdata/xtc/XtcFileIterator.hh"
 #include "pdsdata/acqiris/ConfigV1.hh"
+#include "pdsdata/ipimb/ConfigV1.hh"
 #include "pdsdata/ipimb/ConfigV2.hh"
 #include "pdsdata/encoder/ConfigV1.hh"
 #include "pdsdata/camera/FrameFexConfigV1.hh"
@@ -35,39 +37,48 @@
 
 using namespace Pds;
 
+static bool noEpics;
+
 class myLevelIter : public XtcIterator {
 public:
   enum {Stop, Continue};
-  myLevelIter(Xtc* xtc, unsigned depth) : XtcIterator(xtc), _depth(depth) {}
+  myLevelIter(Xtc* xtc, unsigned depth) : 
+    XtcIterator(xtc), _depth(depth) {}
 
-  void process(const DetInfo&, const Acqiris::ConfigV1&) {
+  void process(const Src&, const Acqiris::ConfigV1&) {
     printf("*** Processing Acqiris config object\n");
   }
-  void process(const DetInfo&, const Ipimb::ConfigV2&) {
+  void process(const Src&, const Ipimb::ConfigV1& o) {
     printf("*** Processing Ipimb config object\n");
+    o.dump();
   }
-  void process(const DetInfo&, const Encoder::ConfigV1&) {
+  void process(const Src&, const Ipimb::ConfigV2& o) {
+    printf("*** Processing Ipimb config object\n");
+    o.dump();
+  }
+  void process(const Src&, const Encoder::ConfigV1&) {
     printf("*** Processing Encoder config object\n");
   }
-  void process(const DetInfo&, const Opal1k::ConfigV1&) {
+  void process(const Src&, const Opal1k::ConfigV1&) {
     printf("*** Processing Opal1000 config object\n");
   }
-  void process(const DetInfo&, const Pulnix::TM6740ConfigV1&) {
+  void process(const Src&, const Pulnix::TM6740ConfigV1&) {
     printf("*** Processing TM6740 config object\n");
   }
-  void process(const DetInfo&, const Camera::FrameFexConfigV1& c) {
+  void process(const Src&, const Camera::FrameFexConfigV1& c) {
     printf("*** Processing frame feature extraction config object\n");
     printf("roiBegin (%d,%d)  roiEnd(%d,%d)\n",
      c.roiBegin().column, c.roiBegin().row,
      c.roiEnd().column, c.roiEnd().row);
   }
-  void process(const DetInfo&, const Camera::FrameFccdConfigV1&) {
+  void process(const Src&, const Camera::FrameFccdConfigV1&) {
     printf("*** Processing FCCD Frame ConfigV1 object\n");
   }
-  void process(const DetInfo&, const FCCD::FccdConfigV1&) {
+  void process(const Src&, const FCCD::FccdConfigV1&) {
     printf("*** Processing FCCD ConfigV1 object\n");
   }
-  void process(const DetInfo& det, const PNCCD::ConfigV1& config) {
+  void process(const Src& info, const PNCCD::ConfigV1& config) {
+    const DetInfo& det = static_cast<const DetInfo&>(info);
     if ( det.detId() != 0 )
     {
       printf( "myLevelIter::process(...,PNCCD::ConfigV1&): pnCCD detector Id (%d) is not 0\n", det.detId() );
@@ -83,7 +94,8 @@ public:
     printf("*** Processing pnCCD config.  Number of Links: %d, PayloadSize per Link: %d\n",
            config.numLinks(),config.payloadSizePerLink());
   }  
-  void process(const DetInfo& det, const PNCCD::ConfigV2& config) {
+  void process(const Src& info, const PNCCD::ConfigV2& config) {
+    const DetInfo& det = static_cast<const DetInfo&>(info);
     if ( det.detId() != 0 )
     {
       printf( "myLevelIter::process(...,PNCCD::ConfigV2&): pnCCD detector Id (%d) is not 0\n", det.detId() );
@@ -102,7 +114,7 @@ public:
         config.numChannels(),config.numRows(), config.numSubmoduleChannels(),config.numSubmoduleRows(),config.numSubmodules());
     printf("\tCamex Magic 0x%x, info %s, Timing File Name %s\n", config.camexMagic(),config.info(),config.timingFName());
   }
-  void process(const DetInfo&, const ControlData::ConfigV1& config) {
+  void process(const Src&, const ControlData::ConfigV1& config) {
     printf("*** Processing Control config object\n");    
     
     printf( "Control PV Number = %d, Monitor PV Number = %d\n", config.npvControls(), config.npvMonitors() );
@@ -125,87 +137,87 @@ public:
     }
           
   }  
-  void process(const DetInfo&, const EpicsPvHeader& epicsPv)
+  void process(const Src&, const EpicsPvHeader& epicsPv)
   {    
     printf("*** Processing Epics object\n");
     epicsPv.printPv();
     printf( "\n" );
   }
-  void process(const DetInfo&, const BldDataFEEGasDetEnergy& bldData) {
+  void process(const Src&, const BldDataFEEGasDetEnergy& bldData) {
     printf("*** Processing FEEGasDetEnergy object\n");
     bldData.print();
     printf( "\n" );    
   }  
-  void process(const DetInfo&, const BldDataEBeamV0& bldData) {
+  void process(const Src&, const BldDataEBeamV0& bldData) {
     printf("*** Processing EBeamV0 object\n");
     bldData.print();
     printf( "\n" );    
   }  
-  void process(const DetInfo&, const BldDataEBeamV1& bldData) {
+  void process(const Src&, const BldDataEBeamV1& bldData) {
     printf("*** Processing EBeamV1 object\n");
     bldData.print();
     printf( "\n" );    
   }  
-  void process(const DetInfo&, const BldDataEBeam& bldData) {
+  void process(const Src&, const BldDataEBeam& bldData) {
     printf("*** Processing EBeam object\n");
     bldData.print();
     printf( "\n" );    
   }  
-  void process(const DetInfo&, const BldDataPhaseCavity& bldData) {
+  void process(const Src&, const BldDataPhaseCavity& bldData) {
     printf("*** Processing PhaseCavity object\n");
     bldData.print();
     printf( "\n" );    
   }
-  void process(const DetInfo&, const BldDataIpimbV0& bldData) {
+  void process(const Src&, const BldDataIpimbV0& bldData) {
     printf("*** Processing Bld-Ipimb V0 object\n");
     bldData.print();
     printf( "\n" );    
   } 
 
-  void process(const DetInfo&, const BldDataIpimb& bldData) {
+  void process(const Src&, const BldDataIpimb& bldData) {
     printf("*** Processing Bld-Ipimb V1 object\n");
     bldData.print();
     printf( "\n" );    
   } 
 
-  void process(const DetInfo&, const BldDataGMDV0& bldData) {
+  void process(const Src&, const BldDataGMDV0& bldData) {
     printf("*** Processing Bld-GMD V0 object\n");
     bldData.print();
     printf( "\n" );    
   }   
 
-  void process(const DetInfo&, const BldDataGMDV1& bldData) {
+  void process(const Src&, const BldDataGMDV1& bldData) {
     printf("*** Processing Bld-GMD V1 object\n");
     bldData.print();
     printf( "\n" );
   }
   
-  void process(const DetInfo&, const EvrData::IOConfigV1&) {
+  void process(const Src&, const EvrData::IOConfigV1&) {
     printf("*** Processing EVR IOconfig V1 object\n");
   }
-  void process(const DetInfo&, const EvrData::ConfigV1&) {
+  void process(const Src&, const EvrData::ConfigV1&) {
     printf("*** Processing EVR config V1 object\n");
   }
-  void process(const DetInfo&, const EvrData::ConfigV2&) {
+  void process(const Src&, const EvrData::ConfigV2&) {
     printf("*** Processing EVR config V2 object\n");
   }
-  void process(const DetInfo&, const EvrData::ConfigV3&) {
+  void process(const Src&, const EvrData::ConfigV3&) {
     printf("*** Processing EVR config V3 object\n");
   }
-  void process(const DetInfo&, const EvrData::ConfigV4&) {
+  void process(const Src&, const EvrData::ConfigV4&) {
     printf("*** Processing EVR config V4 object\n");
   }
-  void process(const DetInfo&, const EvrData::ConfigV7& c) {
+  void process(const Src&, const EvrData::ConfigV7& c) {
     printf("*** Processing EVR config V4 object\n");
     c.print();
     const EvrData::ConfigV7::SeqConfigType& s = c.seq_config();
     printf(" seq src %d/%d : len %d : cycles %d\n",
            s.sync_source(), s.beam_source(), s.length(), s.cycles());
   }
-  void process(const DetInfo&, const Princeton::ConfigV1&) {
+  void process(const Src&, const Princeton::ConfigV1&) {
     printf("*** Processing Princeton ConfigV1 object\n");
   }
-  void process(const DetInfo&, const CsPad::ConfigV4& c) {
+  void process(const Src&, const CsPad::ConfigV4& c) {
     printf("*** Processing Cspad ConfigV4 object\n");
     printf("  runDelay %x  intTime %x\n",
            c.runDelay(), c.quads()[0].intTime());
@@ -216,14 +228,19 @@ public:
     printf("%s level, payload size %d contains: %s: ",
      Level::name(level), xtc->sizeofPayload(), TypeId::name(xtc->contains.id()));
      
-    const DetInfo& info = *(DetInfo*)(&xtc->src);
-    if (level==Level::Source) {
-      printf("%s,%d  %s,%d\n",
-             DetInfo::name(info.detector()),info.detId(),
-             DetInfo::name(info.device()),info.devId());
-    } else {
-      ProcInfo& info = *(ProcInfo*)(&xtc->src);
-      printf("IpAddress 0x%x ProcessId 0x%x\n",info.ipAddr(),info.processId());
+    const Src& info = xtc->src;
+    switch(xtc->src.level()) {
+    case Level::Source:
+      printf("%s\n", DetInfo::name(static_cast<const DetInfo&>(xtc->src)));
+      break;
+    case Level::Reporter:
+      printf("%s\n", BldInfo::name(static_cast<const BldInfo&>(xtc->src)));
+      break;
+    default: {
+      const ProcInfo& pinfo = static_cast<const ProcInfo&>(xtc->src);
+      printf("IpAddress 0x%x ProcessId 0x%x\n",pinfo.ipAddr(),pinfo.processId());
+      break;
+    }
     }
     if (level < 0 || level >= Level::NumberOfLevels )
     {
@@ -254,6 +271,9 @@ public:
       unsigned version = xtc->contains.version();
       switch (version) {
       case 1:
+        process(info,*(const Ipimb::ConfigV1*)(xtc->payload()));
+        break;
+      case 2:
         process(info,*(const Ipimb::ConfigV2*)(xtc->payload()));
         break;
       default:
@@ -331,13 +351,15 @@ public:
       break;
     case (TypeId::Id_Epics) :      
     {
-      int iVersion = xtc->contains.version();
-      if ( iVersion != EpicsXtcSettings::iXtcVersion ) 
-      {
-          printf( "Xtc Epics version (%d) is not compatible with reader supported version (%d)", iVersion, EpicsXtcSettings::iXtcVersion );
-          break;
+      if (!noEpics) {
+        int iVersion = xtc->contains.version();
+        if ( iVersion != EpicsXtcSettings::iXtcVersion ) 
+          {
+            printf( "Xtc Epics version (%d) is not compatible with reader supported version (%d)", iVersion, EpicsXtcSettings::iXtcVersion );
+            break;
+          }
+        process(info, *(const EpicsPvHeader*)(xtc->payload()));
       }
-      process(info, *(const EpicsPvHeader*)(xtc->payload()));
       break;
     }
     /*
@@ -417,6 +439,7 @@ public:
   }
 private:
   unsigned       _depth;
+  const char*    _hdr;
 
   /* static private data */
   static PNCCD::ConfigV1 _pnCcdCfgListV1[2];
@@ -434,14 +457,22 @@ int main(int argc, char* argv[]) {
   int c;
   char* xtcname=0;
   int parseErr = 0;
+  noEpics=false;
+  unsigned nevents=0;
 
-  while ((c = getopt(argc, argv, "hf:")) != -1) {
+  while ((c = getopt(argc, argv, "hef:n:")) != -1) {
     switch (c) {
+    case 'e':
+      noEpics=true;
+      break;
     case 'h':
       usage(argv[0]);
       exit(0);
     case 'f':
       xtcname = optarg;
+      break;
+    case 'n':
+      nevents = strtoul(optarg,NULL,0);
       break;
     default:
       parseErr++;
@@ -459,16 +490,17 @@ int main(int argc, char* argv[]) {
     exit(2);
   }
 
+  unsigned count(0);
   XtcFileIterator iter(fd,0x900000);
   Dgram* dg;
   while( dg = iter.next() ) {
-    if (dg->seq.service()==TransitionId::Configure ||
-        dg->seq.service()==TransitionId::BeginCalibCycle) {
-      printf("%s transition: time 0x%x/0x%x, payloadSize %d\n",TransitionId::name(dg->seq.service()),
-             dg->seq.stamp().fiducials(),dg->seq.stamp().ticks(), dg->xtc.sizeofPayload());
-      myLevelIter liter(&(dg->xtc),0);
-      liter.iterate();
-    }
+    if (dg->seq.service() == TransitionId::L1Accept)
+      if (++count>nevents) break;
+
+    printf("%s transition: time 0x%x/0x%x, payloadSize %d\n",TransitionId::name(dg->seq.service()),
+            dg->seq.stamp().fiducials(),dg->seq.stamp().ticks(), dg->xtc.sizeofPayload());
+    myLevelIter liter(&(dg->xtc),0);
+    liter.iterate();
   }
   ::close(fd);
   return 0;

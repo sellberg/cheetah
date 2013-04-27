@@ -39,15 +39,23 @@ static const unsigned MAX_INDEX = 999999;
 using namespace Ami;
 
 static QChar _integrate(0x002C);  // ,
+static QChar _mean     (0x003D);  // @
+static QChar _variance (0x005F);  // _
 static QChar _moment1  (0x0027);  // '
 static QChar _moment2  (0x0022);  // "
 static QChar _contrast (0x0021);  // !
 static QChar _range    (0x0023);  // #
+static QChar _xmoment  (0x0024);  // $
+static QChar _ymoment  (0x003F);  // &
 const QChar& BinMath::integrate() { return _integrate; }
+const QChar& BinMath::mean     () { return _mean     ; }
+const QChar& BinMath::variance () { return _variance ; }
 const QChar& BinMath::moment1  () { return _moment1  ; }
 const QChar& BinMath::moment2  () { return _moment2  ; }
 const QChar& BinMath::contrast () { return _contrast ; }
 const QChar& BinMath::range    () { return _range    ; }
+const QChar& BinMath::xmoment  () { return _xmoment  ; }
+const QChar& BinMath::ymoment  () { return _ymoment  ; }
 const double BinMath::floatPrecision() { return 1.e3; }
 
 BinMath::BinMath(const DescEntry& output, 
@@ -86,7 +94,15 @@ BinMath::BinMath(const char*& p, const DescEntry& input, FeatureCache& features)
   { QString expr(_expression);
     QString new_expr;
     // parse expression for bin indices
-    QRegExp match("\\[[0-9!,\\\'\\\"]+\\]");
+    QString mex("\\[[0-9");
+    mex += _integrate;
+    mex += _mean;
+    mex += _variance;
+    mex += _contrast;
+    mex += _xmoment;
+    mex += _ymoment;
+    mex += QString("\\\'\\\"]+\\]");
+    QRegExp match(mex);
     int last=0;
     int pos=0;
     int mlen=0;
@@ -279,19 +295,31 @@ static bool _parseIndices(const QString& use,
 {
   int index;
   if ((index=use.indexOf(_integrate)) == -1)
-    if ((index=use.indexOf(_moment1)) == -1)
-      if ((index=use.indexOf(_moment2)) == -1) 
-        if ((index=use.indexOf(_contrast)) == -1) {
-          mom = None;
-          lo = hi = use.toInt();
-          return lo <  MAX_INDEX;
-        }
-        else
-          mom = Contrast;
-      else
-        mom = Second;
+    if ((index=use.indexOf(_mean)) == -1)
+      if ((index=use.indexOf(_variance)) == -1)
+        if ((index=use.indexOf(_moment1)) == -1)
+          if ((index=use.indexOf(_moment2)) == -1) 
+            if ((index=use.indexOf(_contrast)) == -1)
+              if ((index=use.indexOf(_xmoment)) == -1)
+                if ((index=use.indexOf(_ymoment)) == -1) {
+                  mom = None;
+                  lo = hi = use.toInt();
+                  return lo <  MAX_INDEX;
+                }
+                else
+                  mom = YCenterOfMass;
+              else
+                mom = XCenterOfMass;
+            else
+              mom = Contrast;
+          else
+            mom = Second;
+        else 
+          mom = First;
+      else 
+        mom = Variance;
     else 
-      mom = First;
+      mom = Mean;
   else
     mom = Zero;
 

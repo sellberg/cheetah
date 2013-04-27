@@ -15,6 +15,11 @@
 #include <sys/mman.h>
 #include <sys/prctl.h>
 
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
+//#define DBUG
+
 using std::queue;
 using std::stack;
 
@@ -24,6 +29,7 @@ using std::stack;
 static const unsigned TMO_SEC = 10;
 
 #define PERMS (S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR|S_IWGRP|S_IWOTH)
+#define PERMS_IN (S_IRUSR|S_IRGRP|S_IROTH)
 #define OFLAGS (O_CREAT|O_RDWR)
 
 namespace Pds {
@@ -68,18 +74,19 @@ using namespace Pds;
 XtcMonitorServer::XtcMonitorServer(const char* tag,
 				   unsigned sizeofBuffers, 
 				   unsigned numberofEvBuffers,
-				   unsigned numberofClients,
 				   unsigned numberofEvQueues,
 				   unsigned sequenceLength) :
   _tag              (tag),
   _sizeOfBuffers    (sizeofBuffers),
   _numberOfEvBuffers(numberofEvBuffers),
-  _numberOfClients  (numberofClients),
-  _numberOfEvQueues (numberofEvQueues ? numberofEvQueues : numberofClients),
-  _sequence(new EventSequence(sequenceLength))
+  _numberOfEvQueues (numberofEvQueues),
+  _myOutputTrQueue  (0),
+  _sequence(new EventSequence(sequenceLength)),
+  _ievt      (0) 
 {
   _myMsg.numberOfBuffers(numberofEvBuffers+numberofTrBuffers);
   _myMsg.sizeOfBuffers  (sizeofBuffers);
+  _myMsg.return_queue   (0);
 
   _tmo.tv_sec  = 0;
   _tmo.tv_nsec = 0;
@@ -93,33 +100,17 @@ XtcMonitorServer::~XtcMonitorServer()
 { 
   delete _sequence;
   sem_destroy(&_sem);
-  pthread_kill(_threadID, SIGTERM);
+  pthread_kill(_taskThread, SIGTERM);
   printf("Not Unlinking Shared Memory... \n");
 
-  printf("Unlinking Message Queues... \n");
-  mq_close(_discoveryQueue);
-  mq_close(_myInputEvQueue);
-  for(unsigned i=0; i<_numberOfClients; i++) {
-    mq_close(_myOutputTrQueue[i]);
-  }
-  for(unsigned i=0; i<_numberOfEvQueues; i++) {
-    mq_close(_myOutputEvQueue[i]);
-  }
-  mq_close(_shuffleQueue);
-
-  char qname[128];
-  XtcMonitorMsg::discoveryQueue (_tag, qname);  mq_unlink(qname);
-  for(unsigned i=0; i<_numberOfClients; i++) {
-    XtcMonitorMsg::transitionInputQueue(_tag,i,qname); mq_unlink(qname);
-  }
-
-  for(unsigned i=0; i<_numberOfEvQueues; i++) {
-    XtcMonitorMsg::eventInputQueue     (_tag,i,qname); mq_unlink(qname);
-  }
-  XtcMonitorMsg::eventInputQueue     (_tag,_numberOfEvQueues,qname); mq_unlink(qname);
-  sprintf(qname, "/PdsShuffleQueue_%s",_tag);  mq_unlink(qname);
+  unlink();
 
   delete[] _postmarks;
+}
+
+void XtcMonitorServer::distribute(bool l)
+{
+  _myMsg.return_queue( l ? _numberOfEvQueues : 0 );
 }
 
 void XtcMonitorServer::_claim(unsigned index)
@@ -284,9 +275,15 @@ XtcMonitorServer::Result XtcMonitorServer::events(Dgram* dg)
     //
     //  Broadcast the transition to all listening clients
     //
-    for(unsigned i=0; i<_numberOfClients; i++) {
-      if (mq_timedsend(_myOutputTrQueue[i], (const char*)&_myMsg, sizeof(_myMsg), 0, &_tmo))
+    for(unsigned i=0; i<_myOutputTrQueue.size(); i++) {
+      mqd_t oq = _myOutputTrQueue[i];
+      if (oq == -1) continue;
+      if (mq_timedsend(oq, (const char*)&_myMsg, sizeof(_myMsg), 0, &_tmo))
+#ifdef DBUG
+	printf("Failed to queue tr %s to client %d\n", TransitionId::name(dgrm.seq.service()), i);
+#else
         ;  // best effort
+#endif
     }
 
   }
@@ -297,8 +294,9 @@ void XtcMonitorServer::routine()
 {
   while(1) {
     if (::poll(_pfd,2,-1) > 0) {
-      if (_pfd[0].revents & POLLIN)
-        _initialize_client();
+
+      if (_pfd[0].revents & POLLIN) 
+	_initialize_client();
 
       if (_pfd[1].revents & POLLIN) {
         ShMsg m;
@@ -308,28 +306,42 @@ void XtcMonitorServer::routine()
         _copyDatagram(m.dg(),_myShm+_sizeOfBuffers*m.msg().bufferIndex());
         _deleteDatagram(m.dg());
 
-	//
-	//  Send this event to the first available client
-	//
-	for(unsigned i=0; i<=_numberOfEvQueues; i++)
-	  if (mq_timedsend(_myOutputEvQueue[i], (const char*)&m.msg(), sizeof(m.msg()), 0, &_tmo))
-	    ; //	    printf("outputEv timedout to client %d\n",i);
+	if (m.msg().serial()) {
+	  //
+	  //  Send this event to the first available client
+	  //
+	  for(unsigned i=0; i<=_numberOfEvQueues; i++)
+	    if (mq_timedsend(_myOutputEvQueue[i], (const char*)&m.msg(), sizeof(m.msg()), 0, &_tmo))
+	      ; //	    printf("outputEv timedout to client %d\n",i);
+	    else {
+	      clock_gettime(CLOCK_REALTIME,&_postmarks[m.msg().bufferIndex()]);
+	      _lastSent = m.msg().bufferIndex();
+	      break;
+	    }
+	}
+	else {
+	  //
+	  //  Send this event to the next client around (round-robin)
+	  //
+	  int oq = _myOutputEvQueue[_ievt++%_numberOfEvQueues];
+	  if (mq_timedsend(oq, (const char*)&m.msg(), sizeof(m.msg()), 0, &_tmo))
+	    ;
 	  else {
-            clock_gettime(CLOCK_REALTIME,&_postmarks[m.msg().bufferIndex()]);
-            _lastSent = m.msg().bufferIndex();
-	    break;
-          }
+	    clock_gettime(CLOCK_REALTIME,&_postmarks[m.msg().bufferIndex()]);
+	    _lastSent = m.msg().bufferIndex();
+	  }
+	}
       }
     }
   }
 }
 
 static void* TaskRoutine(void* task)
-    {
+{
   XtcMonitorServer* srv = (XtcMonitorServer*)task;
   srv->routine();
   return srv;
-    }
+}
 
 int XtcMonitorServer::_init() 
 { 
@@ -368,33 +380,17 @@ int XtcMonitorServer::_init()
   q_attr.mq_msgsize = (long int)sizeof(XtcMonitorMsg);
   q_attr.mq_flags   = O_NONBLOCK;
 
-  _myOutputEvQueue = new mqd_t[_numberOfClients];
+  _myOutputEvQueue = new mqd_t[_numberOfEvQueues];
   for(unsigned i=0; i<_numberOfEvQueues; i++) {
     XtcMonitorMsg::eventInputQueue(p,i,toQname);
     _flushQueue(_myOutputEvQueue[i] = _openQueue(toQname,q_attr));
   }
-  
-  q_attr.mq_maxmsg  = _numberOfClients;
-  q_attr.mq_msgsize = (long int)sizeof(XtcMonitorMsg);
-  q_attr.mq_flags   = O_NONBLOCK;
 
   XtcMonitorMsg::discoveryQueue(p, fromQname);
-  sprintf(fromQname, "/PdsFromMonitorDiscovery_%s",p);
   _pfd[0].fd      = _discoveryQueue  = _openQueue(fromQname,q_attr);
   _pfd[0].events  = POLLIN;
   _pfd[0].revents = 0;
-
   
-  q_attr.mq_maxmsg  = numberofTrBuffers;
-  q_attr.mq_msgsize = (long int)sizeof(XtcMonitorMsg);
-  q_attr.mq_flags   = O_NONBLOCK;
-
-  _myOutputTrQueue = new mqd_t[_numberOfClients];
-  for(unsigned i=0; i<_numberOfClients; i++) {
-    XtcMonitorMsg::transitionInputQueue(p,i,toQname);
-    _flushQueue(_myOutputTrQueue[i] = _openQueue(toQname,q_attr));
-  }
-
   q_attr.mq_maxmsg  = _numberOfEvBuffers;
   q_attr.mq_msgsize = (long int)sizeof(ShMsg);
   q_attr.mq_flags   = O_NONBLOCK;
@@ -407,8 +403,8 @@ int XtcMonitorServer::_init()
   _pfd[1].events  = POLLIN;
   _pfd[1].revents = 0;
 
-  // create the listening thread
-  pthread_create(&_threadID,NULL,TaskRoutine,this);
+  // create the listening threads
+  pthread_create(&_taskThread,NULL,TaskRoutine,this);
 
   // prestuff the input queue which doubles as the free list
   _postmarks = new timespec[_numberOfEvBuffers];
@@ -440,8 +436,57 @@ void XtcMonitorServer::_initialize_client()
   if (mq_receive(_discoveryQueue, (char*)&msg, sizeof(msg), NULL) < 0) 
     perror("mq_receive");
 
-  unsigned iclient = msg.bufferIndex();
+  int iclient=-1;
+  for(unsigned i=0; i<_myOutputTrQueue.size(); i++) {
+    if (_myOutputTrQueue[i] == -1) {
+      iclient = i;
+      break;
+    }
+  }
+  if (iclient == -1) {
+    iclient = _myOutputTrQueue.size();
+    _myOutputTrQueue.push_back(-1);
+  }
+
+  char qname[128];
+
+  mq_attr q_attr;
+  q_attr.mq_maxmsg  = numberofTrBuffers;
+  q_attr.mq_msgsize = (long int)sizeof(XtcMonitorMsg);
+  q_attr.mq_flags   = O_NONBLOCK;
+
+  XtcMonitorMsg::transitionInputQueue(_tag,iclient,qname);
+  _flushQueue(_myOutputTrQueue[iclient] = _openQueue(qname,q_attr));
+
   printf("_initialize_client %d\n",iclient);
+
+  _myMsg.bufferIndex(iclient);
+
+  { XtcMonitorMsg::registerQueue(_tag,qname,msg.bufferIndex());
+    struct mq_attr mymq_attr;
+    mqd_t queue;
+    while(1) {
+      queue = mq_open(qname, O_RDWR, PERMS, &mymq_attr);
+      if (queue == (mqd_t)-1) {
+	char b[128];
+	sprintf(b,"mq_open %s",qname);
+	perror(b);
+	sleep(1);
+      }
+      else {
+	printf("Opened queue %s (%d)\n",qname,queue);
+	break;
+      }
+    }
+
+    if (mq_send(queue, (const char*)&_myMsg, sizeof(_myMsg), 0)) {
+      char b[128];
+      sprintf(b,"mq_send %s",qname);
+      perror(b);
+    }
+    
+    mq_close(queue);
+  }
 
   std::stack<int> tr;
   while(!_cachedTr.empty()) {
@@ -557,5 +602,33 @@ void XtcMonitorServer::_pop_transition()
 {
   _freeTr.push(_cachedTr.top());
   _cachedTr.pop();
+}
+
+void XtcMonitorServer::unlink() 
+{ 
+  printf("Unlinking Message Queues... \n");
+  mq_close(_myInputEvQueue);
+  for(unsigned i=0; i<_myOutputTrQueue.size(); i++) {
+    int oq = _myOutputTrQueue[i];
+    if (oq==-1) continue;
+    mq_close(oq);
+  }
+  for(unsigned i=0; i<_numberOfEvQueues; i++) {
+    mq_close(_myOutputEvQueue[i]);
+  }
+  mq_close(_shuffleQueue);
+  mq_close(_discoveryQueue);
+
+  char qname[128];
+  for(unsigned i=0; i<_myOutputTrQueue.size(); i++) {
+    XtcMonitorMsg::transitionInputQueue(_tag,i,qname); mq_unlink(qname);
+  }
+
+  for(unsigned i=0; i<_numberOfEvQueues; i++) {
+    XtcMonitorMsg::eventInputQueue     (_tag,i,qname); mq_unlink(qname);
+  }
+  XtcMonitorMsg::eventInputQueue     (_tag,_numberOfEvQueues,qname); mq_unlink(qname);
+  sprintf(qname, "/PdsShuffleQueue_%s",_tag);  mq_unlink(qname);
+  XtcMonitorMsg::discoveryQueue      (_tag,qname); mq_unlink(qname);
 }
 

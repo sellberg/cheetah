@@ -29,6 +29,8 @@
 #include "ami/data/Single.hh"
 #include "ami/data/Average.hh"
 
+#include "ami/service/Ins.hh"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -41,9 +43,11 @@
 
 static const unsigned CDS_SUBNET_LO = 37;
 static const unsigned CDS_SUBNET_HI = 44;
+static const unsigned CDS_SUBNET_L2 = 10;
 
 static const unsigned FEZ_SUBNET_LO = 20;
 static const unsigned FEZ_SUBNET_HI = 27;
+static const unsigned FEZ_SUBNET_L2 =  8;
 
 static PyObject* AmiError;
 
@@ -136,7 +140,7 @@ static int _parseargs(PyObject* args, PyObject* kwds, Ami::Python::ClientArgs& c
 	  sts = PyArg_ParseTupleAndKeywords(t,kwds,"sI",ekwlist,
 					    &xtitle, &nbins);
           if (sts) {
-            printf( "Creating Scan %s, %s, %d\n" , name,xtitle,nbins);
+            // printf( "Creating Scan %s, %s, %d\n" , name,xtitle,nbins);
             op = new Ami::EnvPlot(Ami::DescScan(name,xtitle,"mean",nbins));
             break;
           }
@@ -182,7 +186,7 @@ static int _parseargs(PyObject* args, PyObject* kwds, Ami::Python::ClientArgs& c
     sts = PyArg_ParseTupleAndKeywords(t,kwds,"|s",kwlist,&filter_str);
     Py_DECREF(t);
     filter = parse_filter(filter_str);
-    printf("parsed filter from %s\n",filter_str);
+    // printf("parsed filter from %s\n",filter_str);
   }
 
   cl_args.info    = info;
@@ -676,11 +680,13 @@ pyami_connect(PyObject *self, PyObject *args)
         unsigned addr = htonl(((sockaddr_in&)ifr->ifr_addr).sin_addr.s_addr);
         unsigned subn = (addr>>8)&0xff;
         //      printf("Found addr %08x  subn %d\n",addr,subn);
-        if (subn>=CDS_SUBNET_LO &&
-            subn<=CDS_SUBNET_HI)
+        if ((subn>=CDS_SUBNET_LO &&
+	     subn<=CDS_SUBNET_HI) ||
+	    subn==CDS_SUBNET_L2) 
           ppinterface = addr;
-        else if (subn>=FEZ_SUBNET_LO && 
-                 subn<=FEZ_SUBNET_HI)
+        else if ((subn>=FEZ_SUBNET_LO && 
+		  subn<=FEZ_SUBNET_HI) ||
+		 subn==FEZ_SUBNET_L2)
           mcinterface = addr;
       }
     }
@@ -691,7 +697,7 @@ pyami_connect(PyObject *self, PyObject *args)
     return NULL;
   }
   if (mcinterface==0) {
-    if (servergroup & 0x80000000) {
+    if (Ami::Ins::is_multicast(servergroup)) {
       PyErr_SetString(PyExc_RuntimeError,"failed to lookup group interface");
       return NULL;
     }

@@ -60,6 +60,8 @@ ConfigV2::ConfigV2 (uint16_t chargeAmpRange,
 uint64_t ConfigV2::triggerCounter() const{return _triggerCounter;}
 uint64_t ConfigV2::serialID() const{return _serialID;}
 uint16_t ConfigV2::chargeAmpRange() const{return _chargeAmpRange;}
+ConfigV2::CapacitorValue ConfigV2::capacitorValue(unsigned ch) const
+{ return CapacitorValue((_chargeAmpRange>>(4*ch))&0xf); }
 uint16_t ConfigV2::calibrationRange() const{return _calibrationRange;}
 uint32_t ConfigV2::resetLength() const{return _resetLength;}
 uint16_t ConfigV2::resetDelay() const{return _resetDelay;}

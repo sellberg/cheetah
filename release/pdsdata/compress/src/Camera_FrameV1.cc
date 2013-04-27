@@ -6,7 +6,10 @@
 using namespace Pds::Camera;
 
 CompressedFrameV1::CompressedFrameV1(const FrameV1& f) :
-  _frame(f)
+  _frame(f.width(),
+         f.height(),
+         f.depth(),
+         f.offset())
 {
 }
 

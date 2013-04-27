@@ -2,6 +2,7 @@
   /reg/g/pcds/package/ana/release/pdsdata/xtc/DetInfo.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/Src.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/Level.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/xtc/BldInfo.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/ProcInfo.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/XtcIterator.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/XtcFileIterator.hh \
@@ -17,8 +18,9 @@
   /reg/g/pcds/package/ana/release/pdsdata/xtc/Src.hh \
   /reg/g/pcds/package/ana/release/pdsdata/acqiris/ConfigV1.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/TypeId.hh \
-  /reg/g/pcds/package/ana/release/pdsdata/ipimb/ConfigV2.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/ipimb/ConfigV1.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/TypeId.hh \
+  /reg/g/pcds/package/ana/release/pdsdata/ipimb/ConfigV2.hh \
   /reg/g/pcds/package/ana/release/pdsdata/encoder/ConfigV1.hh \
   /reg/g/pcds/package/ana/release/pdsdata/xtc/TypeId.hh \
   /reg/g/pcds/package/ana/release/pdsdata/camera/FrameFexConfigV1.hh \

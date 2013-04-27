@@ -75,8 +75,14 @@ void Control::resume() {
 void Control::run (bool l) {
   _client.one_shot(false);
   _repeat=1; 
-  if (l)  Timer::start(); 
-  else    cancel();
+  if (l)  {
+    Timer::start(); 
+    _pRun->setText("Stop");
+  }
+  else {
+    cancel();
+    _pRun->setText("Run");
+  }
 }
 
 void Control::single() {
@@ -98,6 +104,8 @@ void Control::save(char*& p) const
 {
   XML_insert( p, "QPushButton", "_pRun",
               QtPersistent::insert(p,_pRun   ->isChecked()) );
+  XML_insert( p, "QLineEdit", "_pRate",
+              QtPersistent::insert(p,_pRate  ->text()) );
 }
 
 void Control::load(const char*& p)
@@ -108,6 +116,11 @@ void Control::load(const char*& p)
       printf("Extract RUN state %c\n",b?'t':'f');
       _pRun   ->setChecked(b);
       run(b);
+    }
+    else if (tag.name == "_pRate") {
+      QString b = QtPersistent::extract_s(p);
+      _pRate  ->setText(b);
+      set_rate();
     }
   XML_iterate_close(Control,tag);
 }

@@ -24,14 +24,14 @@ using namespace std;
 static void usage(char* progname) {
   fprintf(stderr,
 	  "Usage: %s -p <xtc path>\n"
-	  "         [-i <interface address>]\n"
-	  "         [-s <server mcast group>]\n"
+	  "         [-f <path for save/load files>]\n"
 	  "         [-L <user plug-in path>]\n"
 	  "         [-o <filename for debugging messages>]\n"
 	  "         [-e <filename for error messages>]\n"
           "         [-C <color palette>]    (list from {%s); for example \"mono,jet\")\n"
           "         [-R (full resolution)\n"
-          "         [-E (expert mode>]\n", 
+	  "         [-l (live read mode)]\n"
+          "         [-E (expert mode/movie option)]\n", 
           progname,
           Ami::Qt::ImageColorControl::palette_set().c_str());
 }
@@ -76,6 +76,7 @@ int main(int argc, char* argv[]) {
   unsigned serverGroup = getLocallyUniqueServerGroup();
   list<UserModule*> userModules;
   bool testMode = false;
+  bool liveReadMode = false;
   bool separateWindowMode = false;
   char* outputFile = NULL;
   char* errorFile = NULL;
@@ -86,7 +87,7 @@ int main(int argc, char* argv[]) {
   qRegisterMetaType<Pds::TransitionId::Value>("Pds::TransitionId::Value");
 
   int c;
-  while ((c = getopt(argc, argv, "p:f:o:e:C:L:ERTW?h")) != -1) {
+  while ((c = getopt(argc, argv, "p:f:o:e:C:L:lERTW?h")) != -1) {
     switch (c) {
     case 'p':
       path = optarg;
@@ -111,6 +112,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'e':
       errorFile = optarg;
+      break;
+    case 'l':
+      liveReadMode = true;
       break;
     case 'R':
       Ami::EventHandler::enable_full_resolution(true);
@@ -152,7 +156,7 @@ int main(int argc, char* argv[]) {
   if (! separateWindowMode) {
     printf("Starting DetectorSelect...\n");
     groupBox = new QGroupBox("Offline");
-    output = new Ami::Qt::DetectorSelect("DAQ Offline Monitoring", interface, interface, serverGroup, groupBox, true);
+    output = new Ami::Qt::DetectorSelect("PS-Mon", interface, interface, serverGroup, groupBox, true);
     output->show();
     printf("Started DetectorSelect.\n");
   } else {
@@ -168,7 +172,7 @@ int main(int argc, char* argv[]) {
   // Start the XtcFileClient inside of the DetectorSelect GUI.
   bool sync = true;
   XtcClient client(features, factory, userModules, filter, sync);
-  Ami::Qt::XtcFileClient input(groupBox, client, path, testMode);
+  Ami::Qt::XtcFileClient input(groupBox, client, path, testMode, liveReadMode);
 
   app.exec();
 

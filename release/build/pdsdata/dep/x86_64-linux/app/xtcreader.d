@@ -39,6 +39,7 @@
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/fccd/FccdConfigV2.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/timepix/ConfigV1.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/timepix/ConfigV2.hh \
+  /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/timepix/ConfigV3.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/timepix/DataV1.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/xtc/TypeId.hh \
   /reg/neh/home3/sellberg/source/cheetah/release/pdsdata/../pdsdata/timepix/DataV2.hh \

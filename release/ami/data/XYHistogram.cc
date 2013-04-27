@@ -14,14 +14,8 @@
 
 using namespace Ami;
 
-XYHistogram::XYHistogram(const DescEntry& output, 
-                         double xlo, double xhi,
-                         double ylo, double yhi) :
+XYHistogram::XYHistogram(const DescEntry& output) :
   AbsOperator(AbsOperator::XYHistogram),
-  _xlo        (xlo),
-  _xhi        (xhi),
-  _ylo        (ylo),
-  _yhi        (yhi),
   _output    (0)
 {
   memcpy(_desc_buffer, &output, output.size());
@@ -32,10 +26,6 @@ XYHistogram::XYHistogram(const char*& p, const DescEntry& input) :
   AbsOperator(AbsOperator::XYHistogram)
 {
   _extract(p, _desc_buffer, DESC_LEN);
-  _extract(p, &_xlo        , sizeof(_xlo ));
-  _extract(p, &_xhi        , sizeof(_xhi ));
-  _extract(p, &_ylo        , sizeof(_ylo ));
-  _extract(p, &_yhi        , sizeof(_yhi ));
 
   const DescEntry& o = *reinterpret_cast<const DescEntry*>(_desc_buffer);
   _output = EntryFactory::entry(o);
@@ -46,10 +36,6 @@ XYHistogram::XYHistogram(const char*& p) :
   _output    (0)
 {
   _extract(p, _desc_buffer, DESC_LEN);
-  _extract(p, &_xlo        , sizeof(_xlo ));
-  _extract(p, &_xhi        , sizeof(_xhi ));
-  _extract(p, &_ylo        , sizeof(_ylo ));
-  _extract(p, &_yhi        , sizeof(_yhi ));
 }
 
 XYHistogram::~XYHistogram()
@@ -65,10 +51,6 @@ DescEntry& XYHistogram::_routput   () const
 void*      XYHistogram::_serialize(void* p) const
 {
   _insert(p, _desc_buffer, DESC_LEN);
-  _insert(p, &_xlo        , sizeof(_xlo ));
-  _insert(p, &_xhi        , sizeof(_xhi ));
-  _insert(p, &_ylo        , sizeof(_ylo ));
-  _insert(p, &_yhi        , sizeof(_yhi ));
   return p;
 }
 
@@ -81,17 +63,17 @@ Entry&     XYHistogram::_operate(const Entry& e) const
   const DescImage& inputd = _input->desc();
   const ImageMask* mask = inputd.mask();
   if (_input) {
+
+    unsigned ilo(0), ihi(inputd.nbinsx());
+    unsigned jlo(0), jhi(inputd.nbinsy());
+    
+    double   p(_input->info(EntryImage::Pedestal));
+    double   n   = 1./double(inputd.ppxbin()*inputd.ppybin());
+    
     switch(_routput().type()) {
     case DescEntry::TH1F:  // unnormalized
       { EntryTH1F*      o = static_cast<EntryTH1F*>(_output);
         o->clear();
-
-        unsigned ilo = unsigned((_xlo-inputd.xlow())/inputd.ppxbin());
-        unsigned ihi = unsigned((_xhi-inputd.xlow())/inputd.ppxbin());
-        unsigned jlo = unsigned((_ylo-inputd.ylow())/inputd.ppybin());
-        unsigned jhi = unsigned((_yhi-inputd.ylow())/inputd.ppybin());
-        double   p(_input->info(EntryImage::Pedestal));
-        double   n   = 1./double(inputd.ppxbin()*inputd.ppybin());
         if (mask) {
           for(unsigned j=jlo; j<jhi; j++) {
             if (!mask->row(j)) continue;
@@ -104,8 +86,8 @@ Entry&     XYHistogram::_operate(const Entry& e) const
           for(int fn=0; fn<int(inputd.nframes()); fn++) {
             int i0(ilo),i1(ihi),j0(jlo),j1(jhi);
             if (inputd.xy_bounds(i0,i1,j0,j1,fn)) {
-              for(int j=j0; j<j1; j++) {
-                for(int i=i0; i<i1; i++) {
+              for(int j=j0; j<=j1; j++) {
+                for(int i=i0; i<=i1; i++) {
                   o->addcontent(1.,(double(_input->content(i,j))-p)*n);
                 }
               }
@@ -120,13 +102,6 @@ Entry&     XYHistogram::_operate(const Entry& e) const
         break; }
     case DescEntry::ScalarRange:
       { EntryScalarRange* o = static_cast<EntryScalarRange*>(_output);
-
-        unsigned ilo = unsigned((_xlo-inputd.xlow())/inputd.ppxbin());
-        unsigned ihi = unsigned((_xhi-inputd.xlow())/inputd.ppxbin());
-        unsigned jlo = unsigned((_ylo-inputd.ylow())/inputd.ppybin());
-        unsigned jhi = unsigned((_yhi-inputd.ylow())/inputd.ppybin());
-        double   p(_input->info(EntryImage::Pedestal));
-        double   n   = 1./double(inputd.ppxbin()*inputd.ppybin());
         if (mask) {
           for(unsigned j=jlo; j<jhi; j++) {
             if (!mask->row(j)) continue;
@@ -139,8 +114,8 @@ Entry&     XYHistogram::_operate(const Entry& e) const
           for(int fn=0; fn<int(inputd.nframes()); fn++) {
             int i0(ilo),i1(ihi),j0(jlo),j1(jhi);
             if (inputd.xy_bounds(i0,i1,j0,j1,fn)) {
-              for(int j=j0; j<j1; j++) {
-                for(int i=i0; i<i1; i++) {
+              for(int j=j0; j<=j1; j++) {
+                for(int i=i0; i<=i1; i++) {
                   o->addcontent((double(_input->content(i,j))-p)*n);
                 }
               }

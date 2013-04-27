@@ -3,6 +3,7 @@
 
 #include "ami/client/AbsClient.hh"
 #include "ami/data/Cds.hh"
+#include "ami/data/EntryList.hh"
 
 class iovec;
 
@@ -25,6 +26,8 @@ namespace Ami {
     bool svc             () const;
     void process         () ;
     void tmo             () ;
+  public:
+    void request_payload (const EntryList&);
   private:
     void _checkState     (const char*);
     void _checkState     (const char*, unsigned);
@@ -32,16 +35,19 @@ namespace Ami {
     AbsClient& _client;
     unsigned   _n;
     unsigned   _remaining;
+    unsigned   _nsources;
     Cds        _cds;
+    Cds        _ocds;
     unsigned   _niovload;
     iovec*     _iovload;
     iovec*     _iovdesc;
     BSocket*   _buffer;
-    enum { Init, Connected, 
+    enum { Init, Connecting, Connected, 
            Discovering, Discovered, Configured, 
            Describing, Described, Processing } _state;
     double     _latest;
     unsigned   _current;
+    EntryList  _request;
   };
 };
 

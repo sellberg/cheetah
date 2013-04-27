@@ -5,11 +5,13 @@
 
 #include "ami/service/Task.hh"
 #include "ami/service/TaskObject.hh"
+#include "ami/service/Sockaddr.hh"
 
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
 
 using namespace Ami;
 
@@ -27,7 +29,8 @@ Poll::Poll(int timeout) :
   _ofd     (new    Fd*[Step]),
   _pfd     (new pollfd[Step]),
   _sem     (Semaphore::EMPTY),
-  _buffer  (new char[BufferSize])
+  _buffer  (new char[BufferSize]),
+  _shutdown(false)
 {
   _pfd[0].fd = _loopback->socket();
   _pfd[0].events = POLLIN | POLLERR;
@@ -51,8 +54,12 @@ void Poll::start()
 void Poll::stop()
 {
   int msg=Shutdown;
-  _loopback->write(&msg,sizeof(msg));
-  _sem.take();
+  _loopback->write(&msg,sizeof(int));
+
+  //  Why does this fail/deadlock?
+  //  _sem.take();
+  while (!_sem.take(1000))
+    _shutdown = true;
 }
 
 //
@@ -159,6 +166,12 @@ void Poll::unmanage(Fd& fd)
 
 int Poll::poll()
 {
+  socklen_t addrlen = sizeof(sockaddr_in);
+  sockaddr_in name;
+  if (::getsockname(_pfd[0].fd, (sockaddr*)&name, &addrlen) < 0) {
+    perror("  Poll::poll::getsockname");
+  }
+
   int result = 1;
   if (::poll(_pfd, _nfds, _timeout) > 0) {
     if (_pfd[0].revents & (POLLIN | POLLERR)) {
@@ -202,6 +215,7 @@ int Poll::poll()
   }
   else {
     result = processTmo();
+    if (_shutdown) result=0;
   }
   return result;
 }

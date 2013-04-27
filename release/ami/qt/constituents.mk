@@ -30,32 +30,32 @@ qt_libs += qwt/qwt
 # Note that <lib> is the name of the library, not of the file: i.e.
 # <lib> for 'libc.so' is 'c'. Low level first.
 tgtlibs_online_ami := pdsdata/xtcdata pdsdata/acqdata
-tgtlibs_online_ami += ami/service ami/data ami/server ami/client ami/amiqt
+tgtlibs_online_ami += ami/service ami/data ami/server ami/client ami/calib ami/amiqt
 tgtlibs_online_ami += $(qt_libs)
 
 datalibs := pdsdata/xtcdata pdsdata/opal1kdata pdsdata/quartzdata pdsdata/pulnixdata pdsdata/camdata pdsdata/pnccddata pdsdata/evrdata pdsdata/acqdata pdsdata/controldata pdsdata/princetondata pdsdata/ipimbdata pdsdata/encoderdata pdsdata/fccddata pdsdata/lusidata pdsdata/cspaddata pdsdata/xampsdata pdsdata/fexampdata pdsdata/gsc16aidata pdsdata/epics pdsdata/usdusbdata
 datalibs += pdsdata/timepixdata
 datalibs += pdsdata/phasicsdata
 datalibs += pdsdata/cspad2x2data
-datalibs += pdsdata/oceanopticsdata pdsdata/flidata pdsdata/andordata pdsdata/compressdata
+datalibs += pdsdata/oceanopticsdata pdsdata/flidata pdsdata/andordata pdsdata/orcadata
 
 #
 # Need all pdsdata libraries to support dynamic linking of plug-in modules
 #
 tgtlibs_offline_ami := $(datalibs) pdsdata/appdata pdsdata/anadata pdsdata/indexdata
-tgtlibs_offline_ami += ami/service ami/data ami/server ami/client ami/event ami/app ami/amiqt
+tgtlibs_offline_ami += ami/service ami/data ami/server ami/client ami/calib ami/event ami/app ami/amiqt
 tgtlibs_offline_ami += $(qt_libs)
 
 tgtlibs_blviewer := $(datalibs) pdsapp/configdb pdsapp/configdbg
-tgtlibs_blviewer += ami/service ami/data ami/server ami/client ami/amiqt
+tgtlibs_blviewer += ami/service ami/data ami/server ami/client ami/calib ami/amiqt
 tgtlibs_blviewer += $(qt_libs)
 
 tgtlibs_bldipimbclient := $(datalibs) pdsapp/configdb pdsapp/configdbg
-tgtlibs_bldipimbclient += ami/service ami/data ami/server ami/client ami/amiqt
+tgtlibs_bldipimbclient += ami/service ami/data ami/server ami/client ami/calib ami/amiqt
 tgtlibs_bldipimbclient += $(qt_libs)
 
 tgtlibs_qttest := $(datalibs)
-tgtlibs_qttest += ami/service ami/data ami/server ami/client ami/amiqt
+tgtlibs_qttest += ami/service ami/data ami/server ami/client ami/calib ami/amiqt
 tgtlibs_qttest += $(qt_libs)
 
 # List special include directories (if any) needed by exe_a as
@@ -94,6 +94,7 @@ libnames := amiqt
 libsrcs_amiqt := Status.cc Status_moc.cc
 libsrcs_amiqt += Path.cc
 libsrcs_amiqt += FeatureRegistry.cc FeatureRegistry_moc.cc
+libsrcs_amiqt += SMPRegistry.cc SMPRegistry_moc.cc
 libsrcs_amiqt += QHComboBox.cc QHComboBox_moc.cc
 libsrcs_amiqt += FeatureBox.cc FeatureBox_moc.cc
 libsrcs_amiqt += QtTree.cc QtTree_moc.cc
@@ -126,6 +127,7 @@ libsrcs_amiqt += Contour.cc
 libsrcs_amiqt += Filter.cc Filter_moc.cc
 libsrcs_amiqt += ChannelMath.cc ChannelMath_moc.cc
 libsrcs_amiqt += QtBase.cc
+libsrcs_amiqt += QtPlotCurve.cc QtPlotCurve_moc.cc
 libsrcs_amiqt += QtWaveform.cc QtTH2F.cc QtTH1F.cc QtProf.cc QtChart.cc QtImage.cc QtScan.cc QtChannelMath.cc QtEmpty.cc QtTable.cc QtTable_moc.cc
 libsrcs_amiqt += PlotFactory.cc
 libsrcs_amiqt += PlotFrame.cc PlotFrame_moc.cc
@@ -166,9 +168,11 @@ libsrcs_amiqt += ImageXYControl.cc ImageXYControl_moc.cc
 libsrcs_amiqt += ColorMaps.cc
 libsrcs_amiqt += ImageScale.cc ImageScale_moc.cc
 libsrcs_amiqt += ImageDisplay.cc ImageDisplay_moc.cc
+libsrcs_amiqt += Rect.cc RectROI.cc RectROI_moc.cc
 libsrcs_amiqt += RectangleCursors.cc RectangleCursors_moc.cc
 libsrcs_amiqt += AnnulusCursors.cc AnnulusCursors_moc.cc
 libsrcs_amiqt += ImageIntegral.cc ImageContrast.cc
+libsrcs_amiqt += ImageFunctions.cc ImageFunctions_moc.cc
 libsrcs_amiqt += ImageContourProjection.cc ImageContourProjection_moc.cc
 libsrcs_amiqt += ImageRPhiProjection.cc ImageRPhiProjection_moc.cc
 libsrcs_amiqt += ImageXYProjection.cc ImageXYProjection_moc.cc
@@ -177,6 +181,7 @@ libsrcs_amiqt += CrossHairDelta.cc CrossHairDelta_moc.cc
 libsrcs_amiqt += ImageGridScale.cc ImageGridScale_moc.cc
 libsrcs_amiqt += ImageClient.cc
 libsrcs_amiqt += CspadClient.cc CspadClient_moc.cc
+libsrcs_amiqt += FccdClient.cc FccdClient_moc.cc
 libsrcs_amiqt += EnvPlot.cc EnvPlot_moc.cc EnvTable.cc EnvTable_moc.cc
 libsrcs_amiqt += EnvPost.cc EnvOverlay.cc
 libsrcs_amiqt += PostAnalysis.cc

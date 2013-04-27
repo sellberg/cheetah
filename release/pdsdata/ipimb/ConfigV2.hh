@@ -30,7 +30,8 @@ namespace Pds {
                 );
       uint64_t triggerCounter() const;
       uint64_t serialID() const;
-      uint16_t chargeAmpRange() const;
+      uint16_t chargeAmpRange() const;               // encoded channel feedback capacitor values
+      CapacitorValue capacitorValue(unsigned) const; // decoded
       uint16_t calibrationRange() const;
       uint32_t resetLength() const;
       uint16_t resetDelay() const;

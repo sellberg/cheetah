@@ -1,10 +1,12 @@
-/* $Id: main.cc,v 1.111 2012/06/07 16:08:33 weaver Exp $ */
+/* $Id: main.cc,v 1.116 2013/03/18 01:44:38 weaver Exp $ */
 #include <stdio.h>
 #include <math.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/stat.h>
 
+/*
+ * ROOT DEPENDENT
+ */
 //#include <TROOT.h>
 //#include <TApplication.h>
 //#include <TFile.h>
@@ -48,6 +50,7 @@
 #include "pdsdata/pnCCD/ConfigV1.hh"
 #include "pdsdata/pnCCD/FrameV1.hh"
 #include "pdsdata/control/ConfigV1.hh"
+#include "pdsdata/control/ConfigV2.hh"
 #include "pdsdata/control/PVControl.hh"
 #include "pdsdata/control/PVMonitor.hh"
 #include "pdsdata/evr/ConfigV1.hh"
@@ -80,9 +83,12 @@
 #include "pdsdata/cspad/ElementHeader.hh"
 #include "pdsdata/cspad/MiniElementV1.hh"
 #include "pdsdata/cspad2x2/ConfigV1.hh"
+#include "pdsdata/cspad2x2/ConfigV2.hh"
 #include "pdsdata/cspad2x2/ElementV1.hh"
 #include "pdsdata/gsc16ai/ConfigV1.hh"
 #include "pdsdata/gsc16ai/DataV1.hh"
+#include "pdsdata/fexamp/ConfigV1.hh"
+#include "pdsdata/fexamp/ElementV1.hh"
 #include "pdsdata/timepix/ConfigV1.hh"
 #include "pdsdata/timepix/ConfigV2.hh"
 #include "pdsdata/timepix/DataV1.hh"
@@ -101,7 +107,7 @@ using std::vector;
 using std::string;
 using std::map;
 using std::queue;
-//using std::auto_ptr;
+using std::auto_ptr;
 using namespace Pds;
 using namespace Ana;
 
@@ -153,7 +159,7 @@ class EventStore : public XtcIterator {
   };
 
 public:
-  EventStore(const char* reorder_file=0, int iDebugLevel=false) : _iDebugLevel(iDebugLevel), _shift_def(0), _complete(false)
+  EventStore(const char* reorder_file=0, int iDebugLevel=false) : _iDebugLevel(iDebugLevel), _control_src(Pds::Level::Control,0,0), _shift_def(0), _complete(false)
   {
     if (reorder_file) {
       FILE* f = fopen(reorder_file,"r");
@@ -250,8 +256,11 @@ public:
   //
   //  Find the control data
   //
-  const ControlData::ConfigV1& control_data() const 
-  { return *reinterpret_cast<const ControlData::ConfigV1*>(&_control_buffer[0]); }
+  const Xtc* control_data() const {
+    const Xtc* xtc = _lookup(_control_src, Pds::TypeId(Pds::TypeId::Id_ControlConfig,1), _cmaps);
+    if (xtc) return xtc;
+    return _lookup(_control_src, Pds::TypeId(Pds::TypeId::Id_ControlConfig,2), _cmaps);
+  }
   int   control_index(const char* pvName, int arrayIndex) const { 
     string pvHashKey = GenerateCtrlPvHashKey(pvName, arrayIndex);
     map<string,int>::const_iterator it=_control_name_map.find( pvHashKey );
@@ -431,29 +440,47 @@ private:
   }
   void _reset_control()
   {
-    _control_buffer.resize(sizeof(ControlData::ConfigV1));
-    *new (&_control_buffer[0]) ControlData::ConfigV1(ControlData::ConfigV1::Default);
-
     _control_name_map.clear();
     _monitor_name_map.clear();
   }
   void _store_control(const Xtc* xtc)
   {
-    const ControlData::ConfigV1& config = *reinterpret_cast<const ControlData::ConfigV1*>(xtc->payload());
-    _control_buffer.resize( config.size() );
-    *new ( &_control_buffer[0] ) ControlData::ConfigV1(config);
-    
-    for(unsigned int iPvControl=0; iPvControl < config.npvControls(); iPvControl++) 
-      {
-        const Pds::ControlData::PVControl& pvControlCur = config.pvControl(iPvControl);      
-        _control_name_map[ GenerateCtrlPvHashKey( pvControlCur.name(), pvControlCur.index() ) ] = iPvControl;
-      }
+    _control_src = static_cast<const Pds::ProcInfo&>(xtc->src);
+    _store(xtc->src, xtc->contains, xtc);
 
-    for(unsigned int iPvMonitor=0; iPvMonitor < config.npvMonitors(); iPvMonitor++) 
-      {      
-        const Pds::ControlData::PVMonitor& pvMonitorCur = config.pvMonitor(iPvMonitor);
-        _monitor_name_map[ GenerateCtrlPvHashKey( pvMonitorCur.name(), pvMonitorCur.index() ) ] = iPvMonitor;
-      }
+    switch( xtc->contains.version() ) {
+    case 1:
+      { const ControlData::ConfigV1& config = *reinterpret_cast<const ControlData::ConfigV1*>(xtc->payload());
+        for(unsigned int iPvControl=0; iPvControl < config.npvControls(); iPvControl++) 
+          {
+            const Pds::ControlData::PVControl& pvControlCur = config.pvControl(iPvControl);      
+            _control_name_map[ GenerateCtrlPvHashKey( pvControlCur.name(), pvControlCur.index() ) ] = iPvControl;
+          }
+        
+        for(unsigned int iPvMonitor=0; iPvMonitor < config.npvMonitors(); iPvMonitor++) 
+          {      
+            const Pds::ControlData::PVMonitor& pvMonitorCur = config.pvMonitor(iPvMonitor);
+            _monitor_name_map[ GenerateCtrlPvHashKey( pvMonitorCur.name(), pvMonitorCur.index() ) ] = iPvMonitor;
+          }
+        break; }
+    case 2:
+      { const ControlData::ConfigV2& config = *reinterpret_cast<const ControlData::ConfigV2*>(xtc->payload());
+        for(unsigned int iPvControl=0; iPvControl < config.npvControls(); iPvControl++) 
+          {
+            const Pds::ControlData::PVControl& pvControlCur = config.pvControl(iPvControl);      
+            _control_name_map[ GenerateCtrlPvHashKey( pvControlCur.name(), pvControlCur.index() ) ] = iPvControl;
+          }
+        
+        for(unsigned int iPvMonitor=0; iPvMonitor < config.npvMonitors(); iPvMonitor++) 
+          {      
+            const Pds::ControlData::PVMonitor& pvMonitorCur = config.pvMonitor(iPvMonitor);
+            _monitor_name_map[ GenerateCtrlPvHashKey( pvMonitorCur.name(), pvMonitorCur.index() ) ] = iPvMonitor;
+          }
+        break; }
+    default:
+      { printf("store_control: unable to handle version %d\n", xtc->contains.version());
+        break; }
+    }
   }
   void _shift()
   {
@@ -531,7 +558,7 @@ private:
   vector<const EpicsPvHeader*> _repics;         // reference to epics data
   vector<Epics::PvConfigV1>    _epics_config;
   // calib data
-  vector<unsigned char> _control_buffer;
+  Pds::ProcInfo         _control_src;
   map<string, int>      _control_name_map;
   map<string, int>      _monitor_name_map;
   // processed data
@@ -591,15 +618,17 @@ void fillConstFrac(double* t, double* v, unsigned numSamples, float baseline,
   }
 }
 
-/*void fillConstFrac(double* t, double* v, unsigned numSamples, float baseline,
-                   float thresh, TH1* hist) {
-  double edge[100];
-  int n;
-  fillConstFrac(t,v,numSamples,baseline,thresh,edge,n,100);
-  for(int i=0; i<n; i++)
-    hist->Fill(edge[i],1.0);
-}
-*/
+/*
+ * ROOT DEPENDENT
+ */
+//void fillConstFrac(double* t, double* v, unsigned numSamples, float baseline,
+//                   float thresh, TH1* hist) {
+//  double edge[100];
+//  int n;
+//  fillConstFrac(t,v,numSamples,baseline,thresh,edge,n,100);
+//  for(int i=0; i<n; i++)
+//    hist->Fill(edge[i],1.0);
+//}
 
 /* 
  * Time Data
@@ -843,6 +872,17 @@ int getIpmFexConfig   (DetInfo::Detector det, int iDevId,
 }
 
 
+int getFeboConfig (DetInfo::Detector det, Fexamp::ConfigV1& cfg)
+{
+  const Xtc* xtc = _estore->lookup_cfg( DetInfo(0,det,0,DetInfo::Fexamp,0), 
+                                        TypeId(TypeId::Id_FexampConfig,1) );
+  if (xtc && xtc->damage.value()==0) {
+    //    cfg = *reinterpret_cast<const Fexamp::ConfigV1*>(xtc->payload());
+    cfg = *reinterpret_cast<Fexamp::ConfigV1*>(xtc->payload());
+  }
+  return xtc ? xtc->damage.value() : 2;
+}
+
 int getCspadConfig (DetInfo::Detector det, CsPad::ConfigV1& cfg)
 {
   const Xtc* xtc = _estore->lookup_cfg( DetInfo(0,det,0,DetInfo::Cspad,0), 
@@ -874,7 +914,6 @@ int getCspadConfig (DetInfo::Detector det, CsPad::ConfigV3& cfg)
   }
   return xtc ? xtc->damage.value() : 2;
 }
-
 
 int getCspadConfig (DetInfo::Detector det, CsPad::ConfigV4& cfg)
 {
@@ -908,6 +947,16 @@ int getCspad2x2Config (DetInfo::Detector det, int iDevId, CsPad2x2::ConfigV1& cf
                                         TypeId(TypeId::Id_Cspad2x2Config,1) );
   if (xtc && xtc->damage.value()==0) {
     cfg = *reinterpret_cast<const CsPad2x2::ConfigV1*>(xtc->payload());
+  }
+  return xtc ? xtc->damage.value() : 2;
+}
+
+int getCspad2x2Config (DetInfo::Detector det, int iDevId, CsPad2x2::ConfigV2& cfg)
+{
+  const Xtc* xtc = _estore->lookup_cfg( DetInfo(0,det,0,DetInfo::Cspad2x2,iDevId), 
+                                        TypeId(TypeId::Id_Cspad2x2Config,2) );
+  if (xtc && xtc->damage.value()==0) {
+    cfg = *reinterpret_cast<const CsPad2x2::ConfigV2*>(xtc->payload());
   }
   return xtc ? xtc->damage.value() : 2;
 }
@@ -1794,6 +1843,17 @@ int getIpmFexValue   (DetInfo::Detector det, int iDevId,
   return getIpmFexValue(det, 0, iDevId, channels, sum, xpos, ypos); 
 }
 
+int getFeboData (DetInfo::Detector det, Fexamp::ElementV1*& el)
+{
+  const Xtc* xtc = _estore->lookup_evt(DetInfo(0,det,0,DetInfo::Fexamp,0),
+				       TypeId(TypeId::Id_FexampElement,1));
+  if (xtc && xtc->damage.value()==0) {
+    el = reinterpret_cast<Pds::Fexamp::ElementV1*>(xtc->payload());
+  }
+
+  return xtc ? xtc->damage.value() : 2;
+}
+
 int getCspadData  (DetInfo::Detector det, CsPad::ElementIterator& iter)
 {
   const Xtc* xtc = _estore->lookup_evt( DetInfo(0,det,0,DetInfo::Cspad,0),
@@ -1887,16 +1947,22 @@ int getCspad2x2Data (DetInfo::Detector det, int iDevId, CsPad::ElementIterator& 
   { const Xtc* cfg = _estore->lookup_cfg( DetInfo(0,det,0,DetInfo::Cspad2x2,iDevId),
                                           TypeId(TypeId::Id_CspadConfig,3) );
     if (!(cfg && cfg->damage.value()==0)) {
-      cfg = _estore->lookup_cfg( DetInfo(0,det,0,DetInfo::Cspad2x2,0),
-         TypeId(TypeId::Id_Cspad2x2Config,1) );
+      cfg = _estore->lookup_cfg( DetInfo(0,det,0,DetInfo::Cspad2x2,iDevId),
+				 TypeId(TypeId::Id_Cspad2x2Config,1) );
       newFlag = 1;
-    } else {
+      
+      if (!(cfg && cfg->damage.value()==0)) {
+	cfg = _estore->lookup_cfg( DetInfo(0,det,0,DetInfo::Cspad2x2,iDevId),
+				   TypeId(TypeId::Id_Cspad2x2Config,2) );
+	newFlag = 2;
+      }
+    }
+    if (newFlag==0) {
       //  Temporarily fix a bad configuration parameter    
       reinterpret_cast<uint32_t*>(cfg->payload())[20] = 3;
     }
 
     if (cfg && cfg->damage.value()==0) {
-      
       const Xtc* nxtc = _estore->buffer( DetInfo(0,det,0,DetInfo::Cspad2x2,iDevId), 
                                          TypeId(TypeId::Id_CspadElement,2),
                                          sizeof(CsPad::ElementHeader)+2*sizeof(CsPad::Section));
@@ -1916,7 +1982,7 @@ int getCspad2x2Data (DetInfo::Detector det, int iDevId, CsPad::ElementIterator& 
       if (newFlag==0) {
   iter = CsPad::ElementIterator(*reinterpret_cast<CsPad::ConfigV3*>(cfg->payload()),
               *nxtc);
-      } else {
+      } else if (newFlag==1) {
   CsPad2x2::ConfigV1* tmpCfgV1 = reinterpret_cast<CsPad2x2::ConfigV1*>(cfg->payload());
   const CsPad::ConfigV3 tmpCfgV3(0,
                0,
@@ -1929,6 +1995,21 @@ int getCspad2x2Data (DetInfo::Detector det, int iDevId, CsPad::ElementIterator& 
                tmpCfgV1->asicMask(),
                1,
                tmpCfgV1->roiMask(0));
+  iter = CsPad::ElementIterator(tmpCfgV3,
+              *nxtc);
+      } else {
+  CsPad2x2::ConfigV2* tmpCfgV2 = reinterpret_cast<CsPad2x2::ConfigV2*>(cfg->payload());
+  const CsPad::ConfigV3 tmpCfgV3(0,
+               0,
+               tmpCfgV2->inactiveRunMode(),
+               tmpCfgV2->activeRunMode(),
+               tmpCfgV2->tdi(),
+               tmpCfgV2->payloadSize(), 
+               tmpCfgV2->badAsicMask(),// 0
+               tmpCfgV2->badAsicMask(),// 1
+               tmpCfgV2->asicMask(),
+               1,
+               tmpCfgV2->roiMask(0));
   iter = CsPad::ElementIterator(tmpCfgV3,
               *nxtc);
       }
@@ -2291,18 +2372,6 @@ int getPnCcdValue( int deviceId, unsigned char*& image, int& width, int& height 
 //
 // Returns: Zero on success, nonzero on error.
 //
-// JAS: Gives linking error in the cheetah:
-/*
- myana/main.o: In function `getGsc16aiTimestamp(Pds::DetInfo::Detector, int, int, unsigned short&, unsigned short&, unsigned short&)':
- /reg/neh/home3/sellberg/source/cheetah/myana/main.cc:2336: undefined reference to `Pds::Gsc16ai::DataV1::timestamp(int) const'
- /reg/neh/home3/sellberg/source/cheetah/myana/main.cc:2337: undefined reference to `Pds::Gsc16ai::DataV1::timestamp(int) const'
- /reg/neh/home3/sellberg/source/cheetah/myana/main.cc:2338: undefined reference to `Pds::Gsc16ai::DataV1::timestamp(int) const'
- myana/main.o: In function `getGsc16aiValue(Pds::DetInfo::Detector, int, int, unsigned short&, double&, int)':
- /reg/neh/home3/sellberg/source/cheetah/myana/main.cc:2316: undefined reference to `Pds::Gsc16ai::DataV1::channelValue(int) const'
- collect2: ld returned 1 exit status
-*/
-// FUNCTIONS MARKED OUT
-/*
 int getGsc16aiValue(DetInfo::Detector det, int iDetId, int iDevId,
                    uint16_t& channelValue, double& channelVoltage, int chan)
 {
@@ -2351,8 +2420,6 @@ int getGsc16aiTimestamp(Pds::DetInfo::Detector det, int iDetId, int iDevId,
   }
   return xtc ? xtc->damage.value() : 2;
 }
-*/
-
 
 /*
  * getTimepixValue - retrieve Timepix data
@@ -2426,24 +2493,50 @@ static string GenerateCtrlPvHashKey( const char* pvName, int arrayIndex)
 
 int getControlPvNumber()
 {
-  return _estore->control_data().npvControls();
+  const Xtc* xtc = _estore->control_data();
+  switch(xtc->contains.version()) {
+  case 1:
+    { const ControlData::ConfigV1& config = *reinterpret_cast<const ControlData::ConfigV1*>(xtc->payload());
+      return config.npvControls(); }
+  case 2:
+    { const ControlData::ConfigV2& config = *reinterpret_cast<const ControlData::ConfigV2*>(xtc->payload());
+      return config.npvControls(); }
+  default:
+    return 0;
+  }
 }
 
 int getControlPvName( int pvId, const char*& pvName, int& arrayIndex )
 {
-  const ControlData::ConfigV1& config = _estore->control_data();
-  if ( pvId < 0 || pvId >= (int) config.npvControls() ) // no such pvId
-    return 2;
-    
-  const ControlData::PVControl& pvControlCur = config.pvControl(pvId);
-  pvName = pvControlCur.name();
-
-  if (pvControlCur.array())
-    arrayIndex = pvControlCur.index();
-  else
+#define ExtractName                                                     \
+  if ( pvId < 0 || pvId >= (int) config.npvControls() )                 \
+    return 2;                                                           \
+                                                                        \
+  const ControlData::PVControl& pvControlCur = config.pvControl(pvId);  \
+  pvName = pvControlCur.name();                                         \
+                                                                        \
+  if (pvControlCur.array())                                             \
+    arrayIndex = pvControlCur.index();                                  \
+  else                                                                  \
     arrayIndex = 0;
-    
+
+  const Xtc* xtc = _estore->control_data();
+  switch(xtc->contains.version()) {
+  case 1:
+    { const ControlData::ConfigV1& config = *reinterpret_cast<const ControlData::ConfigV1*>(xtc->payload());
+      ExtractName
+      break; }
+  case 2:
+    { const ControlData::ConfigV2& config = *reinterpret_cast<const ControlData::ConfigV2*>(xtc->payload());
+      ExtractName
+      break; }
+  default:
+    { printf("No control PV info found\n");
+      return 3; }
+  }
+
   return 0;
+#undef ExtractName
 }
 
 int getControlValue(const char* pvName, int arrayIndex, double& value )
@@ -2452,32 +2545,73 @@ int getControlValue(const char* pvName, int arrayIndex, double& value )
   if (pvIndex<0)
     return 1;
 
-  const ControlData::PVControl& pvControlCur = _estore->control_data().pvControl(pvIndex);
-  value = pvControlCur.value();
-    
+  const Xtc* xtc = _estore->control_data();
+  switch(xtc->contains.version()) {
+  case 1:
+    { const ControlData::ConfigV1* config = reinterpret_cast<const ControlData::ConfigV1*>(xtc->payload());
+      const ControlData::PVControl& pvControlCur = config->pvControl(pvIndex);
+      value = pvControlCur.value();
+      break;
+    }
+  case 2:
+    { const ControlData::ConfigV2* config = reinterpret_cast<const ControlData::ConfigV2*>(xtc->payload());
+      const ControlData::PVControl& pvControlCur = config->pvControl(pvIndex);
+      value = pvControlCur.value();
+      break;
+    }
+  default:
+    return 3;
+  }
+
   return 0;
 }
 
 int getMonitorPvNumber()
 {
-  return _estore->control_data().npvMonitors();
+  const Xtc* xtc = _estore->control_data();
+  switch(xtc->contains.version()) {
+  case 1:
+    { const ControlData::ConfigV1& config = *reinterpret_cast<const ControlData::ConfigV1*>(xtc->payload());
+      return config.npvMonitors(); }
+  case 2:
+    { const ControlData::ConfigV2& config = *reinterpret_cast<const ControlData::ConfigV2*>(xtc->payload());
+      return config.npvMonitors(); }
+  default:
+    return 0;
+  }
 }
 
 int getMonitorPvName( int pvId, const char*& pvName, int& arrayIndex )
 {
-  const ControlData::ConfigV1& config = _estore->control_data();
-  if ( pvId < 0 || pvId >= (int) config.npvMonitors() ) // no such pvId
-    return 2;
-    
-  const ControlData::PVMonitor& pvMonitorCur = config.pvMonitor(pvId);
-  pvName = pvMonitorCur.name();
-
-  if (pvMonitorCur.array())
-    arrayIndex = pvMonitorCur.index();
-  else
+#define ExtractName                                                     \
+  if ( pvId < 0 || pvId >= (int) config.npvMonitors() )                 \
+    return 2;                                                           \
+                                                                        \
+  const ControlData::PVMonitor& pvControlCur = config.pvMonitor(pvId);  \
+  pvName = pvControlCur.name();                                         \
+                                                                        \
+  if (pvControlCur.array())                                             \
+    arrayIndex = pvControlCur.index();                                  \
+  else                                                                  \
     arrayIndex = 0;
-    
+
+  const Xtc* xtc = _estore->control_data();
+  switch(xtc->contains.version()) {
+  case 1:
+    { const ControlData::ConfigV1& config = *reinterpret_cast<const ControlData::ConfigV1*>(xtc->payload());
+      ExtractName
+      break; }
+  case 2:
+    { const ControlData::ConfigV2& config = *reinterpret_cast<const ControlData::ConfigV2*>(xtc->payload());
+      ExtractName
+      break; }
+  default:
+    { printf("No control PV info found\n");
+      return 3; }
+  }
+
   return 0;
+#undef ExtractName
 }
 
 int getMonitorValue(const char* pvName, int arrayIndex, double& hilimit, double& lolimit )
@@ -2486,11 +2620,23 @@ int getMonitorValue(const char* pvName, int arrayIndex, double& hilimit, double&
   if (pvIndex<0)
     return 1;
 
-  const ControlData::PVMonitor& pvMonitorCur = _estore->control_data().pvMonitor(pvIndex);
-          
-  hilimit = pvMonitorCur.hiValue();
-  lolimit = pvMonitorCur.loValue();
-    
+  const Xtc* xtc = _estore->control_data();
+  switch(xtc->contains.version()) {
+  case 1:
+    { const ControlData::ConfigV1* config = reinterpret_cast<const ControlData::ConfigV1*>(xtc->payload());
+      const ControlData::PVMonitor& pvMonitorCur = config->pvMonitor(pvIndex);
+      hilimit = pvMonitorCur.hiValue();
+      lolimit = pvMonitorCur.loValue();
+      break; }
+  case 2:
+    { const ControlData::ConfigV2* config = reinterpret_cast<const ControlData::ConfigV2*>(xtc->payload());
+      const ControlData::PVMonitor& pvMonitorCur = config->pvMonitor(pvIndex);
+      hilimit = pvMonitorCur.hiValue();
+      lolimit = pvMonitorCur.loValue();
+      break; }
+  default:
+    { return 3; }
+  }
   return 0;
 }
 
@@ -3244,9 +3390,12 @@ int main(int argc, char *argv[])
   else if (runPrefix)
     makeoutfilename(runPrefix, outfile);
 
-//  printf("Opening ROOT output file %s\n", outfile);
-//  TFile *out;
-//  out = new TFile(outfile, "RECREATE");
+  /*
+   * ROOT DEPENDENT
+   */
+  //printf("Opening ROOT output file %s\n", outfile);
+  //TFile *out;
+  //out = new TFile(outfile, "RECREATE");
 
   _split = new SplitEventQ(split_depth);
 
@@ -3338,7 +3487,7 @@ int main(int argc, char *argv[])
       /*
        * Find out all xtc files within this run
        */       
-      for (int iSliceSerial = 0;;++iSliceSerial)
+      for (int iSliceSerial = 0; iSliceSerial < 10;++iSliceSerial)
       {
         int iChunkSerial = 0;
         while (true)
@@ -3356,10 +3505,7 @@ int main(int argc, char *argv[])
           all_files.push_back(sFnBuf);
           ++iChunkSerial;
         }
-        
-        if (iChunkSerial == 0)
-          break;
-      } // for (int iSliceSerial = 0;;++iSliceSerial)
+      } // for (int iSliceSerial = 0; iSliceSerial < 10;++iSliceSerial)
         
       all_files.sort();
 
@@ -3389,8 +3535,11 @@ int main(int argc, char *argv[])
 
   delete _split;
 
-//  out->Write();
-//  out->Close();
+  /*
+   * ROOT DEPENDENT
+   */
+  //out->Write();
+  //out->Close();
 
   if (_writer)
     delete _writer;

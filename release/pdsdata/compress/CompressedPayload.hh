@@ -8,8 +8,9 @@ namespace Pds {
   class CompressedPayload {
   public:
     enum Engine {
-      None = 0,
-      Hist16 = 1
+      None   = 0,
+      Hist16 = 1,
+      HistN  = 2,
     };
 
     CompressedPayload();

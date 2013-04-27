@@ -1,6 +1,5 @@
 #include "AnalysisFactory.hh"
 
-#include "ami/app/SummaryAnalysis.hh"
 #include "ami/app/EventFilter.hh"
 #include "ami/data/Analysis.hh"
 #include "ami/data/UserModule.hh"
@@ -27,16 +26,26 @@ AnalysisFactory::AnalysisFactory(std::vector<FeatureCache*>&  cache,
   _ocds      ("Hidden"),
   _features  (cache),
   _user      (user),
+  _user_cds  (user.size()),
   _filter    (filter),
   _waitingForConfigure(false)
 {
   pthread_mutex_init(&_mutex, NULL);
   pthread_cond_init(&_condition, NULL);
   EntryFactory::source(*_features[PostAnalysis]);
+
+  unsigned i=0;
+  for(UList::iterator it=user.begin(); it!=user.end(); it++,i++) {
+    _user_cds[i] = 0;
+    (*it)->driver = this;
+  }
 }
 
 AnalysisFactory::~AnalysisFactory()
 {
+  for(unsigned i=0; i<_user_cds.size(); i++)
+    if (_user_cds[i])
+      delete _user_cds[i];
 }
 
 std::vector<FeatureCache*>& AnalysisFactory::features() { return _features; }
@@ -107,23 +116,25 @@ void AnalysisFactory::configure(unsigned       id,
   while(payload < end) {
     const ConfigureRequest& req = *reinterpret_cast<const ConfigureRequest*>(payload);
     
-    if (req.size()==0 || req.source() == ConfigureRequest::Summary) {
+    if (req.size()==0) {
       const uint32_t* p = reinterpret_cast<const uint32_t*>(&req);
       printf("AnalysisFactory::configure received corrupt request from id %d\n [%08x %08x %08x %08x %08x %08x]\n",
              id, p[0], p[1], p[2], p[3], p[4], p[5] );
       break;
     }
 
-    if (req.source() == ConfigureRequest::Summary) {
-      SummaryAnalysis::instance().clear();
-      SummaryAnalysis::instance().create(cds);
-    }
-    else if (req.source() == ConfigureRequest::User) {
+    if (req.source() == ConfigureRequest::User) {
       int i=0;
       for(UList::iterator it=_user.begin(); it!=_user.end(); it++,i++) {
         if (req.input() == i) {
-          (*it)->clear();
-          (*it)->create(cds);
+	  _srv.register_key(i,id);
+          Cds* ucds = _user_cds[i];
+          if (ucds==0) {
+            _user_cds[i] = ucds = new Cds((*it)->name());
+            (*it)->clear();
+            (*it)->create(*ucds);
+          }
+          ucds->mirror(cds);
           break;
         }
       }
@@ -180,9 +191,10 @@ void AnalysisFactory::configure(unsigned       id,
                                      cds, *_features[req.scalars()], p);
           _analyses.push_back(a);
 #ifdef DBUG
-          printf("Created analysis for %s [%d]\n",
+          printf("Created analysis for %s [%d] features %d\n",
                  a->output().name(),
-                 a->output().signature());
+                 a->output().signature(),
+		 req.scalars());
 #endif
         }
       }
@@ -232,7 +244,6 @@ void AnalysisFactory::configure(unsigned       id,
 void AnalysisFactory::analyze  ()
 {
   pthread_mutex_lock(&_mutex);
-  SummaryAnalysis::instance().analyze();
   for(AnList::iterator it=_analyses.begin(); it!=_analyses.end(); it++) {
     (*it)->analyze();
   }
@@ -256,4 +267,15 @@ void AnalysisFactory::remove(unsigned id)
   }
   _analyses = newlist;
   pthread_mutex_unlock(&_mutex);
+}
+
+void AnalysisFactory::recreate(UserModule* user)
+{
+  int i=0;
+  for(UList::iterator it=_user.begin(); it!=_user.end(); it++,i++)
+    if (user == *it) {
+      _user_cds[i] = 0;
+      _srv.discover_key(i);
+      break;
+    }
 }

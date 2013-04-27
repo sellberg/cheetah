@@ -63,8 +63,9 @@ namespace Ami {
         Message msg(0,Message::NoOp);
         if (_skt->read(&msg,sizeof(msg))==sizeof(msg))
           if (msg.type()==Message::Hello) {
-            printf("Hello from socket %d\n",
-		   _skt->socket());
+#ifdef DBUG
+	    printf("Hello from socket %d\n", _skt->socket());
+#endif
             _found = true;
           }
       }
@@ -99,14 +100,20 @@ namespace Ami {
     void routine()
     {
       if (_skt==0) {
-        sleep(1);
         TSocket* skt = new TSocket;
         try {
           skt->connect(_ins);
           _skt = skt;
+#ifdef DBUG
+	  printf("Proxy online\n");
+#endif
         }
         catch(Event& e) {
+#ifdef DBUG
+	  printf("ProxyConnect failed\n");
+#endif
           delete skt;
+	  sleep(1);
         }
       }
       else {
@@ -119,13 +126,17 @@ namespace Ami {
           int len = _skt->read(&msg,sizeof(msg));
           if (len==sizeof(msg)) {
             if (msg.type()==Message::Hello) {
+#ifdef DBUG
               printf("Hello from socket %d\n",
                      _skt->socket());
+#endif
               _found = true;
             }
           }
           else if (len<=0) {
+#ifdef DBUG
             printf("Proxy offline\n");
+#endif
             delete _skt;
             _skt = 0;
           }
@@ -196,26 +207,29 @@ ClientManager::ClientManager(unsigned   interface,
 {
   bool mcast = Ins::is_multicast(serverGroup);
 
+#ifdef DBUG
   printf("CM int %x grp %x mcast %c poll %p\n", 
 	 interface, serverGroup,
 	 mcast ? 'T':'F',
          _poll);
+#endif
 
   if (mcast) {
     VClientSocket* so = new VClientSocket;
     so->set_dst(_server, interface);
     _connect = so;
-  }
-  else {
-    // Connect to a proxy
-    TSocket* so = new TSocket;
-    so->connect(_server);
-    _connect = so;
-  }
-
-  if (mcast)
     _reconn = new ServerConnect(*this, new VServerSocket(_server, interface));
+  }
   else {
+    TSocket* so = new TSocket;
+    _connect = 0;
+    try {
+      so->connect(_server);
+      _connect = so;
+    }
+    catch(Event& e) {
+      delete so;
+    }
     _reconn = new ProxyConnect(*this, _connect, _server);
   }
 
@@ -244,6 +258,7 @@ void ClientManager::request_payload()
 void ClientManager::request_payload(const EntryList& req)
 {
   if (_state == Connected) {
+    _client.request_payload(req);
     _request = Message(_request.id()+1,Message::PayloadReq,req);
     _poll->bcast_out(reinterpret_cast<const char*>(&_request),
 		     sizeof(_request));
@@ -438,6 +453,9 @@ int ClientManager::handle_client_io(ClientSocket& socket)
 
 void ClientManager::forward(const Message& request)
 {
+  if (request.type() == Message::PayloadReq)
+    _client.request_payload(request.list());
+
   _request = request;
   _poll->bcast_out(reinterpret_cast<const char*>(&request),
                    sizeof(request));

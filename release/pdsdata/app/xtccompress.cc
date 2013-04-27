@@ -12,6 +12,8 @@
 #include "pdsdata/cspad/ElementV2.hh"
 #include "pdsdata/compress/Cspad_ElementV2.hh"
 #include "pdsdata/cspad/ElementIterator.hh"
+#include "pdsdata/compress/Hist16Engine.hh"
+#include "pdsdata/compress/HistNEngine.hh"
 
 #include "pdsdata/xtc/Dgram.hh"
 #include "pdsdata/xtc/XtcFileIterator.hh"
@@ -31,24 +33,54 @@
 #include <map>
 using std::map;
 
-#include "xtccompress_test.icc"
+static Pds::CompressedPayload::Engine _engine = Pds::CompressedPayload::None;
+
+namespace Pds {
+  //
+  //  A key for std::map lookup of an Xtc
+  //
+  class XtcMapKey {
+  public:
+    XtcMapKey(const Xtc& xtc) :
+      _level(xtc.src.level()),
+      _phy  (xtc.src.phy()),
+      _t    (xtc.contains) {}
+    XtcMapKey(const Xtc& xtc, TypeId t) :
+      _level(xtc.src.level()),
+      _phy  (xtc.src.phy()),
+      _t    (t) {}
+  public:
+    bool operator<(const XtcMapKey& o) const
+    {
+      if (_level != o._level) return _level < o._level;
+      if (_phy   != o._phy  ) return _phy   < o._phy ;
+      return _t.value() < o._t.value();
+    }
+  private:
+    unsigned _level;
+    unsigned _phy;
+    TypeId   _t;
+  };
+};
 
 using namespace Pds;
 
-using Pds::Camera::FrameCompressor;
-
+//
+//  An Xtc iterator to compress or uncompress camera images.
+//  The resulting Xtc structure maintains 32-bit alignment.
+//  If the compression algorithms themselves maintain 32-bit alignment,
+//    then these steps aren't necessary.
+//
 class myIter {
 public:
   enum Status {Stop, Continue};
   myIter(bool extract) : _extract(extract), _aligned(true), _pwrite(0),
                          _outbuf(new char[0x1000000]),
-                         _outsz (0x1000000),
-                         _frameCmp(new FrameCompressor)
+                         _outsz (0x1000000)
   {
   }
   ~myIter() 
   {
-    delete _frameCmp;
     delete[] _outbuf;
   }  
 private:
@@ -155,7 +187,7 @@ private:
           switch (xtc->contains.version()) {
           case 1: {
             const Camera::FrameV1& pframe = *reinterpret_cast<const Camera::FrameV1*>(xtc->payload());
-            if (_compress(xtc, pframe, CompressedPayload::None))
+            if (_compress(xtc, pframe))
               return;
             break;
           }
@@ -170,7 +202,7 @@ private:
       case (TypeId::Id_CspadElement) : {
         if (!xtc->damage.value()) {
           CsPad::ElementIterator* iter = _lookup_iterator(xtc);
-          if (_compress(xtc, iter, CompressedPayload::Hist16))
+          if (_compress(xtc, iter))
             return;
         }
         break;
@@ -248,16 +280,8 @@ private:
   //  Compress Camera::FrameV1
   //
   bool _compress(const Xtc*                xtc,
-                 const Camera::FrameV1&    frame,
-                 CompressedPayload::Engine engine)
+                 const Camera::FrameV1&    frame)
   {
-    const CompressedPayload* pd = _compress(engine,
-                                            frame.data(), 
-                                            frame.data_size());
-
-    if (!pd) 
-      return false;
-
     // Copy the xtc header
     uint32_t* pwrite = _pwrite;
     { 
@@ -268,11 +292,22 @@ private:
     }
     
     _align_unlock();
-    
+
     Camera::CompressedFrameV1 cframe(frame);
     _uwrite(&cframe, sizeof(cframe)-sizeof(CompressedPayload));
 
-    _uwrite(pd, sizeof(*pd)+pd->csize());
+    const CompressedPayload* pd = _compress(_engine,
+                                            frame.data(), 
+                                            frame.data_size(),
+                                            frame.depth_bytes(),
+                                            _upwrite);
+    
+    if (!pd) {
+      _pwrite = pwrite;
+      return false;
+    }
+
+    _upwrite += sizeof(*pd)+pd->csize();
 
     _align_lock();
 
@@ -296,25 +331,19 @@ private:
       _write(&nxtc, sizeof(Xtc));
     }
 
-    void* outbuf;
-    _decompress(frame.pd(), outbuf);
-
-    if (!outbuf)
-      return false;
-
-#if 1
     Camera::FrameV1 cframe(frame.width (),
 			   frame.height(),
 			   frame.depth (),
 			   frame.offset());
     _write(&cframe, sizeof(cframe));
-#else    
-    new (_new(sizeof(Camera::FrameV1))) Camera::FrameV1(frame.width (),
-							frame.height(),
-							frame.depth (),
-							frame.offset());
-#endif
-    _write(outbuf, frame.pd().dsize());
+
+    if (frame.pd().uncompress(_pwrite)) {
+      _pwrite += frame.pd().dsize()>>2;
+    }
+    else {
+      _pwrite = pwrite;
+      return false;
+    }
 
     //  Update the extent of the container
     reinterpret_cast<Xtc*>(pwrite)->extent = (_pwrite-pwrite)*sizeof(uint32_t);
@@ -322,8 +351,7 @@ private:
   }
 
   bool _compress(const Xtc* xtc, 
-                 CsPad::ElementIterator* iter,
-                 CompressedPayload::Engine engine) 
+                 CsPad::ElementIterator* iter)
   {
     if (!iter) return false;
 
@@ -338,10 +366,8 @@ private:
 
     _align_unlock();
 
-    bool result = true;
-
     const Pds::CsPad::ElementHeader* hdr;
-    while( result && (hdr = iter->next()) ) {
+    while( (hdr = iter->next()) ) {
 
       unsigned nsects = 0;
       const Pds::CsPad::Section* s;
@@ -351,27 +377,24 @@ private:
 
       _uwrite(hdr, sizeof(*hdr));
 
-      const CompressedPayload* pd = _compress(engine,
+      const CompressedPayload* pd = _compress(_engine,
                                               hdr+1, 
-                                              nsects*Pds::CsPad::ColumnsPerASIC*Pds::CsPad::MaxRowsPerASIC*2*2);
+                                              nsects*Pds::CsPad::ColumnsPerASIC*Pds::CsPad::MaxRowsPerASIC*2*2,
+                                              2,
+                                              _upwrite);
 
       if (!pd) {
-        result = false;
-        break;
+        _pwrite = pwrite;
+        return false;
       }
 
-      _uwrite(pd, sizeof(*pd)+pd->csize());
+      _upwrite += sizeof(*pd)+pd->csize();
     
       uint32_t qw = iter->getQuadWord();
       _uwrite(&qw, sizeof(qw));
     }
 
     delete iter;
-
-    if (!result) {
-      //  undo
-      return false;
-    }
 
     _align_lock();
 
@@ -398,15 +421,17 @@ private:
     // Copy the quadrant headers and the section images
     while( ((const char*)hdr < end) ) {
 
-      void*    outbuf;
       const CompressedPayload& pyl = hdr->pd();
+      _write(hdr, sizeof(*hdr)-sizeof(pyl));  // quadrant header
 
-      _decompress(pyl, outbuf);
+      if (pyl.uncompress(_pwrite)) {
+        _pwrite += pyl.dsize()>>2;
+      }
+      else {
+        _pwrite = pwrite;
+        return false;
+      }
 
-      if (!outbuf) return false;
-
-      _write(hdr, sizeof(*hdr)-sizeof(pyl));              // quadrant header
-      _write(outbuf, pyl.dsize());                        // section images
       _write((const char*)pyl.cdata()+pyl.csize(), sizeof(uint32_t));  // 
       
       const uint8_t* next = (const uint8_t*)hdr->pd().cdata() + hdr->pd().csize() + sizeof(uint32_t);
@@ -444,78 +469,50 @@ private:
   //
   const CompressedPayload* _compress(CompressedPayload::Engine engine,
                                      const void* inbuf,
-                                     unsigned    insz)
+                                     unsigned    insz,
+                                     unsigned    depth,
+                                     void*       outbuf)
   {
-    bool     result;
-    void*    outbuf;
     size_t   outsz;
+    CompressedPayload* pd = 0;
 
     switch(engine) {
     case CompressedPayload::None:
-      outbuf = const_cast<void*>(inbuf);
-      outsz  = insz;
-      result = true;
+      memcpy((char*)outbuf+sizeof(*pd), inbuf, insz);
+      pd = new(outbuf) CompressedPayload(engine,insz,insz);
       break;
     case CompressedPayload::Hist16: {
-      FrameCompressor::ImageParams params;
+      Compress::Hist16Engine::ImageParams params;
+      params.width  = insz/2;
+      params.height = 1;
+      params.depth  = depth;
+      
+      Compress::Hist16Engine e;
+      if (e.compress(inbuf,
+                     params, 
+                     (char*)outbuf+sizeof(*pd), 
+                     outsz) == Compress::Hist16Engine::Success) {
+        pd = new(outbuf) CompressedPayload(engine,insz,outsz);
+      }        
+      break; }
+    case CompressedPayload::HistN: {
+      Compress::Hist16Engine::ImageParams params;
       params.width  = insz/2;
       params.height = 1;
       params.depth  = 2;
       
-      result = _frameCmp->compress(inbuf,
-                                   params, 
-                                   outbuf, 
-                                   outsz) == FrameCompressor::Success;
+      Compress::HistNEngine e;
+      if (e.compress(inbuf, depth, insz,
+                     (char*)outbuf+sizeof(*pd), 
+                     outsz) == Compress::HistNEngine::Success) {
+        pd = new(outbuf) CompressedPayload(engine,insz,outsz);
+      }        
       break; }
     default:
-      result = false;
       break;
     }
 
-    if (!result) {
-      return 0;
-    }
-
-    unsigned sz = sizeof(CompressedPayload)+outsz;
-    if (sz > _outsz) {
-      delete[] _outbuf;
-      _outbuf = new char[_outsz = sz];
-    }
-    CompressedPayload* pd = new(_outbuf) CompressedPayload(engine, insz, outsz);
-    memcpy(const_cast<void*>(pd->cdata()), outbuf, outsz);
     return pd;
-  }
-
-  void _decompress(const CompressedPayload& pyl,
-                   void*&    outbuf)
-  {
-    bool result;
-
-    switch(pyl.compressor()) {
-    case CompressedPayload::None:
-      outbuf = const_cast<void*>(pyl.cdata());
-      result = true;
-      break;
-    case CompressedPayload::Hist16: {
-      FrameCompressor::ImageParams params;
-      params.width  = pyl.dsize()/2;
-      params.height = 1;
-      params.depth  = 2;
-
-      int r = _frameCmp->decompress(pyl.cdata(),
-                                     pyl.csize(),
-                                     params, 
-                                    outbuf);
-
-      result = (r == FrameCompressor::Success);
-      break; }
-    default:
-      result = false;
-      break;
-    }
-
-    if (!result)
-      outbuf = 0;
   }
 
 private:
@@ -538,13 +535,21 @@ private:
 
   char*                                     _outbuf;
   unsigned                                  _outsz;
-  FrameCompressor*                          _frameCmp;
 
   map<XtcMapKey, const Xtc*>                _xtcmap;
 };
 
 void usage(char* progname) {
-  fprintf(stderr,"Usage: %s -i <input filename> -o <output filename> [-x] [-h]\n  -x : extract (decompress)\n", progname);
+  fprintf(stderr,
+          "Usage: %s -i <filename> [-o <filename>] [-n events] [-x] [-h] [-1] [-2]\n"
+          "       -i <filename>  : input xtc file\n"
+          "       -o <filename>  : output xtc file\n"
+          "       -n <events>    : number to process\n"
+          "       -x : extract (decompress)\n"
+          "       -1 : use Hist16 algorithm\n"
+          "       -2 : use HistN  algorithm\n"
+          "If -o is omitted, then compress, uncompress, and memcmp the result\n",
+          progname);
 }
 
 int main(int argc, char* argv[]) {
@@ -555,7 +560,7 @@ int main(int argc, char* argv[]) {
   int parseErr = 0;
   unsigned nevents = -1;
 
-  while ((c = getopt(argc, argv, "hxn:i:o:")) != -1) {
+  while ((c = getopt(argc, argv, "hxn:i:o:12")) != -1) {
     switch (c) {
     case 'h':
       usage(argv[0]);
@@ -572,12 +577,18 @@ int main(int argc, char* argv[]) {
     case 'o':
       outxtcname = optarg;
       break;
+    case '1':
+      _engine = Pds::CompressedPayload::Hist16;
+      break;
+    case '2':
+      _engine = Pds::CompressedPayload::HistN;
+      break;
     default:
       parseErr++;
     }
   }
   
-  if (!inxtcname || !outxtcname) {
+  if (!inxtcname) {
     usage(argv[0]);
     exit(2);
   }
@@ -588,10 +599,13 @@ int main(int argc, char* argv[]) {
     exit(2);
   }
 
-  FILE* ofd = fopen(outxtcname,"wx");
-  if (ofd == 0) {
-    perror("Unable to open output file\n");
-    exit(2);
+  FILE* ofd = 0;
+  if (outxtcname) {
+    ofd = fopen(outxtcname,"wx");
+    if (ofd == 0) {
+      perror("Unable to open output file\n");
+      exit(2);
+    }
   }
   
   const unsigned MAX_DG_SIZE = 0x2000000;
@@ -599,27 +613,52 @@ int main(int argc, char* argv[]) {
   Dgram* dg;
 
   uint32_t* obuff = new uint32_t[MAX_DG_SIZE>>2];
+  uint32_t* dbuff = new uint32_t[MAX_DG_SIZE>>2];
 
-  myIter cmpiter(extract);
+  unsigned long long total_payload=0, total_comp=0;
+
+  myIter cmpiter(false);
+  myIter deciter(true);
 
   while ((dg = iter.next())) {
     //    if (!dg->seq.isEvent())
-    cmpiter.iterate(dg, obuff);
+
+    if (ofd) {
+      if (extract)
+        deciter.iterate(dg, obuff);
+      else
+        cmpiter.iterate(dg, obuff);
+    }
+    else {
+      cmpiter.iterate(dg, obuff);
+      deciter.iterate(reinterpret_cast<const Dgram*>(obuff), dbuff);
+      if (memcmp(dg,dbuff,sizeof(*dg)+dg->xtc.sizeofPayload()))
+        printf("  memcmp failed\n");
+    }
     
     const Dgram* odg = reinterpret_cast<const Dgram*>(obuff);
-    fwrite(odg, sizeof(*odg) + odg->xtc.sizeofPayload(), 1, ofd);
-    fflush(ofd);
+    if (ofd) {
+      fwrite(odg, sizeof(*odg) + odg->xtc.sizeofPayload(), 1, ofd);
+      fflush(ofd);
+    }
 
     printf("%s transition: time 0x%x/0x%x, payloadSize %d (%d)\n",TransitionId::name(dg->seq.service()),
            dg->seq.stamp().fiducials(),dg->seq.stamp().ticks(), dg->xtc.sizeofPayload(), odg->xtc.sizeofPayload());
+
+    total_payload += dg ->xtc.sizeofPayload();
+    total_comp    += odg->xtc.sizeofPayload();
 
     if (dg->seq.isEvent())
       if (--nevents == 0)
         break;
   }
   
+  printf("total payload %lld  comp %lld  %f%%\n",
+         total_payload, total_comp, 100*double(total_comp)/double(total_payload));
+
   close (ifd);
-  fclose(ofd);
+  if (ofd)
+    fclose(ofd);
   return 0;
 }
 
