@@ -138,7 +138,7 @@ public:
 	int			useSolidAngleCorrection;	// set to nonzero to calculate and apply solid angle correction to each hit (or saved event), only the theta-dependent part of the correction is applied to the 2D scattering pattern, also controls what correction algorithm to be used: 1 = rigorous, 2 = azimuthally symmetric
 	
 	// Attenuation correction
-	int			useAttenuationCorrection;		// Whether to correct each event's intensity with the calculated attenuation
+	int			useAttenuationCorrection;		// Whether to correct each event's intensity with the calculated attenuation, this also toggles if the intensity should be corrected for the FEE gas detectors readouts (in mJ)
 	float		filterPositionIn;				// Nominal position for silicon filters in beam
 	float		filterPositionOut;				// Nominal position for silicon filters out of beam
 	char		attenuationFile[1024];			// Name of the file containing the attenuation list

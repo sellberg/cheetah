@@ -505,8 +505,11 @@ void event() {
 	threadInfo->pixelCenterX = global.pixelCenterX;
 	threadInfo->pixelCenterY = global.pixelCenterY;
 	
-	if (global.useAttenuationCorrection >= 0 && global.nAttenuations >= 1) {
-		threadInfo->attenuation = global.attenuations[global.nAttenuations-1];	// 1/transmission taken from last successful readout of the Si filters
+	if (global.useAttenuationCorrection >= 2 && global.nAttenuations >= 1) {
+		threadInfo->attenuation = global.attenuations[global.nAttenuations-1]/((gmd1+gmd2)/2);	// 1/(transmission*gmd) taken from last successful readouts of the Si filters and FEE gas detectors
+	}
+	else if (global.useAttenuationCorrection >= 0 && global.nAttenuations >= 1) {
+			threadInfo->attenuation = global.attenuations[global.nAttenuations-1];	// 1/transmission taken from last successful readout of the Si filters
 	} else {
 		threadInfo->attenuation = 0;
 	}
@@ -833,8 +836,8 @@ void endjob()
 	pthread_mutex_destroy(&global.correlationFFT_mutex);
 	pthread_mutex_destroy(&global.pixelcenter_mutex);
 	pthread_mutex_destroy(&global.image_mutex);	
-    pthread_mutex_destroy(&global.intensities_mutex);
-    pthread_mutex_destroy(&global.selfdark_mutex);
+	pthread_mutex_destroy(&global.intensities_mutex);
+	pthread_mutex_destroy(&global.selfdark_mutex);
 	pthread_mutex_destroy(&global.hotpixel_mutex);
 	pthread_mutex_destroy(&global.nhits_mutex);
 	pthread_mutex_destroy(&global.framefp_mutex);
