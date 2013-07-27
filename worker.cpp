@@ -368,7 +368,8 @@ void *worker(void *threadarg) {
 	if (global->hdf5dump || (hit.standard && (global->hitfinder.savehits || global->powdersum)) 
 						 || (hit.water && (global->waterfinder.savehits || global->powdersum)) 
 						 || (hit.ice && (global->icefinder.savehits || global->powdersum)) 
-						 || (!hit.background && (global->backgroundfinder.savehits || global->powdersum)) ) {
+						 || (!hit.background && (global->backgroundfinder.savehits || global->powdersum))
+        				 || (global->listfinder.use && (global->listfinder.savehits || global->powdersum)) ) {
 		assemble2Dimage(threadInfo, global);
 	}
 	
