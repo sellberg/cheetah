@@ -25,7 +25,8 @@ ARCH 			= x86_64-linux-opt
 
 MYANADIR		= myana
 CSPADDIR		= cspad-gjw
-LCLSDIR 		= release
+#LCLSDIR 		= release
+LCLSDIR 		= /reg/neh/home/sellberg/source/cheetah/release
 HDF5DIR 		= /reg/neh/home/barty/hdf5
 TIFFDIR			= /reg/neh/home/feldkamp/tiff
 FFTWDIR         	= /reg/neh/home/feldkamp/fftw
@@ -33,13 +34,17 @@ GIRAFFEDIR      	= /reg/neh/home/sellberg/source/giraffe
 ROOTSYS			= /reg/g/pcds/package/root
 #OBJFILES		= main.o XtcRun.o
 
-INCLUDEDIRS     = -Irelease \
+#INCLUDEDIRS     = -Irelease \
+
+INCLUDEDIRS     = -I$(LCLSDIR) \
                   -I$(HDF5DIR)/include \
                   -I$(TIFFDIR)/include \
                   -I$(FFTWDIR)/include \
                   -I$(GIRAFFEDIR)
 
-LIBDIRS         = -Lrelease/build/pdsdata/lib/$(ARCH)/ \
+#LIBDIRS         = -Lrelease/build/pdsdata/lib/$(ARCH)/ \
+
+LIBDIRS         = -L$(LCLSDIR)/build/pdsdata/lib/$(ARCH)/ \
                   -L$(HDF5DIR)/lib \
                   -L$(TIFFDIR)/lib \
                   -L$(FFTWDIR)/lib \
